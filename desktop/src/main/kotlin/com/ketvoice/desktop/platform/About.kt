@@ -22,6 +22,10 @@ object About {
         Component("Gson", "2.11.0", "Apache 2.0", "Gson-Apache-2.0.txt"),
         Component("JSON-Java", "20240303", "Public domain", "JSON-Java-Public-Domain.txt"),
         Component("Inter", "4", "SIL OFL 1.1", "Inter-OFL.txt"),
+        Component("Manrope", "", "SIL OFL 1.1", "Manrope-OFL.txt"),
+        Component("Atkinson Hyperlegible Next", "", "SIL OFL 1.1", "AtkinsonHyperlegibleNext-OFL.txt"),
+        Component("Nunito", "", "SIL OFL 1.1", "Nunito-OFL.txt"),
+        Component("Lora", "", "SIL OFL 1.1", "Lora-OFL.txt"),
         Component("OpenJDK", "21", "GPL 2.0 + Classpath Exception", "OpenJDK-GPL-2.0-CE.txt"),
     )
 
@@ -40,7 +44,7 @@ object About {
         appendLine()
         appendLine(AppText.t("Ketvoice utilise ces logiciels libres. Leurs licences suivent."))
         appendLine()
-        components.forEach { appendLine("• ${it.name} ${it.version} — ${it.licence}") }
+        components.forEach { appendLine("• ${"${it.name} ${it.version}".trimEnd()} — ${it.licence}") }
         components.forEach { c ->
             appendLine()
             appendLine("―".repeat(40))

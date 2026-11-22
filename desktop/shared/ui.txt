@@ -12,3 +12,14 @@ ui/player/LyricsMotion.kt
 ui/player/LyricsPresentation.kt
 # Windows 9.0 port: how the settings search matches a row.
 ui/settings/SettingsMatch.kt
+# Personnalisation (Windows, 9.0): theme colours and codes, contrast guard, fonts, sizes, corners and the lyrics' look.
+# Appearance.kt draws its fonts through AppFontFiles.kt, which has a desktop counterpart (classpath fonts).
+theme/CoverLegibility.kt
+theme/ThemeColors.kt
+theme/Appearance.kt
+theme/Personalization.kt
+# Lyrics 8.3 and 9.0: softer fill, living held notes, blur of far lines; artwork height by format.
+ui/player/LyricsWords.kt
+ui/player/KaraokeDraw.kt
+ui/player/LyricsBlur.kt
+ui/player/PlayerArtworkMath.kt

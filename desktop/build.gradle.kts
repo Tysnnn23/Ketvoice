@@ -124,8 +124,8 @@ val smtcDll = file(providers.gradleProperty("smtcDll").orNull ?: "../native/smtc
 val requireSmtc = providers.gradleProperty("requireSmtc").orNull == "true"
 tasks.processResources {
     from("../app/src/main/assets") { include("provider_registry.json", "translations.json", "visual-refresh-translations.json"); into("assets") }
-    // Ket 27's typeface (Inter, SIL OFL), read by the desktop theme.
-    from("../app/src/main/res/font") { include("inter_variable.ttf"); into("font") }
+    // Ket 27's typeface (Inter) and the four « Personnalisation » fonts (SIL OFL), read by the desktop theme.
+    from("../app/src/main/res/font") { include("*.ttf"); into("font") }
     from("../docs/licenses") { include("*.txt"); into("licenses") }
     from("icons") { include("ketvoice.png"); into("icons") }
     from(smtcDll) { into("native") }

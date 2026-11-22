@@ -2856,7 +2856,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "From 2 to 5 entries. Home or the Library always stays in the sidebar.",
   "Disposition": "Layout",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "The menu of a song, from a right click or the “…” button.",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "The buttons on the right of the playback bar: 2 to 5, and the queue always stays."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "The buttons on the right of the playback bar: 2 to 5, and the queue always stays.",
+  "Fermer l'éditeur ?": "Close the editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: time · ← →: ±50 ms · ↑ ↓: line · Ctrl+Z: undo"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5715,7 +5717,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "2 से 5 प्रविष्टियाँ। होम या लाइब्रेरी हमेशा साइडबार में रहती है।",
   "Disposition": "लेआउट",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "किसी गाने का मेन्यू, राइट-क्लिक या “…” बटन से।",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "प्लेबैक बार के दाईं ओर के बटन: 2 से 5, कतार हमेशा रहती है।"
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "प्लेबैक बार के दाईं ओर के बटन: 2 से 5, कतार हमेशा रहती है।",
+  "Fermer l'éditeur ?": "संपादक बंद करें?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: समय दें · ← →: ±50 ms · ↑ ↓: पंक्ति · Ctrl+Z: पूर्ववत करें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -8574,7 +8578,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "2〜5 項目。ホームまたはライブラリは常にサイドバーに残ります。",
   "Disposition": "レイアウト",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "右クリックまたは「…」ボタンで開く曲のメニュー。",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "再生バー右側のボタン：2〜5 個。再生キューは常に残ります。"
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "再生バー右側のボタン：2〜5 個。再生キューは常に残ります。",
+  "Fermer l'éditeur ?": "エディタを閉じますか？",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "スペース：タイミングを打つ · ← →：±50 ms · ↑ ↓：行 · Ctrl+Z：元に戻す"
  },
  "zh": {
   "Reverb": "混响",
@@ -11433,7 +11439,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "2 到 5 个条目。主页或资料库始终保留在侧边栏中。",
   "Disposition": "布局",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "歌曲的菜单，通过右键或“…”按钮打开。",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "播放栏右侧的按钮：2 到 5 个，播放队列始终保留。"
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "播放栏右侧的按钮：2 到 5 个，播放队列始终保留。",
+  "Fermer l'éditeur ?": "关闭编辑器？",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "空格：对时 · ← →：±50 毫秒 · ↑ ↓：行 · Ctrl+Z：撤销"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -14292,7 +14300,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "От 2 до 5 пунктов. Главная или Медиатека всегда остаются в боковой панели.",
   "Disposition": "Расположение",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Меню трека — по правому щелчку или кнопке «…».",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Кнопки справа на панели воспроизведения: от 2 до 5, очередь остаётся всегда."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Кнопки справа на панели воспроизведения: от 2 до 5, очередь остаётся всегда.",
+  "Fermer l'éditeur ?": "Закрыть редактор?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Пробел: отметить · ← →: ±50 мс · ↑ ↓: строка · Ctrl+Z: отменить"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -17151,7 +17161,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "Da 2 a 5 voci. Home o la Libreria restano sempre nella barra laterale.",
   "Disposition": "Disposizione",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Il menu di un brano, dal clic destro o dal pulsante «…».",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "I pulsanti a destra della barra di riproduzione: da 2 a 5, la coda resta sempre."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "I pulsanti a destra della barra di riproduzione: da 2 a 5, la coda resta sempre.",
+  "Fermer l'éditeur ?": "Chiudere l'editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Spazio: sincronizza · ← →: ±50 ms · ↑ ↓: riga · Ctrl+Z: annulla"
  },
  "es": {
   "Reverb": "Reverb",
@@ -20010,7 +20022,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "De 2 a 5 entradas. Inicio o la Biblioteca siempre permanece en la barra lateral.",
   "Disposition": "Disposición",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "El menú de una canción, con clic derecho o con el botón «…».",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Los botones a la derecha de la barra de reproducción: de 2 a 5, la cola siempre permanece."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Los botones a la derecha de la barra de reproducción: de 2 a 5, la cola siempre permanece.",
+  "Fermer l'éditeur ?": "¿Cerrar el editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espacio: marcar · ← →: ±50 ms · ↑ ↓: línea · Ctrl+Z: deshacer"
  },
  "de": {
   "Reverb": "Reverb",
@@ -22869,7 +22883,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "2 bis 5 Einträge. Start oder die Mediathek bleibt immer in der Seitenleiste.",
   "Disposition": "Anordnung",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Das Menü eines Titels, per Rechtsklick oder über die Taste „…“.",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Die Tasten rechts in der Wiedergabeleiste: 2 bis 5, die Warteschlange bleibt immer."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Die Tasten rechts in der Wiedergabeleiste: 2 bis 5, die Warteschlange bleibt immer.",
+  "Fermer l'éditeur ?": "Editor schließen?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Leertaste: timen · ← →: ±50 ms · ↑ ↓: Zeile · Strg+Z: rückgängig"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -25728,7 +25744,9 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "De 2 a 5 entradas. O Início ou a Biblioteca fica sempre na barra lateral.",
   "Disposition": "Disposição",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "O menu de uma música, pelo clique direito ou pelo botão “…”.",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Os botões à direita da barra de reprodução: de 2 a 5, a fila fica sempre."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Os botões à direita da barra de reprodução: de 2 a 5, a fila fica sempre.",
+  "Fermer l'éditeur ?": "Fechar o editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espaço: marcar · ← →: ±50 ms · ↑ ↓: linha · Ctrl+Z: desfazer"
  },
  "ko": {
   "Reverb": "리버브",
@@ -28587,6 +28605,8 @@
   "De 2 à 5 entrées. L'Accueil ou la Bibliothèque reste toujours dans la barre latérale.": "2~5개 항목. 홈 또는 보관함은 항상 사이드바에 남습니다.",
   "Disposition": "레이아웃",
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "마우스 오른쪽 클릭 또는 “…” 버튼으로 여는 곡 메뉴.",
-  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "재생 바 오른쪽 버튼: 2~5개, 대기열은 항상 남습니다."
+  "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "재생 바 오른쪽 버튼: 2~5개, 대기열은 항상 남습니다.",
+  "Fermer l'éditeur ?": "편집기를 닫을까요?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "스페이스: 타이밍 찍기 · ← →: ±50 ms · ↑ ↓: 줄 · Ctrl+Z: 실행 취소"
  }
 }

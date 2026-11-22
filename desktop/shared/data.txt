@@ -66,3 +66,5 @@ smartlib/PublicPage.kt
 # Windows 9.0 port: the layout keys (Disposition) and the pure half of downloaded playlists kept up to date.
 data/LayoutSettings.kt
 data/PlaylistFollow.kt
+# Lyrics editor (Windows, 9.0): the pure draft, LRC and enhanced LRC.
+data/LyricsDraft.kt

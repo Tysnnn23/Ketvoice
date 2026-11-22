@@ -123,8 +123,8 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
 
 /** Items of a title's menu that other features provide, each in its place of [DeskLayout.menu]. */
 object TrackMenuSlots {
-    /** « Éditer les paroles… » (id `lyricsEditor`): set by the lyrics editor; until then the menu and Settings leave it out. */
-    @Volatile var lyricsEditor: ((Track) -> MenuItem?)? = null
+    /** « Éditer les paroles… » (id `lyricsEditor`): the lyrics editor (LyricsEditorDesk); null leaves it out of the menu and Settings. */
+    @Volatile var lyricsEditor: ((Track) -> MenuItem?)? = { track -> MenuItem("Éditer les paroles…", KetIcons.Lyrics, "lyrics-editor") { LyricsEditorDesk.open(track) } }
 }
 
 val LocalTrackActions = staticCompositionLocalOf<TrackActions> { error("No TrackActions") }

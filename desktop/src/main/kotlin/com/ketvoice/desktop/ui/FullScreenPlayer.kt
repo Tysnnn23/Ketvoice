@@ -82,9 +82,10 @@ fun FullScreenPlayer(onExit: () -> Unit) {
         .testTag("fullscreen-player")) {
         CoverFlowBackground(track.coverUrl, state.isPlaying)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .34f)))
+        val (aspect, onAspect) = rememberCanvasAspect(canvas)
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            // As tall as the screen, at most a little over half its width.
-            val side = minOf(maxHeight, maxWidth * .54f)
+            // As tall as the screen, as wide as the media's shape (a cover is square), at most a little over half its width.
+            val side by rememberGlide(ArtworkFormat.sideDp(maxHeight.value, if (canvas != null) aspect else 1f, maxWidth.value * .54f).dp, "fs-side")
             Row(Modifier.fillMaxSize()) {
                 Box(Modifier.width(side).fillMaxHeight().testTag("fullscreen-art")) {
                     Box(Modifier.fillMaxSize()
@@ -99,7 +100,7 @@ fun FullScreenPlayer(onExit: () -> Unit) {
                         when {
                             canvas != null -> {
                                 (poster ?: cover)?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                                CanvasVideo(canvas, state.isPlaying && canvasMoves(), Modifier.fillMaxSize().testTag("fullscreen-canvas"))
+                                CanvasVideo(canvas, state.isPlaying && canvasMoves(), Modifier.fillMaxSize().testTag("fullscreen-canvas"), onAspect = onAspect)
                             }
                             cover != null -> Image(cover, null, Modifier.fillMaxSize().testTag("fullscreen-cover"), contentScale = ContentScale.Crop)
                         }

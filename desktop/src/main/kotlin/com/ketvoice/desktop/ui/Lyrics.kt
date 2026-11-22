@@ -49,10 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -65,9 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -83,9 +77,19 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.data.TranslationLanguages
 import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.theme.CoverLegibility
+import com.ketvoice.app.ui.player.LyricBlurEffect
+import com.ketvoice.app.ui.player.LyricsBlur
 import com.ketvoice.app.ui.player.LyricsCascade
 import com.ketvoice.app.ui.player.LyricsMotion
 import com.ketvoice.app.ui.player.LyricsPresentation
+import com.ketvoice.app.ui.player.LyricsWords
+import com.ketvoice.app.ui.player.drawFlatWord
+import com.ketvoice.app.ui.player.drawHeldGlow
+import com.ketvoice.app.ui.player.drawLiftedWord
+import com.ketvoice.app.ui.player.heldNow
+import com.ketvoice.app.ui.player.karaokeInk
+import com.ketvoice.app.ui.player.karaokeMasks
 import com.ketvoice.app.util.Romanizer
 import com.ketvoice.desktop.ui.theme.Ket27Desk
 import com.ketvoice.desktop.ui.theme.LocalKet
@@ -111,37 +115,28 @@ object RepoLyricsFeed : LyricsFeed {
 
 val LocalLyricsFeed = staticCompositionLocalOf<LyricsFeed> { RepoLyricsFeed }
 
-/** How sung words move (the app's `LyricsWords`, 5.9.0): a small rise, and a glow on held notes only. Never a blur. */
-internal object DeskLyricsWords {
-    const val LIFT_DP = 2.5f
-    /** Notes held at least this long glow while they are sung. */
-    const val GLOW_FROM_MS = 900L
+/**
+ * The colour of the sung words (« Couleur des mots chantés »). Over the full player's dark field it is the app's
+ * [com.ketvoice.app.theme.LyricsLook.sung]; in the panel, which follows the theme, « Blanc » stays the theme's ink and
+ * the other colours are made readable (AA) on the panel's ground and cards.
+ */
+@Composable
+internal fun rememberDeskSungInk(track: Track, full: Boolean): Color {
+    val ket = LocalKet.current
+    val mode = AppSettings.lyricsSung.value
+    val cover = if (mode == com.ketvoice.app.theme.LyricsLook.SUNG_COVER) rememberCoverColors(track.coverUrl)?.second else null
+    return deskSungInk(mode, full, ket.label, ket.accent, ket.ground, ket.card, cover, AppSettings.lyricsSungArgb.value)
+}
 
-    fun lift(progress: Float): Float {
-        val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
-        return 1f - (1f - p) * (1f - p)
-    }
-
-    /** The glow of a held note: strongest in the middle of the note, nothing for short words. */
-    fun glow(progress: Float, durationMs: Long): Float {
-        if (durationMs < GLOW_FROM_MS || !(progress > 0f && progress < 1f)) return 0f
-        val strength = ((durationMs - GLOW_FROM_MS) / 1_100f + .5f).coerceIn(.5f, 1f)
-        return kotlin.math.sin(progress * Math.PI).toFloat() * strength
-    }
-
-    /** True when the words, joined, hold every visible letter of the line (drawing words alone loses nothing). */
-    fun covers(line: String, words: List<String>): Boolean {
-        val letters = line.count { !it.isWhitespace() }
-        if (letters == 0 || words.isEmpty()) return false
-        return words.sumOf { w -> w.count { !it.isWhitespace() } } >= letters && words.joinToString("").length <= line.length
-    }
-
-    /** A word's progress at [now]: smoothstep from its start to its end. */
-    fun progress(now: Long, start: Long, end: Long): Float = when {
-        now < start -> 0f
-        end <= start -> 1f
-        else -> ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
-    }
+internal fun deskSungInk(mode: Int, full: Boolean, label: Color, accent: Color, ground: Color, card: Color, cover: Color?, custom: Long): Color {
+    if (full) return com.ketvoice.app.theme.LyricsLook.sung(mode, accent, cover, custom)
+    val picked = when (mode) {
+        com.ketvoice.app.theme.LyricsLook.SUNG_ACCENT -> accent
+        com.ketvoice.app.theme.LyricsLook.SUNG_COVER -> cover
+        com.ketvoice.app.theme.LyricsLook.SUNG_CUSTOM -> Color(custom.toInt())
+        else -> null
+    } ?: return label
+    return CoverLegibility.readableAccent(picked, ground.copy(alpha = 1f), card)
 }
 
 /** The two looks of Cascade: the right panel (follows the theme) and the full player (white on the cover's light). */
@@ -149,7 +144,7 @@ enum class LyricsLook(val size: Int, val lineHeight: Int, val gap: Int) { Panel(
 
 /** The time the lyrics follow: the player's position, carried on frame by frame between its ticks while it plays. */
 @Composable
-private fun rememberLyricsClock(): androidx.compose.runtime.State<Long> {
+internal fun rememberLyricsClock(): androidx.compose.runtime.State<Long> {
     val player = LocalPlayer.current
     val state by player.state.collectAsState()
     val clock = remember { mutableLongStateOf(state.positionMs) }
@@ -228,6 +223,7 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
     // Following comes back by itself once the listener has left the lyrics alone for a while.
     LaunchedEffect(following, lastScroll) { if (!following) { delay(4_000); following = true } }
     val reduced = Motion.reduced
+    val sung = rememberDeskSungInk(track, full)
 
     Column(modifier.testTag("lyrics:${look.name.lowercase()}")) {
         LyricsHeader(track, lyrics, translating, { translating = !translating }, full)
@@ -267,7 +263,7 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
                 itemsIndexed(lyrics.lines, key = { i, l -> "$i-${l.timeMs}" }) { index, line ->
                     val current = index == active || !lyrics.isTimed
                     val other = across.getOrNull(index) == true
-                    LyricLineView(line, index, active, current, lyrics.isTimed, now, look, label, other,
+                    LyricLineView(line, index, active, current, lyrics.isTimed, now, look, LineInk(label, sung), other, !following,
                         romanized.getOrNull(index), translated[index]?.takeIf { translating && (current || !lyrics.isTimed) }) {
                         if (line.timeMs >= 0) { player.seekTo(LyricsOffsets.seekPosition(line.timeMs, offset)); following = true }
                     }
@@ -298,7 +294,7 @@ private fun LyricsHeader(track: Track, lyrics: LyricsRepo.State, translating: Bo
                 val sources = listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF
                 menu.open(listOf(MenuItem("Romanisation", if (romanization.value) KetIcons.Check else null, "lyrics-romanization") {
                     romanization.value = !romanization.value
-                }, MenuItem("-")) + sources.map { key ->
+                }, MenuItem("Éditeur de paroles", KetIcons.Lyrics, "lyrics-open-editor") { LyricsEditorDesk.open(track) }, MenuItem("-")) + sources.map { key ->
                     MenuItem(MusicApi.sourceName(key), if (key == current) KetIcons.Check else null, "lyrics-source:$key") {
                         AppSettings.lyricsSource.value = key; feed.load(track, refresh = true)
                     }
@@ -313,13 +309,37 @@ private fun LyricsHeader(track: Track, lyrics: LyricsRepo.State, translating: Bo
     }
 }
 
+/** The ink of a line: [label] for the lines and the words still to sing, [sung] for the words sung. */
+internal class LineInk(val label: Color, val sung: Color)
+
+/** A line's text style: the look's size scaled by « Taille du texte des paroles », the lyrics' font and alignment. */
+internal fun lyricStyle(look: LyricsLook, align: TextAlign): TextStyle {
+    val k = com.ketvoice.app.theme.LyricsLook.sizeScale()
+    return TextStyle(fontSize = (look.size * k).sp, lineHeight = (look.lineHeight * k).sp,
+        fontWeight = if (look == LyricsLook.Full) FontWeight.Black else FontWeight.Bold,
+        letterSpacing = (-.3).sp, textAlign = align, fontFamily = com.ketvoice.app.theme.LyricsLook.font())
+}
+
+/**
+ * 8.3 « Flou des paroles »: the radius, in dp and animated with the line's dimming, of a line [distance] lines from the
+ * sung one; nothing while the listener scrolls, under reduced motion or the performance mode, or at « Intensité du flou » 0.
+ */
+@Composable
+private fun rememberLineBlur(distance: Int, timed: Boolean, browsing: Boolean, reduced: Boolean): androidx.compose.runtime.State<Float> =
+    animateFloatAsState(LyricsBlur.radiusDp(distance, AppSettings.lyricsBlur.value, timed, browsing, reduced,
+        AppSettings.highPerformanceMode.value, supported = true, level = com.ketvoice.app.theme.LyricsLook.blur()),
+        if (reduced) snap() else tween(LyricsBlur.FADE_MS), label = "lyric-blur")
+
 @Composable
 private fun LyricLineView(line: MusicApi.LyricLine, index: Int, active: Int, current: Boolean, timed: Boolean, now: Long, look: LyricsLook,
-                          label: Color, other: Boolean, romanized: String?, translation: String?, onClick: () -> Unit) {
+                          ink: LineInk, other: Boolean, browsing: Boolean, romanized: String?, translation: String?, onClick: () -> Unit) {
+    val label = ink.label
     val reduced = Motion.reduced
-    val distance = if (active < 0) index else kotlin.math.abs(index - active)
+    val distance = if (active < 0) index + 1 else kotlin.math.abs(index - active)
     val alpha by animateFloatAsState(if (current) 1f else LyricsCascade.INACTIVE_ALPHA, if (reduced) snap() else tween(320))
     val scale by animateFloatAsState(if (current || !timed) 1f else LyricsCascade.INACTIVE_SCALE, if (reduced) snap() else Motion.Springs.SMOOTH.motion())
+    val blur = rememberLineBlur(distance, timed, browsing, reduced)
+    val blurEffect = remember { LyricBlurEffect() }
     // The wave: when the sung line changes, the lines below follow it one after the other.
     val wave = remember { Animatable(0f) }
     LaunchedEffect(active) {
@@ -329,77 +349,64 @@ private fun LyricLineView(line: MusicApi.LyricLine, index: Int, active: Int, cur
         wave.animateTo(0f, LyricsCascade.WAVE_SPRING)
     }
     val (hover, hovered) = rememberHover()
-    val align = if (other) TextAlign.End else TextAlign.Start
+    val centred = com.ketvoice.app.theme.LyricsLook.centred
+    val align = com.ketvoice.app.theme.LyricsLook.align(other) ?: TextAlign.Start
     val inset = LyricsCascade.DUET_INSET_DP.dp
     Column(Modifier.fillMaxWidth().padding(start = if (other) inset else 0.dp, end = if (other) 0.dp else inset * .5f)
         .graphicsLayer {
             translationY = wave.value.dp.toPx()
             scaleX = scale; scaleY = scale
-            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(if (other) 1f else 0f, .5f)
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(if (centred) .5f else if (other) 1f else 0f, .5f)
+            renderEffect = blurEffect.at(blur.value.dp.toPx())
         }
         .clip(RoundedCornerShape(10.dp)).background(if (hovered && timed) label.copy(alpha = .06f) else Color.Transparent)
         .hoverable(hover).clickable(enabled = timed && line.timeMs >= 0, onClick = onClick)
         .padding(horizontal = 8.dp, vertical = 4.dp).testTag("lyric:$index"),
-        horizontalAlignment = if (other) Alignment.End else Alignment.Start) {
-        val style = TextStyle(fontSize = look.size.sp, lineHeight = look.lineHeight.sp, fontWeight = if (look == LyricsLook.Full) FontWeight.Black else FontWeight.Bold,
-            letterSpacing = (-.3).sp, textAlign = align, fontFamily = Ket27Desk.font)
-        if (current && timed && line.words.size >= 2) WordLine(line, now, style, label)
+        horizontalAlignment = if (centred) Alignment.CenterHorizontally else if (other) Alignment.End else Alignment.Start) {
+        val style = lyricStyle(look, align)
+        if (current && timed && line.words.size >= 2) WordLine(line, now, style, ink)
         else androidx.compose.material3.Text(line.text, Modifier.fillMaxWidth(), color = label.copy(alpha = if (timed) alpha else .9f), style = style)
         val under = label.copy(alpha = (if (timed) alpha else .9f) * .56f)
+        val k = com.ketvoice.app.theme.LyricsLook.sizeScale()
         if (romanized != null) androidx.compose.material3.Text(romanized, Modifier.fillMaxWidth().padding(top = 3.dp).testTag("romanized:$index"), color = under,
-            style = style.copy(fontSize = (look.size * .55f).sp, lineHeight = (look.lineHeight * .55f).sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.1).sp))
+            style = style.copy(fontSize = (look.size * .55f * k).sp, lineHeight = (look.lineHeight * .55f * k).sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.1).sp))
         if (translation != null) androidx.compose.material3.Text(translation, Modifier.fillMaxWidth().padding(top = 4.dp).testTag("translation:$index"), color = under,
-            style = style.copy(fontSize = (look.size * .62f).sp, lineHeight = (look.lineHeight * .62f).sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.1).sp))
+            style = style.copy(fontSize = (look.size * .62f * k).sp, lineHeight = (look.lineHeight * .62f * k).sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.1).sp))
     }
 }
 
-private class WordMask(val start: Long, val end: Long, val slices: List<Slice>, val width: Float)
-private class Slice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
-
-/** The line being sung, lit word by word from the start of each word to its end (the app's KaraokeLine). */
+/**
+ * The line being sung, as the phone sings it (8.3, the shared `KaraokeDraw`): a feathered fill moving at one pace
+ * through each word, the word lifting and growing a little (« Mouvement des mots »), a held note's letters swelling
+ * one after another with a blurred glow behind them. Words that do not cover the line keep the flat fill.
+ */
 @Composable
-private fun WordLine(line: MusicApi.LyricLine, now: Long, style: TextStyle, label: Color) {
+private fun WordLine(line: MusicApi.LyricLine, now: Long, style: TextStyle, ink: LineInk) {
     var layout by remember(line.text, style) { mutableStateOf<TextLayoutResult?>(null) }
     val words = remember(line) { LyricsPresentation.aligned(line) }
-    val lifting = remember(line, words) { !Motion.reduced && DeskLyricsWords.covers(line.text, words.map { it.text }) }
-    val masks = remember(layout, line, words) { layout?.let { measured ->
-        var offset = 0
-        words.map { word ->
-            val start = offset
-            val end = (start + word.text.length).coerceAtMost(line.text.length)
-            offset = end
-            val slices = if (start >= end) emptyList() else (0 until measured.lineCount).mapNotNull { row ->
-                val from = maxOf(start, measured.getLineStart(row)); val to = minOf(end, measured.getLineEnd(row))
-                if (from < to) measured.getPathForRange(from, to).let { Slice(it, it.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl) } else null
-            }
-            WordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
-        }
-    }.orEmpty() }
-    val pending = label.copy(alpha = .40f)
+    val lifting = remember(line, words) { !Motion.reduced && LyricsWords.covers(line.text, words.map { it.text }) }
+    val masks = remember(layout, line, words) { layout?.let { karaokeMasks(it, line.text, words) }.orEmpty() }
+    val pending = ink.label.copy(alpha = .40f)
+    val motion = com.ketvoice.app.theme.LyricsLook.motion()
+    val glowLayer = lifting && !AppSettings.highPerformanceMode.value
+    val glowEffect = remember { LyricBlurEffect() }
     Box(Modifier.fillMaxWidth().semantics { contentDescription = line.text }) {
         androidx.compose.material3.Text(line.text, Modifier.fillMaxWidth(), color = if (lifting) Color.Transparent else pending, style = style, onTextLayout = { layout = it })
-        Canvas(Modifier.matchParentSize()) {
+        if (glowLayer && masks.any { it.letters.isNotEmpty() }) {
+            val holding = heldNow(masks, now)
+            Canvas(Modifier.matchParentSize().graphicsLayer { renderEffect = if (holding) glowEffect.at(LyricsWords.GLOW_RADIUS_DP.dp.toPx()) else null }) {
+                val measured = layout ?: return@Canvas
+                if (holding) drawHeldGlow(measured, masks, now, karaokeInk(ink.sung, null, false, motion))
+            }
+        }
+        Canvas(Modifier.matchParentSize().testTag("word-line")) {
             val measured = layout ?: return@Canvas
-            val liftPx = DeskLyricsWords.LIFT_DP.dp.toPx()
-            masks.forEach { word ->
-                val progress = DeskLyricsWords.progress(now, word.start, word.end)
-                val rise = if (lifting) DeskLyricsWords.lift(progress) * liftPx else 0f
-                val glow = DeskLyricsWords.glow(progress, word.end - word.start)
-                translate(top = -rise) {
-                    if (lifting) word.slices.forEach { s -> clipPath(s.path) { drawText(measured, color = pending) } }
-                    if (progress <= 0f) return@translate
-                    var remaining = word.width * progress
-                    word.slices.forEach { s ->
-                        val fill = remaining.coerceIn(0f, s.bounds.width); remaining -= s.bounds.width
-                        if (fill <= 0f) return@forEach
-                        val left = if (s.rtl) s.bounds.right - fill else s.bounds.left
-                        val right = if (s.rtl) s.bounds.right else s.bounds.left + fill
-                        clipPath(s.path) { clipRect(left, s.bounds.top, right, s.bounds.bottom) {
-                            // Only a held note glows, a little; its size never changes.
-                            drawText(measured, color = label, shadow = if (glow > .01f) Shadow(label.copy(alpha = .42f * glow), blurRadius = 14f * glow) else null)
-                        } }
-                    }
-                }
+            if (lifting) {
+                val k = karaokeInk(ink.sung, pending, shadowGlow = !glowLayer, motion = motion)
+                masks.forEach { drawLiftedWord(measured, it, now, k) }
+            } else {
+                val feather = LyricsWords.FEATHER_DP.dp.toPx()
+                masks.forEach { drawFlatWord(measured, it, now, ink.sung, feather) }
             }
         }
     }

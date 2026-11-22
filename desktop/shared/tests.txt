@@ -53,3 +53,6 @@ automix/MixKeysTest.kt
 # Windows 1.2: Ketmix 8.4 sub-frame beats. KetmixLoopBridgeTest reads the phone's Ketmix panel (ui/player): the desktop
 # covers the bridge in DesktopAutomixTest (planning) and KetmixRenderTest (rendering).
 automix/BeatPrecisionTest.kt
+# Windows 9.0 port: lyrics 8.3 values and the lyrics editor's draft.
+ui/player/LivelyLyricsTest.kt
+data/LyricsDraftTest.kt

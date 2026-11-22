@@ -42,7 +42,8 @@ val destructiveRed: Color @Composable get() = if (LocalKet.current.dark) Color(0
  * cancels; nothing is chosen for the listener, the destructive action needs its own click.
  */
 @Composable
-fun ConfirmDialog(title: String, message: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true) {
+fun ConfirmDialog(title: String, message: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true,
+                  alternative: Pair<String, () -> Unit>? = null) {
     val ket = LocalKet.current
     Popup(alignment = Alignment.Center, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true),
         onKeyEvent = { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.Escape) { onDismiss(); true } else false }) {
@@ -56,6 +57,11 @@ fun ConfirmDialog(title: String, message: String, confirm: String, onConfirm: ()
                 androidx.compose.material3.Text(message, color = ket.secondary, textAlign = TextAlign.Center,
                     style = androidx.compose.material3.LocalTextStyle.current.merge(Ket27Desk.Type.footnote))
                 Spacer(Modifier.height(18.dp))
+                // A second way out (« Ne pas enregistrer »), in red above the two buttons.
+                alternative?.let { (label, action) ->
+                    DialogButton(label, destructiveRed, Modifier.fillMaxWidth().testTag("confirm-alternative")) { action(); onDismiss() }
+                    Spacer(Modifier.height(10.dp))
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DialogButton("Annuler", ket.label, Modifier.weight(1f).testTag("confirm-cancel"), onDismiss)
                     DialogButton(confirm, if (destructive) destructiveRed else ket.accent, Modifier.weight(1f).testTag("confirm-ok")) { onConfirm(); onDismiss() }

@@ -79,7 +79,7 @@ fun NumberedTrackRow(track: Track, list: List<Track>, index: Int, showArtist: Bo
     val menu = LocalMenu.current
     val playing = isCurrent(track)
     Row(
-        modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
+        modifier.fillMaxWidth().height(Ket27Desk.Metrics.trackRow).clip(RoundedCornerShape(Ket27Desk.Radius.row))
             .background(if (hovered) ket.hover else Color.Transparent)
             .hoverable(source).trackInteractions(track, list, index, extraMenu = extraMenu).padding(horizontal = 12.dp).testTag("track:${track.id}"),
         verticalAlignment = Alignment.CenterVertically,
@@ -126,7 +126,7 @@ fun CompactTrackRow(track: Track, list: List<Track>, index: Int, modifier: Modif
     val actions = LocalTrackActions.current
     val playing = isCurrent(track)
     Row(
-        modifier.height(56.dp).clip(RoundedCornerShape(8.dp)).background(if (hovered) ket.hover else Color.Transparent)
+        modifier.height(Ket27Desk.Metrics.compactRow).clip(RoundedCornerShape(Ket27Desk.Radius.row)).background(if (hovered) ket.hover else Color.Transparent)
             .hoverable(source).trackInteractions(track, list, index).padding(horizontal = 8.dp).testTag("track:${track.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {

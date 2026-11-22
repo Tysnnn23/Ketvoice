@@ -117,6 +117,12 @@ fun KetvoiceTheme(
     }
 }
 
+/** The app's theme for [side], with the guard applied ([ThemeGuard.guarded]); [dark] is the appearance asked for. */
+fun ThemeGuard.theme(side: ThemeSide, dark: Boolean, accent: Color): KetTheme = guarded(side, dark, accent).let {
+    KetTheme(isDark = it.isDark, background = it.background, onBackground = it.text, secondary = it.secondary,
+        card = it.surface, hairline = it.hairline, accent = it.accent)
+}
+
 /** Ket 27's own colours, or the listener's (« Thèmes complets ») with the contrast guard of [ThemeGuard]. */
 internal fun listenerTheme(custom: ThemeColors?, dark: Boolean, accent: Color): KetTheme =
     custom?.let { ThemeGuard.theme(it.side(dark), dark, accent) } ?: Ket27.theme(dark, accent)

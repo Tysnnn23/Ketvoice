@@ -159,14 +159,18 @@ object ThemeGuard {
         return Report(worst(raw), worst(secondary), worst(rawAccent), text != raw, readable != rawAccent)
     }
 
-    /** The app's theme for [side], with the guard applied; [dark] is the appearance asked for. */
-    fun theme(side: ThemeSide, dark: Boolean, accent: Color): KetTheme {
+    /** The colours a theme draws for [side], guarded; also what the desktop theme reads. */
+    data class Guarded(val isDark: Boolean, val background: Color, val text: Color, val secondary: Color,
+                       val surface: Color, val hairline: Color, val accent: Color)
+
+    /** [side] with the guard applied; [dark] is the appearance asked for. The app's theme is `ThemeGuard.theme`. */
+    fun guarded(side: ThemeSide, dark: Boolean, accent: Color): Guarded {
         val bg = c(side.background); val surface = c(side.surface)
         val text = readableText(c(side.text), bg, surface)
         // A « dark » side the listener made light is drawn as light (glass, bars and icons follow the page).
         val isDark = if (dark) bg.luminance() < .4f else bg.luminance() < .18f
-        return KetTheme(isDark = isDark, background = bg, onBackground = text, secondary = secondary(text, bg, surface),
-            card = surface, hairline = text.copy(alpha = if (isDark) .17f else .12f),
+        return Guarded(isDark = isDark, background = bg, text = text, secondary = secondary(text, bg, surface),
+            surface = surface, hairline = text.copy(alpha = if (isDark) .17f else .12f),
             accent = CoverLegibility.readableAccent(accent.copy(alpha = 1f), bg, surface))
     }
 }
