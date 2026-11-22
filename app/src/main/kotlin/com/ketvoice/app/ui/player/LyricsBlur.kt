@@ -23,11 +23,14 @@ internal object LyricsBlur {
      * The radius, in dp, line [distance] lines away from the sung one is drawn with. Nothing for the sung line,
      * for lyrics without times, while the listener scrolls them by hand (or picks lines for a Moment), with the
      * setting off, reduced motion or the performance mode (which the automatic economy mode also turns on).
+     * [level] (« Paroles à ton goût », 0..1) scales the distances; 0 is no blur.
      */
     fun radiusDp(distance: Int, enabled: Boolean, timed: Boolean, browsing: Boolean,
-                 reduced: Boolean, performance: Boolean, supported: Boolean): Float =
-        if (!enabled || !timed || browsing || reduced || performance || !supported || distance <= 0) 0f
-        else byDistance(distance)
+                 reduced: Boolean, performance: Boolean, supported: Boolean, level: Float = 1f): Float {
+        val k = if (level.isFinite()) level.coerceIn(0f, 1f) else 1f
+        return if (!enabled || k <= 0f || !timed || browsing || reduced || performance || !supported || distance <= 0) 0f
+        else byDistance(distance) * k
+    }
 
     /** Pixels rounded to a quarter, so that a settled radius always gives the same effect. */
     fun quantizedPx(px: Float): Float = if (!px.isFinite() || px <= 0f) 0f else kotlin.math.round(px * 4f) / 4f

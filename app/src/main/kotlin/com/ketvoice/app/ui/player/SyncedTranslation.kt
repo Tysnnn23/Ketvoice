@@ -54,7 +54,7 @@ internal fun SyncedTranslation(
     /** 8.0: under a line of the other singer, on the right as that line is. */
     end: Boolean = false
 ) {
-    val align = if (end) androidx.compose.ui.text.style.TextAlign.End else null
+    val align = com.ketvoice.app.theme.LyricsLook.align(end)
     val style = Modifier.fillMaxWidth().padding(top = 7.dp)
 
     // Position lissée : en lecture, elle suit vsync (fluide) ; en pause ou

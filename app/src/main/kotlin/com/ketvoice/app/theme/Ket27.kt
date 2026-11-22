@@ -2,13 +2,10 @@ package com.ketvoice.app.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ketvoice.app.R
 
 /**
  * Ket 27: Ketvoice's interface (since 6.0.0 the only one), in the manner of iOS 27. The numbers
@@ -18,12 +15,11 @@ import com.ketvoice.app.R
  * typeface closest to it.
  */
 object Ket27 {
-    @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-    val font: FontFamily by lazy {
-        FontFamily(listOf(100, 200, 300, 400, 500, 600, 700, 800, 900).map { weight ->
-            Font(R.font.inter_variable, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
-        })
-    }
+    /**
+     * The interface's typeface: Inter, or the one the listener picked in « Personnalisation » ([AppFonts]). Read in
+     * composition, a change of font redraws the app at once.
+     */
+    val font: FontFamily get() = AppFonts.family(com.ketvoice.app.data.AppSettings.appFont.value)
 
     /** The system colours of iOS 27, light and dark. */
     object Colors {
@@ -82,27 +78,31 @@ object Ket27 {
 
     /** 7.0: one ladder of corner radii (they were 10 to 32 dp, chosen screen by screen). */
     object Radius {
+        // « Personnalisation » (2026-11-22): the whole ladder follows the listener's corner scale (100 %: these values).
         /** The artwork of a row. */
-        val thumb = 10.dp
+        val thumb get() = AppShape.radius(10.dp)
         /** A cover in a shelf. */
-        val artwork = 14.dp
+        val artwork get() = AppShape.radius(14.dp)
         /** A large card (a mix, « Reprendre »). */
-        val card = 24.dp
+        val card get() = AppShape.radius(24.dp)
         /** A grouped list. */
-        val group = 26.dp
+        val group get() = AppShape.radius(26.dp)
         /** A sheet, an alert. */
-        val sheet = 34.dp
+        val sheet get() = AppShape.radius(34.dp)
     }
 
     /** Lists, bars and controls. */
     object Metrics {
         val margin = 16.dp
-        val groupRadius = Radius.group
-        val row = 52.dp
+        val groupRadius get() = Radius.group
+        /** 52 dp; 44 compact, 60 airy ([AppShape.row]). */
+        val row get() = AppShape.row()
+        /** Above and under a row's content: 10 dp; 6 compact, 14 airy. */
+        val rowPadding get() = AppShape.rowPadding()
         val tile = 30.dp
-        val tileRadius = 7.dp
+        val tileRadius get() = AppShape.radius(7.dp)
         val tabBar = 62.dp
-        val alertRadius = Radius.sheet
+        val alertRadius get() = Radius.sheet
         val switchWidth = 63.dp
         val switchHeight = 28.dp
     }

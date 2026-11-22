@@ -195,6 +195,7 @@ object SettingsStore {
             if (p.contains("appIconVariant")) runCatching { p.getInt("appIconVariant", -1) }.getOrDefault(-1) else null,
             p.getBoolean(com.ketvoice.app.util.LauncherIcons.MIGRATED_KEY, false))
         s.seasonTheme.value = runCatching { p.getString("seasonTheme", "") }.getOrNull().orEmpty()
+        loadPersonalization(p)
         // A season is over: its theme goes back to the listener's look, silently.
         if (Seasons.expire()) p.edit()
             .putString("seasonTheme", s.seasonTheme.value)
@@ -337,6 +338,38 @@ object SettingsStore {
             .putBoolean(com.ketvoice.app.util.LauncherIcons.MIGRATED_KEY, true)
             .putString("seasonTheme", s.seasonTheme.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
+            .also(::savePersonalization)
             .apply()
+    }
+
+    /**
+     * « Personnalisation » (2026-11-22): theme colours, font, sizes, corners, density and the lyrics' look. Its own
+     * methods keep load/save small for ART's verifier; a wrong type or a value no version writes reads as the default.
+     */
+    private fun loadPersonalization(p: SharedPreferences) {
+        val s = AppSettings
+        fun int(key: String, default: Int, range: IntRange) = runCatching { p.getInt(key, default) }.getOrDefault(default).let { if (it in range) it else default }
+        fun text(key: String, default: String) = runCatching { p.getString(key, default) }.getOrNull() ?: default
+        s.themeColors.value = text("themeColors", "").takeIf(com.ketvoice.app.theme.ThemeCodec::valid) ?: ""
+        s.appFont.value = text("appFont", com.ketvoice.app.theme.AppFonts.INTER).takeIf(com.ketvoice.app.theme.AppFonts::valid) ?: com.ketvoice.app.theme.AppFonts.INTER
+        s.textScale.value = int("textScale", 100, com.ketvoice.app.theme.AppShape.TEXT_MIN..com.ketvoice.app.theme.AppShape.TEXT_MAX)
+        s.cornerScale.value = int("cornerScale", 100, com.ketvoice.app.theme.AppShape.CORNER_MIN..com.ketvoice.app.theme.AppShape.CORNER_MAX)
+        s.listDensity.value = int("listDensity", 1, 0..2)
+        s.lyricsFont.value = text("lyricsFont", "").takeIf { it.isEmpty() || com.ketvoice.app.theme.AppFonts.valid(it) } ?: ""
+        s.lyricsScale.value = int("lyricsScale", 100, com.ketvoice.app.theme.LyricsLook.SIZE_MIN..com.ketvoice.app.theme.LyricsLook.SIZE_MAX)
+        s.lyricsAlign.value = int("lyricsAlign", 0, 0..1)
+        s.lyricsSung.value = int("lyricsSung", 0, 0..3)
+        s.lyricsSungArgb.value = runCatching { p.getLong("lyricsSungArgb", 0xFFFFFFFFL) }.getOrDefault(0xFFFFFFFFL).takeIf { it in 0L..0xFFFFFFFFL } ?: 0xFFFFFFFFL
+        s.lyricsBlurLevel.value = int("lyricsBlurLevel", 100, 0..100)
+        s.lyricsMotion.value = int("lyricsMotion", 100, 0..100)
+    }
+
+    private fun savePersonalization(e: SharedPreferences.Editor) {
+        val s = AppSettings
+        e.putString("themeColors", s.themeColors.value).putString("appFont", s.appFont.value)
+            .putInt("textScale", s.textScale.value).putInt("cornerScale", s.cornerScale.value).putInt("listDensity", s.listDensity.value)
+            .putString("lyricsFont", s.lyricsFont.value).putInt("lyricsScale", s.lyricsScale.value).putInt("lyricsAlign", s.lyricsAlign.value)
+            .putInt("lyricsSung", s.lyricsSung.value).putLong("lyricsSungArgb", s.lyricsSungArgb.value)
+            .putInt("lyricsBlurLevel", s.lyricsBlurLevel.value).putInt("lyricsMotion", s.lyricsMotion.value)
     }
 }

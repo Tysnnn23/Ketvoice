@@ -24,11 +24,20 @@ internal object SettingsSearch {
     private fun c(title: String, sub: String = "") = SettingEntry(title, sub, SettingsCategory.Canvas)
     private fun d(title: String, sub: String = "") = SettingEntry(title, sub, SettingsCategory.Downloads)
     private fun st(title: String, sub: String = "") = SettingEntry(title, sub, SettingsCategory.Storage)
+    private fun pz(title: String, sub: String = "") = SettingEntry(title, sub, SettingsCategory.Personalize)
 
     /** The rows, in the order of their pages. */
-    val entries: List<SettingEntry> by lazy { fixed + com.ketvoice.app.data.DesignChoices.all.map {
+    val entries: List<SettingEntry> by lazy { fixed + personalize + com.ketvoice.app.data.DesignChoices.all.map {
         SettingEntry(it.title, "Revenir à la présentation précédente en désactivant cette option", SettingsCategory.Design)
     } + com.ketvoice.app.widget.WidgetPinning.widgets.map { SettingEntry(it.name, it.description, SettingsCategory.Appearance, notQuest) } }
+
+    /** The rows of « Personnalisation » (2026-11-22). */
+    private val personalize: List<SettingEntry> get() = listOf(
+        pz("Partager le thème", "Un code court à envoyer ; il commence par KT1."),
+        pz("Importer un thème", "Collez un code reçu d'un ami"),
+        pz("Police"), pz("Taille du texte"), pz("Arrondis"), pz("Densité des listes"), pz("Police des paroles"),
+        pz("Taille du texte des paroles"), pz("Alignement"), pz("Couleur des mots chantés"),
+        pz("Intensité du flou"), pz("Mouvement des mots"))
 
     private val fixed: List<SettingEntry> get() = listOf(
         a("Compte YouTube Music", "Connexion web pour l'historique et l'accueil personnel"),
@@ -45,6 +54,7 @@ internal object SettingsSearch {
         ap("Photos d'artiste HD", "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée."),
         ap("Signatures et logos d'artistes", "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé."),
         ap("Fluidité 120 Hz", "Demande le mode 120 Hz natif, sans changer la résolution. Consomme davantage de batterie."),
+        ap("Personnalisation", "Couleurs, police, arrondis et paroles"),
         ap("DESIGN KETVOICE", "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique."),
         ap("Canvas sur les pages d'album", "Affiche la vidéo de l'album à la place de la pochette, en plein cadre. Indépendant du Canvas du lecteur."),
         ap("En-tête des albums et playlists", "Sans Canvas, la pochette centrée s'affiche"),

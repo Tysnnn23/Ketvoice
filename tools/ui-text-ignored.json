@@ -164,5 +164,12 @@
  "GTA VI": "name of the GTA VI launcher icon (fan art), the same in every language",
  "enhance-{0}": "test tag of an onboarding enhancement row, never shown",
  "enhance-action-{0}": "test tag of an onboarding enhancement button, never shown",
- "enhance-progress-{0}": "test tag of an onboarding enhancement progress bar, never shown"
+ "enhance-progress-{0}": "test tag of an onboarding enhancement progress bar, never shown",
+ "AA": "WCAG conformance level, the same in every language",
+ "AAA": "WCAG conformance level, the same in every language",
+ "Aa": "type specimen drawn in each font, not a word",
+ "Ket 27": "name of the design language, never translated",
+ "personalize-colour-{0}": "test tag of a Personalisation row",
+ "preset-{0}": "test tag of a theme preset",
+ "{0}-value": "test tag of a slider value"
 }

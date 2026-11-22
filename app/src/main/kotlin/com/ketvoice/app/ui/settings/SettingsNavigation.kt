@@ -12,7 +12,9 @@ internal enum class SettingsCategory(val title: String, val groups: Set<String>)
     Downloads("Téléchargements", setOf("TÉLÉCHARGEMENTS", "HORS LIGNE INTELLIGENT")),
     LocalMusic("Musique locale", setOf("MUSIQUE LOCALE")),
     Storage("Stockage", setOf("STOCKAGE")),
-    About("À propos", setOf("À PROPOS"));
+    About("À propos", setOf("À PROPOS")),
+    /** « Personnalisation » (2026-11-22): its own page ([PersonalizePage]), last so the other pages keep their tiles' colours. */
+    Personalize("Personnalisation", emptySet());
 
     companion object {
         fun fromKey(key: String?): SettingsCategory? = entries.firstOrNull { it.name == key }

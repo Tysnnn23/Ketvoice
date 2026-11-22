@@ -57,7 +57,7 @@ internal fun RomanizedLine(text: String, lineColor: Color, fontScale: Float, end
         lineHeight = (22f * fontScale).sp,
         letterSpacing = (-.1).sp,
         fontWeight = FontWeight.SemiBold,
-        textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else null,
+        textAlign = com.ketvoice.app.theme.LyricsLook.align(end), fontFamily = com.ketvoice.app.theme.LyricsLook.font(),
         modifier = Modifier.fillMaxWidth().padding(top = 3.dp)
     )
 }
