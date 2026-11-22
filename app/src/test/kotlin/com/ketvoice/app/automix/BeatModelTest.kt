@@ -132,8 +132,8 @@ class BeatModelTest {
 
     // ----------------------------------------------------------------- the whole path with a fake network
 
-    private class Fake(val frames: Int) : BeatRunner {
-        private val starts = BeatPost.starts(frames)
+    private class Fake(piece: Int) : BeatRunner {
+        private val starts = BeatPost.starts(piece)
         private var call = 0
         override fun run(spect: FloatArray): Pair<FloatArray, FloatArray> {
             val s = starts[call++]

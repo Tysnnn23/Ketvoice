@@ -202,7 +202,7 @@ class KetmixEditorTest {
         val fresh = MapPointsBackend()
         MixPointStore.use(fresh)
         MixPointStore.setExit("song-a", 200_000L, 150_000L)
-        MixPointStore.mergeBackup(exported + mapOf("t:nothex" to "1,2,3", "p:" + "0".repeat(64) to "9,99"))
+        MixPointStore.mergeBackup(exported + mapOf("t:nothex" to "1,2,3", "p:" + "0".repeat(64) to "10,99"))
         assertEquals(150_000L, MixPointStore.exitOf("song-a", 200_000L))
         assertEquals(8_000L, MixPointStore.entryOf("song-b", 180_000L))
         assertEquals(MixStyle.Echo, MixPointStore.pair("song-a", "song-b")?.style)
@@ -222,7 +222,8 @@ class KetmixEditorTest {
         assertNull(MixPointStore.decodeTitle("-1,-1,200000"))
         assertNull(MixPointStore.decodeTitle("1,2"))
         assertNull(MixPointStore.decodeTitle("-5,2,3"))
-        assertNull(MixPointStore.decodePair("9,1000"))
+        // 9 is « Pont en boucle » (8.4); the first ordinal past the last style is refused.
+        assertNull(MixPointStore.decodePair("10,1000"))
         assertNull(MixPointStore.decodePair("-1,-1"))
         assertFalse(MixPointStore.validEntry("x:" + "a".repeat(64), "1,2,3"))
     }

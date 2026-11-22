@@ -799,12 +799,18 @@ internal object DeckSync {
      * While the title is audible only clear errors are corrected, and more gently.
      */
     fun speed(rate: Float, errorMs: Double, audible: Boolean): Float {
-        val deadBand = if (audible) 12.0 else 4.0
-        if (abs(errorMs) < deadBand) return rate
-        val strength = if (audible) .00035 else .0008
-        val correction = (errorMs * strength).coerceIn(-.04, .04)
+        val correction = correction(errorMs, audible)
+        if (correction == 0.0) return rate
         val speed = rate * (1.0 - correction)
         return (Math.round(speed / STEP) * STEP).toFloat()
+    }
+
+    /** The share by which the incoming deck is slowed (+) or sped up (−) to catch up [errorMs]; 0 within the dead band. */
+    fun correction(errorMs: Double, audible: Boolean): Double {
+        val deadBand = if (audible) 12.0 else 4.0
+        if (abs(errorMs) < deadBand) return 0.0
+        val strength = if (audible) .00035 else .0008
+        return (errorMs * strength).coerceIn(-.04, .04)
     }
 
     /**

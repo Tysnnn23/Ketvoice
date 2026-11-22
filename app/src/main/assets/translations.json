@@ -2608,7 +2608,10 @@
   "Choisissez la matière et les animations du verre.": "Choose the glass material and animations.",
   "Cristal": "Crystal",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Clear, light glass, a springy tab pill, menus that spring from their button",
-  "Le verre habituel de Ketvoice, par défaut": "Ketvoice's usual glass, the default"
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice's usual glass, the default",
+  "Pont en boucle": "Loop bridge",
+  "pont en boucle": "loop bridge",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "The title turns on four bars without singing while the tempo glides to the next one's, even when it is far off"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5219,7 +5222,10 @@
   "Choisissez la matière et les animations du verre.": "ग्लास की सामग्री और एनिमेशन चुनें।",
   "Cristal": "क्रिस्टल",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "साफ़ और हल्का ग्लास, लचीली टैब पिल, बटन से उभरते मेनू",
-  "Le verre habituel de Ketvoice, par défaut": "Ketvoice का सामान्य ग्लास, डिफ़ॉल्ट"
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice का सामान्य ग्लास, डिफ़ॉल्ट",
+  "Pont en boucle": "लूप ब्रिज",
+  "pont en boucle": "लूप ब्रिज",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "शीर्षक बिना गायन वाले चार बार पर घूमता रहता है, जबकि टेम्पो अगले शीर्षक के टेम्पो तक धीरे-धीरे खिसकता है, चाहे वह कितना भी दूर हो"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7830,7 +7836,10 @@
   "Choisissez la matière et les animations du verre.": "ガラスの質感とアニメーションを選びます。",
   "Cristal": "クリスタル",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "澄んだ軽いガラス、弾むタブのピル、ボタンから飛び出すメニュー",
-  "Le verre habituel de Ketvoice, par défaut": "Ketvoice のいつものガラス(標準)"
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice のいつものガラス(標準)",
+  "Pont en boucle": "ループブリッジ",
+  "pont en boucle": "ループブリッジ",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "テンポが次の曲のテンポへなめらかに移る間、曲は歌のない4小節をループします。テンポが大きく離れていても使えます"
  },
  "zh": {
   "Reverb": "混响",
@@ -10441,7 +10450,10 @@
   "Choisissez la matière et les animations du verre.": "选择玻璃的材质和动画。",
   "Cristal": "水晶",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "清透轻盈的玻璃、弹性的标签药丸、从按钮弹出的菜单",
-  "Le verre habituel de Ketvoice, par défaut": "Ketvoice 的常规玻璃(默认)"
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice 的常规玻璃(默认)",
+  "Pont en boucle": "循环桥接",
+  "pont en boucle": "循环桥接",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "在节奏逐渐滑向下一首曲目的节奏时,当前曲目循环播放四个没有人声的小节,即使两者节奏相差很远"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13052,7 +13064,10 @@
   "Choisissez la matière et les animations du verre.": "Выберите материал и анимации стекла.",
   "Cristal": "Кристалл",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Прозрачное лёгкое стекло, упругая капсула вкладок, меню, вырастающие из кнопки",
-  "Le verre habituel de Ketvoice, par défaut": "Привычное стекло Ketvoice, по умолчанию"
+  "Le verre habituel de Ketvoice, par défaut": "Привычное стекло Ketvoice, по умолчанию",
+  "Pont en boucle": "Петля-мост",
+  "pont en boucle": "петля-мост",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Трек повторяет четыре такта без вокала, пока темп плавно переходит к темпу следующего, даже очень далёкому"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15663,7 +15678,10 @@
   "Choisissez la matière et les animations du verre.": "Scegli il materiale e le animazioni del vetro.",
   "Cristal": "Cristallo",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Vetro limpido e leggero, pillola elastica, menu che scaturiscono dal pulsante",
-  "Le verre habituel de Ketvoice, par défaut": "Il vetro abituale di Ketvoice, predefinito"
+  "Le verre habituel de Ketvoice, par défaut": "Il vetro abituale di Ketvoice, predefinito",
+  "Pont en boucle": "Ponte in loop",
+  "pont en boucle": "ponte in loop",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Il brano gira su quattro battute senza canto mentre il tempo scivola fino a quello del successivo, anche se molto lontano"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18274,7 +18292,10 @@
   "Choisissez la matière et les animations du verre.": "Elige el material y las animaciones del cristal.",
   "Cristal": "Cristal",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Cristal limpio y ligero, píldora elástica, menús que surgen del botón",
-  "Le verre habituel de Ketvoice, par défaut": "El cristal habitual de Ketvoice, predeterminado"
+  "Le verre habituel de Ketvoice, par défaut": "El cristal habitual de Ketvoice, predeterminado",
+  "Pont en boucle": "Puente en bucle",
+  "pont en boucle": "puente en bucle",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "El tema gira sobre cuatro compases sin canto mientras el tempo se desliza hasta el del siguiente, aunque esté muy lejos"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20885,7 +20906,10 @@
   "Choisissez la matière et les animations du verre.": "Wähle das Glasmaterial und die Animationen.",
   "Cristal": "Kristall",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Klares, leichtes Glas, federnde Tab-Pille, Menüs, die aus ihrer Taste wachsen",
-  "Le verre habituel de Ketvoice, par défaut": "Das gewohnte Glas von Ketvoice, Standard"
+  "Le verre habituel de Ketvoice, par défaut": "Das gewohnte Glas von Ketvoice, Standard",
+  "Pont en boucle": "Loop-Brücke",
+  "pont en boucle": "Loop-Brücke",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Der Titel kreist über vier Takte ohne Gesang, während das Tempo zu dem des nächsten gleitet, auch wenn es weit entfernt ist"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23496,7 +23520,10 @@
   "Choisissez la matière et les animations du verre.": "Escolha o material e as animações do vidro.",
   "Cristal": "Cristal",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Vidro límpido e leve, pílula elástica, menus que surgem do botão",
-  "Le verre habituel de Ketvoice, par défaut": "O vidro habitual do Ketvoice, predefinido"
+  "Le verre habituel de Ketvoice, par défaut": "O vidro habitual do Ketvoice, predefinido",
+  "Pont en boucle": "Ponte em loop",
+  "pont en boucle": "ponte em loop",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "A faixa gira em quatro compassos sem canto enquanto o tempo desliza até o da seguinte, mesmo que esteja muito distante"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26107,6 +26134,9 @@
   "Choisissez la matière et les animations du verre.": "유리의 질감과 애니메이션을 선택하세요.",
   "Cristal": "크리스털",
   "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "맑고 가벼운 유리, 탄력 있는 탭 알약, 버튼에서 솟아나는 메뉴",
-  "Le verre habituel de Ketvoice, par défaut": "Ketvoice의 기본 유리, 기본값"
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice의 기본 유리, 기본값",
+  "Pont en boucle": "루프 브리지",
+  "pont en boucle": "루프 브리지",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "템포가 다음 곡의 템포로 천천히 옮겨 가는 동안 곡은 노래 없는 네 마디를 반복합니다. 템포 차이가 커도 됩니다"
  }
 }

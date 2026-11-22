@@ -105,7 +105,7 @@ object PersonalBackup {
     // glassStyle: up to GlassStyles.LIQUID_27 (3) on Android.
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..3, "glassLook" to 0..1, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2,
         "albumHeader" to 0..2, "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..8, "ketmixStemsQuality" to 0..2,
+        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2,
         "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50,
         "downloadQualityMode" to 0..2)
     private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality", "mobileQuality", "equalizerGains", "language")

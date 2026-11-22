@@ -181,8 +181,9 @@ internal object Automix {
             } else {
                 host.control(main)?.reset()
                 repeatBefore?.let { mode -> runCatching { main.repeatMode = mode } }
-                // The outgoing title's speed is never touched by a mix; only its level is given back.
+                // The outgoing title's speed is only touched by a « pont en boucle » (8.4): given up half-way, it glides back too.
                 if (started) runCatching { main.volume = baseVolume }
+                if (plan?.glide != null && runCatching { main.playbackParameters.speed }.getOrDefault(1f) != 1f) returnToTempo(main)
                 if (incoming != null) { host.control(incoming)?.reset(); host.release(incoming) }
             }
         }
@@ -682,6 +683,8 @@ internal object Automix {
         var swapped = false
         var worstSync = 0.0
         var speedChanges = 0
+        // 8.4 « Pont en boucle »: both decks' speeds follow one gliding master tempo (see LoopBridge); nothing else may move them meanwhile.
+        val glider = plan.glide?.let { tempoJob?.cancel(); GlideDriver(plan, it, main.playbackParameters.speed, base) }
         while (true) {
             delay(40)
             if (host !== h || s.closed) return
@@ -735,7 +738,8 @@ internal object Automix {
                     continue
                 }
                 if (heard && plan.kind == MixKind.Beatmatch) worstSync = max(worstSync, abs(smoothed))
-                if (speed != base || !settled) {
+                if (glider != null) { if (glide(glider, main, deck, outPosition, smoothed, settled)) speedChanges++ }
+                else if (speed != base || !settled) {
                     // Small corrections while it cannot be heard yet; back on its own speed early enough that the change,
                     // which reaches the sound only once the audio buffer has played out, lands before it is heard.
                     val now = SystemClock.elapsedRealtime()
@@ -769,6 +773,14 @@ internal object Automix {
             delay(250)
             if (h.main !== deck || Player.playbackEpoch != epochNow || s.closed) return
         }
+    }
+
+    /** One tick of a « pont en boucle »'s glide (8.4, kept out of [mix] for Android's register limit, see 6.1.2): true when the speeds changed. */
+    private fun glide(driver: GlideDriver, main: ExoPlayer, deck: ExoPlayer, outPosition: Long, errorMs: Double, settled: Boolean): Boolean {
+        if (!driver.step(SystemClock.elapsedRealtime(), outPosition, errorMs, audible = settled)) return false
+        runCatching { main.playbackParameters = PlaybackParameters(driver.outSpeed) }
+        runCatching { deck.playbackParameters = PlaybackParameters(driver.inSpeed) }
+        return true
     }
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
@@ -1179,13 +1191,14 @@ internal object Automix {
     /** The outgoing title's voice: its last sung part from lyrics and separation (the later one), its lines from either. */
     private fun voiceOut(facts: MixFacts, lyrics: List<MusicApi.LyricLine>, separated: Pair<Long?, List<LongRange>?>?): MixFacts {
         val lines = LyricTimes.lines(lyrics, facts.durationMs)
-        return facts.copy(vocalEndMs = VoiceFacts.end(lines.lastOrNull()?.last, separated?.first), sungLines = LyricTimes.merge(lines, separated?.second))
+        return facts.copy(vocalEndMs = VoiceFacts.end(lines.lastOrNull()?.last, separated?.first), sungLines = LyricTimes.merge(lines, separated?.second),
+            voiceLines = separated?.second)
     }
 
     /** The incoming title's voice: its first sung moment from lyrics and separation (the earlier one), its lines from either. */
     private fun voiceIn(facts: MixFacts, lines: List<LongRange>?, separated: Pair<Long?, List<LongRange>?>?): MixFacts =
         facts.copy(vocalStartMs = VoiceFacts.start(lines?.firstOrNull()?.first, separated?.first),
-            sungLines = LyricTimes.merge(lines.orEmpty(), separated?.second))
+            sungLines = LyricTimes.merge(lines.orEmpty(), separated?.second), voiceLines = separated?.second)
 }
 
 /**

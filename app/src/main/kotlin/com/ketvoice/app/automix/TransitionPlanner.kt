@@ -48,7 +48,12 @@ internal data class MixFacts(
      * Where each line is sung in the part of the title that is mixed (6.9, « fondu sur les paroles »), from its
      * synchronised lyrics or else its separated voice; empty when unknown. See [LyricTimes].
      */
-    val sungLines: List<LongRange> = emptyList()
+    val sungLines: List<LongRange> = emptyList(),
+    /**
+     * 8.4: where its separated voice sings in that part ([com.ketvoice.app.stems.VoiceActivity.passages]) beside its
+     * lyrics; null when it was not separated. A « pont en boucle » ([LoopBridge]) reads both.
+     */
+    val voiceLines: List<LongRange>? = null
 )
 
 internal data class MixContext(
@@ -80,8 +85,11 @@ internal data class MixContext(
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
-/** Stored by ordinal (settings, pair choices): new styles are appended, never inserted. Cut, Drop and Voices: 7.6, see [StyleCuts]. */
-internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade, Rise, Cut, Drop, Voices;
+/**
+ * Stored by ordinal (settings, pair choices): new styles are appended, never inserted. Cut, Drop and Voices: 7.6, see
+ * [StyleCuts]; Bridge (« Pont en boucle »): 8.4, see [LoopBridge].
+ */
+internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade, Rise, Cut, Drop, Voices, Bridge;
     companion object { fun of(setting: Int): MixStyle = values().getOrElse(setting) { Auto } }
 }
 
@@ -198,7 +206,9 @@ internal data class MixPlan(
     /** 7.6: the listener's volume keyframes over the blend (voice, instruments, whole title of each), see [MixKeys]. */
     val keys: List<LevelKey>? = null,
     /** 7.6: a cut on the beat (« Coupe », « Sur le drop »): a [MixKind.Rise] without its build, see [StyleCuts]. */
-    val cut: Boolean = false
+    val cut: Boolean = false,
+    /** 8.4 « Pont en boucle »: both decks' speed glides over the blend, see [LoopBridge]; null = speeds held. */
+    val glide: TempoGlide? = null
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -278,6 +288,9 @@ internal object TransitionPlanner {
         if (settings.style == MixStyle.Fade) return automatic(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto), listener)
         // 7.6 « Relais des voix »: what « Calé sur le tempo » would play, the voices handed over.
         if (settings.style == MixStyle.Voices) return StyleCuts.handoff(automatic(out, incoming, context, settings.copy(style = MixStyle.Tempo), listener), incoming)
+        // 8.4 « Pont en boucle »: played whenever this pair has the bars for it, else what « Calé sur le tempo » would play.
+        if (settings.style == MixStyle.Bridge) return bridge(a, b, out, incoming, context, settings, gain, ::measured)
+            ?: automatic(out, incoming, context, settings.copy(style = MixStyle.Tempo), listener)
         // 7.6 « Coupe » / « Sur le drop »: a cut on a phrase; a last note at full level is still only cut by the DJ setting.
         fun cutOn(drop: Boolean) = StyleCuts.plan(a, b, incoming, settings, end, start, sungUntil, gain, variant, drop)?.let(::measured)?.takeIf { it.cut }
         if (StyleCuts.cuts(settings.style) && beats && !context.loop && !(a.hardEnding && !a.fadeOut && !settings.cutsFullEndings))
@@ -307,7 +320,9 @@ internal object TransitionPlanner {
                 beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant,
                     BlendFit.counts(settings, abs(context.speed * rate - 1f), clash, context.loop, BlendFit.levelGapDb(a, b)))
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
-            }
+            } else if (settings.style == MixStyle.Auto && LoopBridge.wanted(context.speed, rate, settings))
+                // 8.4: too far apart for a blend in time: a « pont en boucle » when both titles have the bars for it.
+                bridge(a, b, out, incoming, context, settings, gain, ::measured)?.let { return it }
         }
         // 2. A last note at full level is never covered: the next title starts right after it, on the beat
         // when there is one, and (unless discreet) the last note rings on in an echo over that start.
@@ -364,6 +379,13 @@ internal object TransitionPlanner {
         val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
+    }
+
+    /** 8.4 « Pont en boucle » ([LoopBridge]) for this pair, as Ketmix may play it; null when it cannot. */
+    private fun bridge(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings,
+                       gain: Float, measured: (MixPlan) -> MixPlan): MixPlan? {
+        if (!context.effects || !context.beats || context.skipSilence || context.loop || context.loopedLast) return null
+        return LoopBridge.plan(a, b, out, incoming, context.speed, settings, gain)?.let(measured)?.takeIf { it.mixes }
     }
 
     /** 3. of [automatic]: a build into the next phrase or an echo, taking turns; null when neither fits this pair. */
@@ -575,7 +597,8 @@ internal object TransitionPlanner {
             !context.effects -> if (auto.kind == MixKind.Trim && userOverlap == null) MixKind.Trim else MixKind.Crossfade
             settings.style == MixStyle.Fade -> MixKind.Crossfade
             settings.style == MixStyle.Filters -> MixKind.Filter
-            settings.style == MixStyle.Tempo -> if (inTime) MixKind.Beatmatch else blend
+            // A bridge is tied to its own loop and entry: once the listener moves a point it is played as a blend in time.
+            settings.style == MixStyle.Tempo || settings.style == MixStyle.Bridge -> if (inTime) MixKind.Beatmatch else blend
             settings.style == MixStyle.Echo -> if (beats && a?.hasBeat == true) MixKind.Echo else blend
             settings.style == MixStyle.Rise -> if (beats && a?.hasBeat == true && b?.hasBeat == true) MixKind.Rise else blend
             settings.style == MixStyle.Voices -> if (inTime) MixKind.Beatmatch else blend
@@ -690,7 +713,7 @@ internal object MixWords {
     }
 
     private fun kindLabel(plan: MixPlan): String = when (plan.kind) {
-        MixKind.Beatmatch -> if (plan.loopUs > 0L) "calé sur une boucle" else "calé sur le tempo"
+        MixKind.Beatmatch -> if (plan.glide != null) "pont en boucle" else if (plan.loopUs > 0L) "calé sur une boucle" else "calé sur le tempo"
         MixKind.Echo -> "sortie en écho"
         MixKind.Filter -> "croisement de filtres"
         MixKind.Wash -> "dissolution"

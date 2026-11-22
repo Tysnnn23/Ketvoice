@@ -7,6 +7,7 @@ automix/BeatSpectrogram.kt
 automix/BlendFit.kt
 automix/CutBudget.kt
 automix/LoopFx.kt
+automix/LoopBridge.kt
 automix/MixShape.kt
 automix/MixKeys.kt
 automix/MixVariety.kt

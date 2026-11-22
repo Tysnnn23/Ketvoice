@@ -108,6 +108,6 @@ class KetmixRenderQualityTest {
         assertTrue("voices handed over: $voices", voices.stems && voices.kind == MixKind.Beatmatch && voices.voiceFromMs > voices.inMs)
         assertEquals("relais des voix", MixWords.label(voices))
         assertEquals("coupe sur le temps", MixWords.label(cut))
-        assertEquals(MixStyle.Voices, MixStyle.of(8)); assertEquals(MixStyle.Auto, MixStyle.of(9))
+        assertEquals(MixStyle.Voices, MixStyle.of(8)); assertEquals(MixStyle.Bridge, MixStyle.of(9)); assertEquals(MixStyle.Auto, MixStyle.of(10))
     }
 }
