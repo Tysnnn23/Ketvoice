@@ -2620,7 +2620,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Sources are tried in this order: the first one with lyrics wins. Drag a source to move it.",
   "Ordre des sources de paroles": "Lyrics source order",
   "Rétablir l'ordre par défaut": "Restore the default order",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "A source picked in “Lyrics source” is used on its own: this order applies to the Automatic source."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "A source picked in “Lyrics source” is used on its own: this order applies to the Automatic source.",
+  "Nouveaux sons dans {0}": "New songs in {0}",
+  "1 nouveau titre : touchez pour le télécharger": "1 new song: tap to download it",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} new songs: tap to download them",
+  "Playlists téléchargées": "Downloaded playlists",
+  "Playlists téléchargées à jour": "Keep downloaded playlists up to date",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "A notification when a downloaded playlist gets new songs: tap it to download only those"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5243,7 +5249,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "स्रोत इसी क्रम में आज़माए जाते हैं: जिसमें पहले बोल मिलें, वही चुना जाता है। किसी स्रोत को खिसकाने के लिए उसे खींचें।",
   "Ordre des sources de paroles": "बोल स्रोतों का क्रम",
   "Rétablir l'ordre par défaut": "डिफ़ॉल्ट क्रम पुनर्स्थापित करें",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "“बोल स्रोत” में चुना गया स्रोत अकेले उपयोग होता है: यह क्रम स्वचालित स्रोत पर लागू होता है।"
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "“बोल स्रोत” में चुना गया स्रोत अकेले उपयोग होता है: यह क्रम स्वचालित स्रोत पर लागू होता है।",
+  "Nouveaux sons dans {0}": "{0} में नए गाने",
+  "1 nouveau titre : touchez pour le télécharger": "1 नया गाना: डाउनलोड करने के लिए टैप करें",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} नए गाने: डाउनलोड करने के लिए टैप करें",
+  "Playlists téléchargées": "डाउनलोड की गई प्लेलिस्ट",
+  "Playlists téléchargées à jour": "डाउनलोड की गई प्लेलिस्ट अपडेट रखें",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "जब डाउनलोड की गई प्लेलिस्ट में नए गाने आएँ तो सूचना: केवल उन्हें डाउनलोड करने के लिए टैप करें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7866,7 +7878,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "ソースはこの順に試され、最初に歌詞が見つかったものが使われます。ドラッグして並べ替えられます。",
   "Ordre des sources de paroles": "歌詞ソースの順序",
   "Rétablir l'ordre par défaut": "デフォルトの順序に戻す",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "「歌詞のソース」で選んだソースは単独で使われます。この順序は「自動」に適用されます。"
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "「歌詞のソース」で選んだソースは単独で使われます。この順序は「自動」に適用されます。",
+  "Nouveaux sons dans {0}": "{0}に新しい曲",
+  "1 nouveau titre : touchez pour le télécharger": "新しい曲が1曲あります。タップしてダウンロード",
+  "{0} nouveaux titres : touchez pour les télécharger": "新しい曲が{0}曲あります。タップしてダウンロード",
+  "Playlists téléchargées": "ダウンロード済みのプレイリスト",
+  "Playlists téléchargées à jour": "ダウンロード済みプレイリストを最新に保つ",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "ダウンロード済みのプレイリストに新しい曲が追加されると通知します。タップするとその曲だけをダウンロードします"
  },
  "zh": {
   "Reverb": "混响",
@@ -10489,7 +10507,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "按此顺序尝试各来源：第一个有歌词的来源胜出。拖动来源即可调整位置。",
   "Ordre des sources de paroles": "歌词来源顺序",
   "Rétablir l'ordre par défaut": "恢复默认顺序",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "在“歌词来源”中选定的来源会单独使用：此顺序仅适用于“自动”来源。"
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "在“歌词来源”中选定的来源会单独使用：此顺序仅适用于“自动”来源。",
+  "Nouveaux sons dans {0}": "{0} 中有新歌曲",
+  "1 nouveau titre : touchez pour le télécharger": "1 首新歌曲：轻触即可下载",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} 首新歌曲：轻触即可下载",
+  "Playlists téléchargées": "已下载的播放列表",
+  "Playlists téléchargées à jour": "让已下载的播放列表保持最新",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "已下载的播放列表有新歌曲时发出通知：轻触即可只下载这些歌曲"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13112,7 +13136,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Источники проверяются в этом порядке: побеждает первый, где есть текст. Перетащите источник, чтобы переместить его.",
   "Ordre des sources de paroles": "Порядок источников текста",
   "Rétablir l'ordre par défaut": "Вернуть порядок по умолчанию",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Источник, выбранный в «Источник текста», используется отдельно: этот порядок действует для автоматического источника."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Источник, выбранный в «Источник текста», используется отдельно: этот порядок действует для автоматического источника.",
+  "Nouveaux sons dans {0}": "Новые треки в «{0}»",
+  "1 nouveau titre : touchez pour le télécharger": "1 новый трек: нажмите, чтобы скачать",
+  "{0} nouveaux titres : touchez pour les télécharger": "Новых треков: {0}. Нажмите, чтобы скачать",
+  "Playlists téléchargées": "Скачанные плейлисты",
+  "Playlists téléchargées à jour": "Обновлять скачанные плейлисты",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Уведомление, когда в скачанном плейлисте появляются новые треки: нажмите, чтобы скачать только их"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15735,7 +15765,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Le fonti vengono provate in quest'ordine: vince la prima che ha il testo. Trascina una fonte per spostarla.",
   "Ordre des sources de paroles": "Ordine delle fonti dei testi",
   "Rétablir l'ordre par défaut": "Ripristina l'ordine predefinito",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fonte scelta in «Fonte dei testi» viene usata da sola: quest'ordine vale per la fonte Automatica."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fonte scelta in «Fonte dei testi» viene usata da sola: quest'ordine vale per la fonte Automatica.",
+  "Nouveaux sons dans {0}": "Nuovi brani in {0}",
+  "1 nouveau titre : touchez pour le télécharger": "1 nuovo brano: tocca per scaricarlo",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} nuovi brani: tocca per scaricarli",
+  "Playlists téléchargées": "Playlist scaricate",
+  "Playlists téléchargées à jour": "Playlist scaricate sempre aggiornate",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notifica quando una playlist scaricata riceve nuovi brani: toccala per scaricare solo quelli"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18358,7 +18394,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Las fuentes se prueban en este orden: gana la primera que tenga letra. Arrastra una fuente para moverla.",
   "Ordre des sources de paroles": "Orden de las fuentes de letras",
   "Rétablir l'ordre par défaut": "Restablecer el orden predeterminado",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fuente elegida en «Fuente de la letra» se usa sola: este orden se aplica a la fuente Automática."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fuente elegida en «Fuente de la letra» se usa sola: este orden se aplica a la fuente Automática.",
+  "Nouveaux sons dans {0}": "Canciones nuevas en {0}",
+  "1 nouveau titre : touchez pour le télécharger": "1 canción nueva: toca para descargarla",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} canciones nuevas: toca para descargarlas",
+  "Playlists téléchargées": "Playlists descargadas",
+  "Playlists téléchargées à jour": "Playlists descargadas al día",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notificación cuando una playlist descargada recibe canciones nuevas: tócala para descargar solo esas"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20981,7 +21023,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Die Quellen werden in dieser Reihenfolge versucht: Die erste mit Liedtext gewinnt. Ziehe eine Quelle, um sie zu verschieben.",
   "Ordre des sources de paroles": "Reihenfolge der Liedtextquellen",
   "Rétablir l'ordre par défaut": "Standardreihenfolge wiederherstellen",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Eine unter „Liedtextquelle“ gewählte Quelle wird allein verwendet: Diese Reihenfolge gilt für die automatische Quelle."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Eine unter „Liedtextquelle“ gewählte Quelle wird allein verwendet: Diese Reihenfolge gilt für die automatische Quelle.",
+  "Nouveaux sons dans {0}": "Neue Songs in {0}",
+  "1 nouveau titre : touchez pour le télécharger": "1 neuer Song: Tippen zum Herunterladen",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} neue Songs: Tippen zum Herunterladen",
+  "Playlists téléchargées": "Heruntergeladene Playlists",
+  "Playlists téléchargées à jour": "Heruntergeladene Playlists aktuell halten",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Eine Benachrichtigung, wenn eine heruntergeladene Playlist neue Songs erhält: Tippe darauf, um nur diese herunterzuladen"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23604,7 +23652,13 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "As fontes são tentadas por esta ordem: ganha a primeira que tiver letra. Arraste uma fonte para a mover.",
   "Ordre des sources de paroles": "Ordem das fontes de letras",
   "Rétablir l'ordre par défaut": "Repor a ordem predefinida",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Uma fonte escolhida em «Fonte da letra» é usada sozinha: esta ordem aplica-se à fonte Automática."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Uma fonte escolhida em «Fonte da letra» é usada sozinha: esta ordem aplica-se à fonte Automática.",
+  "Nouveaux sons dans {0}": "Novas músicas em {0}",
+  "1 nouveau titre : touchez pour le télécharger": "1 música nova: toque para a transferir",
+  "{0} nouveaux titres : touchez pour les télécharger": "{0} músicas novas: toque para as transferir",
+  "Playlists téléchargées": "Playlists transferidas",
+  "Playlists téléchargées à jour": "Playlists transferidas sempre atualizadas",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Uma notificação quando uma playlist transferida recebe músicas novas: toque nela para transferir só essas"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26227,6 +26281,12 @@
   "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "이 순서대로 소스를 시도하며, 가사가 있는 첫 번째 소스가 사용됩니다. 소스를 끌어서 옮기세요.",
   "Ordre des sources de paroles": "가사 소스 순서",
   "Rétablir l'ordre par défaut": "기본 순서로 되돌리기",
-  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "‘가사 소스’에서 고른 소스는 단독으로 사용됩니다. 이 순서는 자동 소스에 적용됩니다."
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "‘가사 소스’에서 고른 소스는 단독으로 사용됩니다. 이 순서는 자동 소스에 적용됩니다.",
+  "Nouveaux sons dans {0}": "{0}에 새로운 곡",
+  "1 nouveau titre : touchez pour le télécharger": "새로운 곡 1개: 탭하여 다운로드",
+  "{0} nouveaux titres : touchez pour les télécharger": "새로운 곡 {0}개: 탭하여 다운로드",
+  "Playlists téléchargées": "다운로드한 플레이리스트",
+  "Playlists téléchargées à jour": "다운로드한 플레이리스트 최신 상태로 유지",
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "다운로드한 플레이리스트에 새로운 곡이 추가되면 알려 줍니다. 탭하면 그 곡만 다운로드합니다"
  }
 }

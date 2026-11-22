@@ -118,6 +118,7 @@ internal object SettingsSearch {
         SettingEntry("Sources personnalisées", "URLs HTTPS terminées par .json · streaming et téléchargements", SettingsCategory.Sources),
         d("Favoris hors ligne automatiquement", "Un titre ajouté aux favoris se télécharge tout seul, pour l'écouter sans connexion"),
         d("Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi"),
+        d("Playlists téléchargées à jour", "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là"),
         d("Qualité de téléchargement", "Le fichier réellement obtenu, pas seulement le réglage"),
         d("Voir la liste", "Pistes enregistrées sur l'appareil"),
         d("Hors ligne intelligent", "Télécharge tout seul, en Wi-Fi, ce que tu écoutes le plus et tes nouveaux favoris."),

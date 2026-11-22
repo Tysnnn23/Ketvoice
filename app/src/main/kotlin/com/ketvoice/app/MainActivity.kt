@@ -170,6 +170,19 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
         handleResumeIntent(intent)
         handleReleaseIntent(intent)
+        handlePlaylistUpdateIntent(intent)
+    }
+
+    /** « Nouveaux sons dans X » was touched (8.4): only the new titles of that playlist are downloaded. */
+    private fun handlePlaylistUpdateIntent(intent: Intent?) {
+        if (intent?.action != com.ketvoice.app.data.PlaylistUpdates.ACTION) return
+        val playlist = intent.getStringExtra(com.ketvoice.app.data.PlaylistUpdates.EXTRA_PLAYLIST).orEmpty()
+        val tracks = intent.getStringArrayExtra(com.ketvoice.app.data.PlaylistUpdates.EXTRA_TRACKS).orEmpty().toList()
+        intent.action = null
+        com.ketvoice.app.data.PlaylistStore.init(applicationContext)
+        com.ketvoice.app.data.Downloader.init(applicationContext)
+        val started = com.ketvoice.app.data.PlaylistUpdates.downloadNew(playlist, tracks)
+        if (started > 0) android.widget.Toast.makeText(this, com.ketvoice.app.data.AppText.t("Téléchargements lancés"), android.widget.Toast.LENGTH_SHORT).show()
     }
 
     /** The notification of a new release was touched (6.3): the artist's page opens. */
@@ -201,6 +214,7 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
         handleResumeIntent(intent)
         handleReleaseIntent(intent)
+        handlePlaylistUpdateIntent(intent)
     }
 
     override fun onResume() {

@@ -30,6 +30,8 @@ object AppSettings {
     /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
     val glassTilt = mutableStateOf(true)
     val downloadsWifiOnly = mutableStateOf(false)
+    /** « Playlists téléchargées à jour » (8.4): new titles of a downloaded playlist are announced, to download in a touch. */
+    val playlistUpdates = mutableStateOf(true)
     /** A title made a favourite is downloaded for listening offline. */
     val autoOfflineFavorites = mutableStateOf(true)
     /** « Hors ligne intelligent » (7.0): what the listener plays most and their new favourites, downloaded on their own; off by default. */

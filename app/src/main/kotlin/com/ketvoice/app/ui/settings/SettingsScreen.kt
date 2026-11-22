@@ -728,6 +728,14 @@ fun SettingsScreen() {
                     AppSettings.autoOfflineFavorites.value) { AppSettings.autoOfflineFavorites.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
                     AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
+                    runCatching { com.ketvoice.app.data.PlaylistUpdates.schedule(ctx, replace = true) }
+                }
+                // 8.4: new titles of a downloaded playlist, announced in the background.
+                SToggle(KetIcons.Bell, "Playlists téléchargées à jour",
+                    "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là",
+                    AppSettings.playlistUpdates.value) {
+                    AppSettings.playlistUpdates.value = it; SettingsStore.save()
+                    runCatching { com.ketvoice.app.data.PlaylistUpdates.schedule(ctx, replace = true) }
                 }
                 SRow(
                     KetIcons.Download, "Qualité de téléchargement",

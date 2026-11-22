@@ -420,6 +420,8 @@ fun AppRoot() {
                                     val pending = playlist.entries.mapNotNull { it.track }
                                         .filter { Downloader.itemFor(it.id) == null }
                                     pending.forEach { Downloader.download(it) }
+                                    // 8.4: a downloaded playlist is followed; its new titles are announced later.
+                                    runCatching { com.ketvoice.app.data.PlaylistUpdates.follow(playlist) }
                                     if (pending.isNotEmpty()) android.widget.Toast.makeText(
                                         context,
                                         com.ketvoice.app.data.AppText.t("Téléchargements lancés"),

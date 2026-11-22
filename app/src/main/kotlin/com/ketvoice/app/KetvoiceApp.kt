@@ -65,6 +65,10 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         // New releases of the followed artists (6.3): checked twice a day in the background.
         if (android.os.Build.FINGERPRINT != "robolectric")
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.ReleaseWatch.schedule(this) }
+        // « Playlists téléchargées à jour » (8.4): the downloaded playlists are checked for new titles in the background.
+        runCatching { com.ketvoice.app.data.PlaylistUpdates.init(this) }
+        if (android.os.Build.FINGERPRINT != "robolectric")
+            start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.PlaylistUpdates.schedule(this) }
         // « Hors ligne intelligent » (7.0): its passes on an unmetered network, scheduled while it is on, cancelled otherwise.
         if (android.os.Build.FINGERPRINT != "robolectric")
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.SmartOffline.schedule(this) }
