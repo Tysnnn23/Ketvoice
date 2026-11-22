@@ -411,6 +411,8 @@ fun AppRoot() {
                 com.ketvoice.app.ui.common.TrackCreditsHost(Modifier.zIndex(7.2f))
                 // ---- Ketmix DJ editor (6.1): over the player and the menus ----
                 com.ketvoice.app.ui.player.KetmixEditorHost(Modifier.zIndex(7.5f))
+                // ---- « Éditeur de paroles » (9.0): over the player and the menus, like the Ketmix editor ----
+                com.ketvoice.app.ui.player.LyricsEditorHost(Modifier.zIndex(7.55f))
                 // ---- Share card of a title (7.3): over the player and the menus ----
                 if (AppUi.shareCard.value != null) Box(Modifier.fillMaxSize().zIndex(7.6f)) { com.ketvoice.app.ui.player.ShareCardHost() }
                 // ---- Menu d'actions de playlist : même couche que le menu morceau,

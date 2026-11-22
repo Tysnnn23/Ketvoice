@@ -197,6 +197,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         MenuItemRow("Égaliseur", Icons.Filled.Tune) {
             onClose(); com.ketvoice.app.ui.AppUi.showEqualizer.value = true
         }
+        MenuItemRow("Éditer les paroles…", com.ketvoice.app.ui.common.KetIcons.Lyrics) {
+            onClose(); LyricsEditor.open(track)
+        }
         var reverbOpen by remember { mutableStateOf(false) }
         MenuItemRow("Reverb", Icons.Filled.Equalizer) { reverbOpen = !reverbOpen }
         if (reverbOpen) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
