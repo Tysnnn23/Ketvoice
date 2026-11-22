@@ -212,7 +212,7 @@ class HeadphoneEqTest {
     }
 
     @Test fun linksAreReadBackWholeAndCheckedForBackups() {
-        val text = HeadphoneEq.encodeLinks(mapOf("wired" to HeadphoneEq.Link("abc", "Écouteurs"), "bt:0123456789abcdef" to HeadphoneEq.Link("d4", "XM4")))
+        val text = HeadphoneEq.encodeLinks(mapOf("wired" to HeadphoneLink("abc", "Écouteurs"), "bt:0123456789abcdef" to HeadphoneLink("d4", "XM4")))
         assertTrue(HeadphoneEq.validLinks(text))
         assertEquals(2, HeadphoneEq.decodeLinks(text).size)
         assertFalse("an address in clear is refused", HeadphoneEq.validLinks("{\"bt:AA:BB:CC:DD:EE:FF\":{\"p\":\"a\",\"n\":\"x\"}}"))

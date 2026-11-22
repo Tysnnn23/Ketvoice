@@ -30,6 +30,7 @@ import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.player.AudioOutput
 import com.ketvoice.app.player.AudioOutputs
 import com.ketvoice.app.player.HeadphoneEq
+import com.ketvoice.app.player.HeadphoneLink
 import com.ketvoice.app.player.HeadphoneProfile
 import com.ketvoice.app.player.HeadphoneProfiles
 import com.ketvoice.app.theme.Ket27
@@ -48,7 +49,7 @@ import kotlin.math.pow
 
 /** What the screen needs to draw the section; built from the settings and the outputs, or by a test. */
 internal data class HeadphoneEqView(val output: AudioOutput?, val status: HeadphoneEq.Status, val profiles: List<HeadphoneProfile>,
-                                    val links: Map<String, HeadphoneEq.Link>, val enabled: Boolean, val comparing: Boolean)
+                                    val links: Map<String, HeadphoneLink>, val enabled: Boolean, val comparing: Boolean)
 
 /** The line under the output's name: whether its correction is heard, and why not. */
 internal fun headphoneStatusLine(view: HeadphoneEqView): String = when {
