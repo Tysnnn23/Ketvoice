@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 9.0.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 153** — a Personalisation page (theme, font, size, corners, density, lyrics look, tabs, Home, player, library, menus and swipes), a headphone EQ linked to each output, and a lyrics timing editor. Defaults reproduce 8.4.0.
+
+- Appearance (`theme/ThemeColors.kt`, `theme/Appearance.kt`, `theme/Personalization.kt`, `ui/settings/PersonalizeSettings.kt`, `ColorPickerSheet.kt`): custom background/surface/text/accent per side with a WCAG AA guard, seven presets, `KT1.` share codes (base64url, version byte, CRC-8); fonts Inter (default), Manrope, Atkinson Hyperlegible Next, Nunito, Lora (SIL OFL); text scale 85–130 %, corner scale 0–200 % over `Ket27.Radius`, list density 44/52/60 dp rows; lyrics font, scale, alignment, sung colour, blur level and motion level. Keys `themeColors`, `appFont`, `textScale`, `cornerScale`, `listDensity`, `lyricsFont`, `lyricsScale`, `lyricsAlign`, `lyricsSung`, `lyricsSungArgb`, `lyricsBlurLevel`, `lyricsMotion`. `ThemeCodecTest`, `PersonalizationSettingsHostTest`, `PersonalizationRenderHostTest`, `DefaultLookRenderHostTest` (default renders compared with 8.4.0).
+- Layout (`data/LayoutSettings.kt`, `ui/chrome/TabLayout.kt`, `ui/home/HomeSections.kt`, `ui/player/PlayerActions.kt`, `ui/library/LibraryLayout.kt`, `ui/common/RowLayouts.kt`, `ui/settings/LayoutCustomization.kt`): 2–5 tabs (Home or Library required) in both glass looks and the tablet sidebar; 11 Home sections ordered/hidden; player row 2–5 buttons (queue kept), up to two mini-player extras, artwork ×0.85/×1.15, Canvas off in the player; list/grid and default order per library section; title menu order and hiding (Ketogether first, More last); swipe actions per direction. Keys `layoutTabs`, `layoutHome`, `layoutPlayer`, `layoutMini`, `layoutArtwork`, `layoutCanvas`, `layoutLibraryViews`, `layoutLibrarySorts`, `layoutMenu`, `layoutSwipeEnd`, `layoutSwipeStart`. `LayoutSettingsTest`, `LayoutCustomizationHostTest`.
+- Headphone EQ (`player/Biquad.kt`, `HeadphoneProfile.kt`, `HeadphoneEq.kt`, `HeadphoneEqProcessor.kt`, `ui/player/HeadphoneEqSection.kt`): imported Equalizer APO parametric profiles (preamp + up to 20 PK/LSC/HSC filters, 40 profiles), linked per output (Bluetooth address digest, wired, USB name digest), Audio EQ Cookbook biquads per sample rate, automatic safe preamp, 60 ms crossfade, between `DeckMixProcessor` and `LevelingAudioProcessor`. No built-in headphone catalogue: the measurement data has no redistribution licence (`docs/licenses/AutoEq-review.md`). Keys `headphoneEq`, `headphoneProfiles`, `headphoneLinks`. `HeadphoneEqTest`, `AudioChainPlaybackTest`.
+- Lyrics editor (`data/LyricsDraft.kt`, `ui/player/LyricsEditor.kt`): line or word tapping on the heard position, ±50 ms nudge, 200-step undo, Cascade preview, saved as (enhanced) LRC in the custom lyrics store, LRC export. `LyricsDraftTest`, `LyricsEditorSaveTest`, `LyricsEditorHostTest`.
+
+Full notes: [9.0.0](docs/releases/v9.0.0.md).
+
+---
+
 # Ketvoice 8.4.0
 
 ![Ketvoice](ketvoice-banner.png)
