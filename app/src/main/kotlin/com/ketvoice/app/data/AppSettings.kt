@@ -32,6 +32,30 @@ object AppSettings {
     val glassIntensity = mutableStateOf(com.ketvoice.app.glass.GlassClarity.DEFAULT)
     /** « Fond noir » (7.1, OLED): in dark mode, the pages stay pure black even under a cover's colours. */
     val trueBlack = mutableStateOf(false)
+    // « Personnalisation » (owner, 2026-11-22). Every default reproduces the look of 8.4 exactly (theme/Appearance.kt).
+    /** The listener's own colours, light and dark ([com.ketvoice.app.theme.ThemeCodec]); empty: Ket 27's own. */
+    val themeColors = mutableStateOf("")
+    /** The interface's typeface ([com.ketvoice.app.theme.AppFonts]): Inter by default. */
+    val appFont = mutableStateOf("inter")
+    /** Text size of the interface, 85..130 %, independent of Android's font scale (which still applies on top). */
+    val textScale = mutableStateOf(100)
+    /** The Ket 27 corner radii, 0 (square) .. 200 % (very round). */
+    val cornerScale = mutableStateOf(100)
+    /** Lists: 0 compact, 1 normal, 2 airy. */
+    val listDensity = mutableStateOf(1)
+    /** The lyrics' typeface; empty follows [appFont]. */
+    val lyricsFont = mutableStateOf("")
+    /** Lyrics size on top of « Taille des paroles », 80..140 %. */
+    val lyricsScale = mutableStateOf(100)
+    /** Lyrics alignment: 0 start (duets on both sides), 1 centred. */
+    val lyricsAlign = mutableStateOf(0)
+    /** The sung words' colour: 0 white, 1 accent, 2 cover, 3 [lyricsSungArgb]. */
+    val lyricsSung = mutableStateOf(0)
+    val lyricsSungArgb = mutableStateOf(0xFFFFFFFFL)
+    /** How much distant lines blur, 0..100 % of the 8.3 distances (with [lyricsBlur] on). */
+    val lyricsBlurLevel = mutableStateOf(100)
+    /** How much sung words lift and grow, 0..100 %. */
+    val lyricsMotion = mutableStateOf(100)
     /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
     val glassTilt = mutableStateOf(true)
     val downloadsWifiOnly = mutableStateOf(false)

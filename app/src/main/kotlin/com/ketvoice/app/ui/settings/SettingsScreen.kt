@@ -126,6 +126,7 @@ fun SettingsScreen() {
                 }
             }
 
+            if (category == SettingsCategory.Personalize) PersonalizePage()
             // ==================================================== YOUTUBE MUSIC
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
                 Section("QUEST · CONFORT") {
@@ -312,6 +313,9 @@ fun SettingsScreen() {
                     com.ketvoice.app.data.AppText.t("Fréquence de l'écran") + " : " + kotlin.math.round(refresh.actualHz).toInt() + " Hz",
                     localize = false, color = th.secondary, fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                SRow(KetIcons.Sliders, "Personnalisation", sub = "Couleurs, police, arrondis et paroles") {
+                    categoryKey = SettingsCategory.Personalize.name
+                }
                 SRow(KetIcons.Sliders, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
                     categoryKey = SettingsCategory.Design.name
                 }
@@ -1037,7 +1041,7 @@ private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
                     Row(Modifier.fillMaxWidth().rowPress(Role.RadioButton) {
                             tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); spec.onSelect(option.id); onDismiss()
                         }.semantics { selected = chosen }
-                        .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
+                        .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = Ket27.Metrics.rowPadding),
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(end = 14.dp)) {
                             Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground,
@@ -1181,7 +1185,7 @@ internal fun ColumnScope.SRow(
     Row(
         Modifier.fillMaxWidth().settingsTarget(title)
             .then(if (onClick != null) Modifier.rowPress(onClick = onClick) else Modifier)
-            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
+            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = Ket27.Metrics.rowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Ket27Tile(icon, title.length + title.first().code)
@@ -1282,7 +1286,7 @@ internal fun ColumnScope.SToggle(
     Row(
         Modifier.fillMaxWidth().settingsTarget(title).toggleable(checked, role = Role.Switch,
             onValueChange = { tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
-            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
+            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = Ket27.Metrics.rowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 8.0: switched on, the symbol reacts — the bell of new releases rings, any other bounces.

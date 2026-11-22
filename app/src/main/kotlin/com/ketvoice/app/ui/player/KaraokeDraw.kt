@@ -112,14 +112,19 @@ private fun DrawScope.drawSungPart(measured: TextLayoutResult, b: Rect, rtl: Boo
 
 /** What one frame of a karaoke line draws with. */
 internal class KaraokeInk(val ink: Color, val pending: Color?, val featherPx: Float, val liftPx: Float,
-                          val leanPx: Float, val letterRisePx: Float, val shadowGlow: Boolean)
+                          val leanPx: Float, val letterRisePx: Float, val shadowGlow: Boolean,
+                          /** « Paroles à ton goût »: 0..1 of the 8.3 lift, growth and swell (the lift distances above are already scaled). */
+                          val motion: Float = 1f) {
+    /** A word's growth scaled by [motion]. */
+    fun grown(grow: Float): Float = 1f + (grow - 1f) * motion
+}
 
 /** One word lifted, grown and (when held) swelling letter by letter, at [now]. */
 internal fun DrawScope.drawLiftedWord(measured: TextLayoutResult, word: LyricWordMask, now: Long, k: KaraokeInk) {
     val since = now - word.start
     val edge = LyricsWords.edgePx(since, word.duration, word.width, k.featherPx, word.pause)
     val rise = LyricsWords.lift(since, word.duration) * k.liftPx
-    val grow = LyricsWords.grow(segmentProgress(now, word.start, word.end), now - word.end)
+    val grow = k.grown(LyricsWords.grow(segmentProgress(now, word.start, word.end), now - word.end))
     if (word.letters.isNotEmpty() && LyricsWords.inHold(since, word.duration)) {
         drawHeldLetters(measured, word, since, edge, rise, grow, k, k.ink, k.pending, k.shadowGlow)
         return
@@ -145,7 +150,7 @@ internal fun DrawScope.drawHeldLetters(measured: TextLayoutResult, word: LyricWo
             val e = LyricsWords.swell(i, word.letters.size, since, word.duration) * strength
             if (glowCopy && e <= .005f) return@forEachIndexed
             val letterInk = if (glowCopy) ink.copy(alpha = ink.alpha * e.coerceIn(0f, 1f)) else ink
-            val size = 1f + LyricsWords.SWELL * e
+            val size = 1f + LyricsWords.SWELL * e * k.motion
             val shadow = if (shadowGlow && e > .01f) Shadow(LyricsWords.glowColor(e), Offset.Zero, 14f * e) else null
             translate(word.across[i] * k.leanPx * e, -rise - k.letterRisePx * e) {
                 scale(size, size, letter.bounds.center) { drawSliceInk(measured, letter, edge, k.featherPx, letterInk, pending, shadow) }
@@ -161,8 +166,8 @@ internal fun DrawScope.drawHeldGlow(measured: TextLayoutResult, masks: List<Lyri
         if (word.letters.isEmpty() || !LyricsWords.inHold(since, word.duration)) return@forEach
         val edge = LyricsWords.edgePx(since, word.duration, word.width, k.featherPx, word.pause)
         val rise = LyricsWords.lift(since, word.duration) * k.liftPx
-        val grow = LyricsWords.grow(segmentProgress(now, word.start, word.end), now - word.end)
-        drawHeldLetters(measured, word, since, edge, rise, grow, k, Color.White.copy(alpha = LyricsWords.GLOW_ALPHA), null, false, glowCopy = true)
+        val grow = k.grown(LyricsWords.grow(segmentProgress(now, word.start, word.end), now - word.end))
+        drawHeldLetters(measured, word, since, edge, rise, grow, k, k.ink.copy(alpha = LyricsWords.GLOW_ALPHA), null, false, glowCopy = true)
     }
 }
 
@@ -177,6 +182,8 @@ internal fun DrawScope.drawFlatWord(measured: TextLayoutResult, word: LyricWordM
     word.slices.forEach { drawSliceInk(measured, it, edge, featherPx, ink, null) }
 }
 
-internal fun DrawScope.karaokeInk(ink: Color, pending: Color?, shadowGlow: Boolean) = KaraokeInk(
-    ink, pending, LyricsWords.FEATHER_DP.dp.toPx(), LyricsWords.LIFT_DP.dp.toPx(),
-    LyricsWords.LEAN_DP.dp.toPx(), LyricsWords.LETTER_RISE_DP.dp.toPx(), shadowGlow)
+internal fun DrawScope.karaokeInk(ink: Color, pending: Color?, shadowGlow: Boolean, motion: Float = 1f): KaraokeInk {
+    val m = if (motion.isFinite()) motion.coerceIn(0f, 1f) else 1f
+    return KaraokeInk(ink, pending, LyricsWords.FEATHER_DP.dp.toPx(), LyricsWords.LIFT_DP.dp.toPx() * m,
+        LyricsWords.LEAN_DP.dp.toPx() * m, LyricsWords.LETTER_RISE_DP.dp.toPx() * m, shadowGlow, m)
+}

@@ -37,7 +37,7 @@ internal object TrackRowLook {
     val cover = 52.dp
     val gap = 14.dp
     /** Above and under the artwork: a 72 dp row. */
-    val padV = 10.dp
+    val padV get() = com.ketvoice.app.theme.Ket27.Metrics.rowPadding
 }
 
 /** The codec badge of a saved title ("FLAC", "MP3"), or null when the title is not on the device. */

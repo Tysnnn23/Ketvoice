@@ -82,9 +82,17 @@ fun KetvoiceTheme(
     // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
     // Noir (7.1): pure black pages in dark mode, whatever the cover; the cards stay apart from them.
     val black = isDark && com.ketvoice.app.data.AppSettings.trueBlack.value
-    val th = season?.theme() ?: cover.apply(Ket27.theme(isDark, chosenAccent)
+    // « Thèmes complets » (2026-11-22): the listener's colours, guarded to WCAG AA; the cover's still lay over them.
+    val stored = com.ketvoice.app.data.AppSettings.themeColors.value
+    val custom = androidx.compose.runtime.remember(stored) { ThemeCodec.parse(stored) }
+    val th = season?.theme() ?: cover.apply(listenerTheme(custom, isDark, chosenAccent)
         .let { if (black) it.copy(background = Color.Black) else it }, black)
     val accent = th.accent
+    val textScale = AppShape.textScale()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    // « Taille du texte » scales the text on top of Android's font scale; at 100 % the density is left untouched.
+    val scaled = if (textScale == 1f) density else androidx.compose.ui.unit.Density(density.density, density.fontScale * textScale)
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides scaled) {
     androidx.compose.runtime.CompositionLocalProvider(
         LocalTheme provides th,
         // Le repère visuel de l'app est la réaction du verre et du contenu,
@@ -97,30 +105,7 @@ fun KetvoiceTheme(
            else com.ketvoice.app.ui.motion.BounceOverscrollFactory)) {
         val ketFont = Ket27.font
         MaterialTheme(
-            colorScheme = if (isDark) darkColorScheme(
-                background = th.background,
-                onBackground = Palette.White,
-                surface = th.card,
-                primary = accent,
-                onPrimary = if (accent.luminance() > .179f) Color.Black else Color.White,
-                surfaceContainerLowest = th.background,
-                surfaceContainerLow = DesignTokens.Color.sunkenDark,
-                surfaceContainer = th.card,
-                surfaceContainerHigh = DesignTokens.Color.raisedDark,
-                surfaceContainerHighest = DesignTokens.Color.highestDark,
-                surfaceTint = Color.Transparent,
-                outline = DesignTokens.Color.outlineDark,
-                outlineVariant = DesignTokens.Color.outlineSoftDark,
-                onSurface = Palette.White,
-                onSurfaceVariant = Palette.SecondaryTextDark
-            ) else lightColorScheme(
-                background = th.background,
-                onBackground = Palette.Black,
-                surface = th.card,
-                primary = accent,
-                onSurface = Palette.Black,
-                onSurfaceVariant = Palette.SecondaryTextLight
-            ),
+            colorScheme = ketColorScheme(th, th.isDark, custom != null),
             typography = Material3Typography(ketFont),
             content = {
                 val inherited = androidx.compose.material3.LocalTextStyle.current
@@ -129,6 +114,40 @@ fun KetvoiceTheme(
         )
       }
     }
+    }
+}
+
+/** Ket 27's own colours, or the listener's (« Thèmes complets ») with the contrast guard of [ThemeGuard]. */
+internal fun listenerTheme(custom: ThemeColors?, dark: Boolean, accent: Color): KetTheme =
+    custom?.let { ThemeGuard.theme(it.side(dark), dark, accent) } ?: Ket27.theme(dark, accent)
+
+private fun ketColorScheme(th: KetTheme, isDark: Boolean, custom: Boolean): androidx.compose.material3.ColorScheme {
+    val accent = th.accent
+    val ink = if (custom) th.onBackground else if (isDark) Palette.White else Palette.Black
+    return if (isDark) darkColorScheme(
+        background = th.background,
+        onBackground = ink,
+        surface = th.card,
+        primary = accent,
+        onPrimary = if (accent.luminance() > .179f) Color.Black else Color.White,
+        surfaceContainerLowest = th.background,
+        surfaceContainerLow = if (custom) androidx.compose.ui.graphics.lerp(th.background, th.card, .5f) else DesignTokens.Color.sunkenDark,
+        surfaceContainer = th.card,
+        surfaceContainerHigh = if (custom) androidx.compose.ui.graphics.lerp(th.card, ink, .06f) else DesignTokens.Color.raisedDark,
+        surfaceContainerHighest = if (custom) androidx.compose.ui.graphics.lerp(th.card, ink, .12f) else DesignTokens.Color.highestDark,
+        surfaceTint = Color.Transparent,
+        outline = DesignTokens.Color.outlineDark,
+        outlineVariant = DesignTokens.Color.outlineSoftDark,
+        onSurface = ink,
+        onSurfaceVariant = if (custom) th.secondary else Palette.SecondaryTextDark
+    ) else lightColorScheme(
+        background = th.background,
+        onBackground = ink,
+        surface = th.card,
+        primary = accent,
+        onSurface = ink,
+        onSurfaceVariant = if (custom) th.secondary else Palette.SecondaryTextLight
+    )
 }
 
 private fun Material3Typography(family: androidx.compose.ui.text.font.FontFamily) =androidx.compose.material3.Typography(

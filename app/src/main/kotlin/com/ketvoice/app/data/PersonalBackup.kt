@@ -38,10 +38,15 @@ internal object PersonalBackup {
         "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassLook" to 0..com.ketvoice.app.glass.GlassLook.MAX, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2, "albumHeader" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..com.ketvoice.app.util.LauncherIcons.LAST)
-    private val longs = setOf("accentArgb", "cacheBytes")
+        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..com.ketvoice.app.util.LauncherIcons.LAST,
+        // « Personnalisation » (2026-11-22): sizes, corners, density and the lyrics' look; older versions drop these keys.
+        "textScale" to com.ketvoice.app.theme.AppShape.TEXT_MIN..com.ketvoice.app.theme.AppShape.TEXT_MAX,
+        "cornerScale" to com.ketvoice.app.theme.AppShape.CORNER_MIN..com.ketvoice.app.theme.AppShape.CORNER_MAX, "listDensity" to 0..2,
+        "lyricsScale" to com.ketvoice.app.theme.LyricsLook.SIZE_MIN..com.ketvoice.app.theme.LyricsLook.SIZE_MAX, "lyricsAlign" to 0..1,
+        "lyricsSung" to 0..3, "lyricsBlurLevel" to 0..100, "lyricsMotion" to 0..100)
+    private val longs = setOf("accentArgb", "cacheBytes", "lyricsSungArgb")
     private val strings = setOf("lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "wifiQuality",
-        "mobileQuality", "equalizerGains", "language")
+        "mobileQuality", "equalizerGains", "language", "themeColors", "appFont", "lyricsFont")
 
     private fun cleanId(id: String): Boolean = id.isNotBlank() && id.length <= 256 &&
         id.none(Char::isISOControl) && "://" !in id && '?' !in id && '#' !in id
@@ -69,7 +74,7 @@ internal object PersonalBackup {
         // 7.5 motion75: « Pochette et Canvas » (2) became the animated Canvas (1), in backups and in sync alike.
         key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }?.let(com.ketvoice.app.ui.sub.AlbumHeader::normalize)
         key in integers -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }
-        key == "accentArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
+        key == "accentArgb" || key == "lyricsSungArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
         key == "cacheBytes" -> (raw as? Number)?.toLong()?.takeIf { it in 500_000_000L..10_000_000_000L }
         key == "glassTint" -> (raw as? Number)?.toFloat()?.takeIf { it.isFinite() && it in 0f..1f }
         key == "glassIntensity" -> (raw as? Number)?.toFloat()?.takeIf { it.isFinite() && it in 0f..1f }
@@ -80,6 +85,9 @@ internal object PersonalBackup {
                 "lyricsOrder" -> LyricsOrder.valid(value)
                 "language" -> AppLanguage.all.any { it.label == value }
                 "equalizerGains" -> value.matches(Regex("-?\\d{1,2}(,-?\\d{1,2}){0,9}"))
+                "themeColors" -> com.ketvoice.app.theme.ThemeCodec.valid(value)
+                "appFont" -> com.ketvoice.app.theme.AppFonts.valid(value)
+                "lyricsFont" -> value.isEmpty() || com.ketvoice.app.theme.AppFonts.valid(value)
                 "translateLanguage", "translationSource" -> value in TranslationLanguages.codes ||
                     TranslationLanguages.codes.any { TranslationLanguages.name(it) == value }
                 else -> false

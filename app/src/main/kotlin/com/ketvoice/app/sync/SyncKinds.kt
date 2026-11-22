@@ -152,7 +152,10 @@ internal object SettingsKind : SyncKind {
         "lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "lyricsBlur", "automixOn", "automixIntensity",
         "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixOnSkip", "ketmixHaptics", "smartShuffle", "volumeLeveling",
         "skipSilence", "equalizerEnabled", "equalizerGains", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
-        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound")
+        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound",
+        // « Personnalisation » (2026-11-22). An older version's apply() skips keys it does not list.
+        "themeColors", "appFont", "textScale", "cornerScale", "listDensity", "lyricsFont", "lyricsScale", "lyricsAlign",
+        "lyricsSung", "lyricsSungArgb", "lyricsBlurLevel", "lyricsMotion")
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()

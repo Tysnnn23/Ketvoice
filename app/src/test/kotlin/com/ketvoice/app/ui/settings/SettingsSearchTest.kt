@@ -70,12 +70,17 @@ class SettingsSearchTest {
 
     /** Rows drawn only in a passing state (a refused permission, a progress) or under a group without a page. */
     private val notIndexed = setOf("Ouvrir le Studio", "Importer des lyrics", "Déconnecter la publication", "Gestionnaire de batterie du fabricant",
-        "Reprise en moins d'une minute", "Notifications désactivées", "Notification des paroles", "Ajouter un widget")
+        "Reprise en moins d'une minute", "Notifications désactivées", "Notification des paroles", "Ajouter un widget",
+        // Shown only once « Autre » is picked for the sung words.
+        "Couleur personnalisée")
 
     @Test fun everyRowThePagesDrawIsIndexed() {
         val folder = listOf(File("src/main/kotlin/com/ketvoice/app/ui/settings"), File("app/src/main/kotlin/com/ketvoice/app/ui/settings")).first { it.isDirectory }
-        val row = Regex("""\b(?:SRow|SToggle)\(\s*[A-Za-z0-9_.]+(?:\([^)]*\))?\s*,\s*"((?:[^"\\$]|\\.)+)"""")
-        val drawn = folder.listFiles()!!.filter { it.name.endsWith(".kt") }.flatMap { file -> row.findAll(file.readText()).map { it.groupValues[1] }.toList() }.toSet()
+        val row = Regex("""\b(?:SRow|SToggle|SRowLike)\(\s*[A-Za-z0-9_.]+(?:\([^)]*\))?\s*,\s*"((?:[^"\\$]|\\.)+)"""")
+        // « Personnalisation » (2026-11-22): its sliders, choices and font strips start with their title.
+        val titled = Regex("""\b(?:PercentSlider|LabeledSegments|FontStrip)\(\s*"((?:[^"\\$]|\\.)+)"""")
+        val drawn = folder.listFiles()!!.filter { it.name.endsWith(".kt") }.flatMap { file ->
+            (row.findAll(file.readText()) + titled.findAll(file.readText())).map { it.groupValues[1] }.toList() }.toSet()
         assertTrue(drawn.size > 90)
         val indexed = SettingsSearch.entries.map { it.title }.toSet()
         val missing = drawn - indexed - notIndexed

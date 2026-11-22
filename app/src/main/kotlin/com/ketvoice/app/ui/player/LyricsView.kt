@@ -90,6 +90,17 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 internal val LocalLyricsOffset = staticCompositionLocalOf { 0 }
+/** The colour of the sung words (« Paroles à ton goût »; white, as in 8.3, unless the listener picked another). */
+internal val LocalLyricsInk = androidx.compose.runtime.compositionLocalOf { Color.White }
+
+/** The sung words' colour for [track]: white, the accent, its cover's colour or the listener's own ([com.ketvoice.app.theme.LyricsLook.sung]). */
+@Composable
+internal fun rememberSungInk(track: Track): Color {
+    val mode = AppSettings.lyricsSung.value
+    val cover = com.ketvoice.app.theme.rememberCoverAccent(
+        if (mode == com.ketvoice.app.theme.LyricsLook.SUNG_COVER) com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) else null)?.first
+    return com.ketvoice.app.theme.LyricsLook.sung(mode, com.ketvoice.app.theme.LocalTheme.current.accent, cover, AppSettings.lyricsSungArgb.value)
+}
 
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
@@ -134,6 +145,10 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     // 8.3: the instrumental breaks of 4 s or more, each filled by the intro's dots under the line before it.
     val breaks = remember(lyrics.lines, lyrics.isTimed) { if (lyrics.isTimed) LyricsMotion.breaks(lyrics.lines) else emptyMap() }
     val blurSupported = remember { LyricsBlur.deviceSupported() }
+    // « Paroles à ton goût » (2026-11-22): size on top of « Taille des paroles », alignment and the sung words' colour.
+    val lyricScale = fontScale * com.ketvoice.app.theme.LyricsLook.sizeScale()
+    val centred = com.ketvoice.app.theme.LyricsLook.centred
+    val sungInk = rememberSungInk(track)
     val revealed = remember(track.id, lyrics.lines) { mutableSetOf<Int>() }
     val seekEpoch by Player.seekEpoch.collectAsState()
     val reduced = Motion.reduced
@@ -228,7 +243,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             // property: once it has settled, the line's filtered picture is kept and not blurred again.
                             val blur = animateFloatAsState(LyricsBlur.radiusDp(if (active < 0) index + 1 else abs(index - active),
                                 AppSettings.lyricsBlur.value, lyrics.isTimed, browsing = !following || moment.isNotEmpty(), reduced,
-                                AppSettings.highPerformanceMode.value, blurSupported),
+                                AppSettings.highPerformanceMode.value, blurSupported, com.ketvoice.app.theme.LyricsLook.blur()),
                                 tween(Motion.duration(LyricsBlur.FADE_MS)), label = "lyricBlur")
                             val blurEffect = remember { LyricBlurEffect() }
                             val entry = remember(index, track.id, lyrics.lines) { Animatable(if (index in revealed || reduced) 1f else 0f) }
@@ -249,7 +264,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 targetValue = if (current || !lyrics.isTimed) 1f
                                     else if (past) LyricsCascade.pastAlpha(active - index) else LyricsCascade.INACTIVE_ALPHA,
                                 animationSpec = tween(Motion.duration(if (past) LyricsCascade.PAST_FADE_MS else 320)))
-                            val lineColor = Color.White
+                            val lineColor = if (current && lyrics.isTimed) sungInk else Color.White
                             // Cascade, the only lyrics style: the sung line alone stands forward; the others step
                             // back a little and catch up in a wave, each a few milliseconds after the one above.
                             // With reduced motion the lines keep their size and place: only their colour changes.
@@ -268,7 +283,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 wave.animateTo(0f, LyricsCascade.WAVE_SPRING)
                             }
                             val held = index in moment
-                            val otherSide = across.getOrElse(index) { false }
+                            val otherSide = !centred && across.getOrElse(index) { false }
                             val lineModifier = Modifier.fillMaxWidth()
                                 // The other singer's lines start a little further in, so that both voices read apart.
                                 .padding(start = if (otherSide) LyricsCascade.DUET_INSET_DP.dp else 0.dp)
@@ -288,16 +303,18 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     val breathe = if (current) 1f + breath.value else 1f
                                     scaleX = lineScale.value * breathe
                                     scaleY = lineScale.value * breathe
-                                    transformOrigin = TransformOrigin(if (otherSide) 1f else 0f, .5f)
+                                    transformOrigin = TransformOrigin(if (otherSide) 1f else if (centred) .5f else 0f, .5f)
                                     renderEffect = blurEffect.at(blur.value.dp.toPx())
                                 }
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
                                 // The fade dims the flat drawing only: a line drawn word by word keeps its own pending ink.
-                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive, end = otherSide,
-                                    fade = { lineAlpha.value })
+                                androidx.compose.runtime.CompositionLocalProvider(LocalLyricsInk provides sungInk) {
+                                    LyricVoices(line, current, lyrics.isTimed, lyricScale, lineColor, nearActive = nearActive, end = otherSide,
+                                        fade = { lineAlpha.value })
+                                }
                                 romanized.getOrNull(index)?.let { Box(Modifier.graphicsLayer { alpha = lineAlpha.value }) {
-                                    RomanizedLine(it, lineColor, fontScale, end = otherSide) } }
+                                    RomanizedLine(it, Color.White, lyricScale, end = otherSide) } }
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -464,7 +481,7 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
 internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
                          color: Color = Color.White, nearActive: Boolean = true, end: Boolean = false,
                          fade: (() -> Float)? = null) {
-    val align = if (end) androidx.compose.ui.text.style.TextAlign.End else null
+    val align = com.ketvoice.app.theme.LyricsLook.align(end)
     val voices = remember(line) { LyricsPresentation.split(line) }
     // Only the active line and its immediate neighbours need the transport clock.
     // This keeps the other visible lines cheap while still letting an unfinished
@@ -483,7 +500,7 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
                 KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale, dim = !active, end = end)
             else Text(voices.lead.text, localize = false, color = color,
                 fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
-                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, textAlign = align,
+                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, textAlign = align, fontFamily = com.ketvoice.app.theme.LyricsLook.font(),
                 modifier = Modifier.fillMaxWidth().then(if (fade != null) Modifier.graphicsLayer { alpha = fade() } else Modifier))
         }
         val leadStart = voices.lead.words.minOfOrNull { it.startMs } ?: line.timeMs
@@ -533,8 +550,8 @@ private fun BackingVocal(
             if (timed && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true, end = across)
             else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
                 fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
-                fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp,
-                textAlign = if (across) androidx.compose.ui.text.style.TextAlign.End else null, modifier = Modifier.fillMaxWidth())
+                fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp, fontFamily = com.ketvoice.app.theme.LyricsLook.font(),
+                textAlign = com.ketvoice.app.theme.LyricsLook.align(across), modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -561,6 +578,9 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     // 8.3: a held note's glow is a blurred copy of its letters (Android 12 and later, outside the performance mode);
     // the layer is blurred only while a held word is in its hold, and holds nothing otherwise.
     val blurGlow = lifting && !backing && android.os.Build.VERSION.SDK_INT >= LyricsBlur.MIN_API && !AppSettings.highPerformanceMode.value
+    // « Paroles à ton goût »: the sung words' colour and how much they lift and grow (1 = the 8.3 lyrics).
+    val sung = LocalLyricsInk.current
+    val motion = com.ketvoice.app.theme.LyricsLook.motion()
     val holding = remember(masks, offset) { derivedStateOf { masks.isNotEmpty() && heldNow(masks, LyricsOffsets.adjustedPosition(clock.longValue, offset)) } }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
@@ -570,15 +590,15 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             fontSize = ((if (backing) 24 else 33) * fontScale).sp,
             lineHeight = ((if (backing) 31 else 41) * fontScale).sp,
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
-            textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else null,
+            fontFamily = com.ketvoice.app.theme.LyricsLook.font(), textAlign = com.ketvoice.app.theme.LyricsLook.align(end),
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
-        if (blurGlow && masks.any { it.letters.isNotEmpty() }) HeldGlow(layout, masks, clock, offset, holding)
+        if (blurGlow && masks.any { it.letters.isNotEmpty() }) HeldGlow(layout, masks, clock, offset, holding, sung, motion)
         Canvas(Modifier.matchParentSize()) {
             val measured = layout ?: return@Canvas
             val now = LyricsOffsets.adjustedPosition(clock.longValue, offset)
-            val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
+            val ink = sung.copy(alpha = if (dim) .82f else 1f)
             if (lifting) {
-                val k = karaokeInk(ink, Color.White.copy(alpha = pendingAlpha), shadowGlow = !blurGlow)
+                val k = karaokeInk(ink, Color.White.copy(alpha = pendingAlpha), shadowGlow = !blurGlow, motion = motion)
                 masks.forEach { drawLiftedWord(measured, it, now, k) }
             } else {
                 val feather = LyricsWords.FEATHER_DP.dp.toPx()
@@ -591,14 +611,14 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
 /** The blurred copy of a held note's letters, behind the line; a plain layer holding nothing outside a hold. */
 @Composable
 private fun BoxScope.HeldGlow(layout: TextLayoutResult?, masks: List<LyricWordMask>, clock: androidx.compose.runtime.LongState,
-                              offset: Int, holding: State<Boolean>) {
+                              offset: Int, holding: State<Boolean>, sung: Color = Color.White, motion: Float = 1f) {
     val effects = remember { LyricBlurEffect() }
     Canvas(Modifier.matchParentSize().graphicsLayer {
         renderEffect = if (holding.value) effects.at(LyricsWords.GLOW_RADIUS_DP.dp.toPx()) else null
     }) {
         if (!holding.value) return@Canvas
         val measured = layout ?: return@Canvas
-        drawHeldGlow(measured, masks, LyricsOffsets.adjustedPosition(clock.longValue, offset), karaokeInk(Color.White, null, false))
+        drawHeldGlow(measured, masks, LyricsOffsets.adjustedPosition(clock.longValue, offset), karaokeInk(sung, null, false, motion))
     }
 }
 

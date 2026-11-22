@@ -52,7 +52,11 @@ components listed under "Third-party components" below.
    Third-party libraries, fonts and other material included in or used by the
    Software keep their own licenses, which this license does not change. In
    particular, the Inter typeface is licensed under the SIL Open Font License
-   (docs/licenses/Inter-OFL.txt). Music, artwork, lyrics, Canvas videos and
+   (docs/licenses/Inter-OFL.txt), and so are the optional typefaces Manrope
+   (docs/licenses/Manrope-OFL.txt), Atkinson Hyperlegible Next
+   (docs/licenses/AtkinsonHyperlegibleNext-OFL.txt), Nunito
+   (docs/licenses/Nunito-OFL.txt) and Lora (docs/licenses/Lora-OFL.txt).
+   Music, artwork, lyrics, Canvas videos and
    other content shown by the app belong to their respective owners and are not
    covered by this license.
 

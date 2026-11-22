@@ -175,7 +175,7 @@ internal fun SettingsHome(connected: Boolean, name: String, onResult: (SettingEn
         }
         if (enhance) com.ketvoice.app.ui.onboarding.EnhanceSheet(onClose = { enhance = false })
         SettingsGroupHeading("Apparence et lecture")
-        SettingsCategoryGroup(listOf(SettingsCategory.Appearance, SettingsCategory.Playback, SettingsCategory.Lyrics, SettingsCategory.Canvas), onCategory)
+        SettingsCategoryGroup(listOf(SettingsCategory.Appearance, SettingsCategory.Personalize, SettingsCategory.Playback, SettingsCategory.Lyrics, SettingsCategory.Canvas), onCategory)
         SettingsGroupHeading("Votre musique")
         SettingsCategoryGroup(listOf(SettingsCategory.Sources, SettingsCategory.Downloads, SettingsCategory.LocalMusic, SettingsCategory.Storage), onCategory)
         SettingsGroupHeading("Ketvoice")
@@ -232,7 +232,7 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
             Row(Modifier.fillMaxWidth().testTag("settings-category-${category.name}")
                 .rowPress { onCategory(category) }.heightIn(min = 60.dp)
                 .padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Ket27Tile(category.icon(), category.ordinal)
+                Ket27Tile(category.icon(), if (category == SettingsCategory.Personalize) 0 else category.ordinal)
                 Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
                     Text(category.title, color = theme.onBackground, fontSize = 17.sp,
                         fontWeight = FontWeight.Normal, lineHeight = 22.sp)
@@ -275,6 +275,7 @@ private fun SettingsCategory.supportingText(): String = when (this) {
     SettingsCategory.LocalMusic -> "Dossiers et fichiers de l'appareil"
     SettingsCategory.Storage -> "Cache et espace utilisé"
     SettingsCategory.About -> "Version et mises à jour"
+    SettingsCategory.Personalize -> "Couleurs, police, arrondis et paroles"
 }
 
 private fun SettingsCategory.icon(): ImageVector = when (this) {
@@ -289,4 +290,5 @@ private fun SettingsCategory.icon(): ImageVector = when (this) {
     SettingsCategory.LocalMusic -> KetIcons.Folder
     SettingsCategory.Storage -> KetIcons.Storage
     SettingsCategory.About -> KetIcons.Info
+    SettingsCategory.Personalize -> KetIcons.Sliders
 }
