@@ -35,13 +35,13 @@ internal object PersonalBackup {
         "highPerformanceMode", "autoEconomy", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
-        "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
+        "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics", "headphoneEq")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassLook" to 0..com.ketvoice.app.glass.GlassLook.MAX, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2, "albumHeader" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..com.ketvoice.app.util.LauncherIcons.LAST)
     private val longs = setOf("accentArgb", "cacheBytes")
     private val strings = setOf("lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "wifiQuality",
-        "mobileQuality", "equalizerGains", "language")
+        "mobileQuality", "equalizerGains", "language", "headphoneProfiles", "headphoneLinks")
 
     private fun cleanId(id: String): Boolean = id.isNotBlank() && id.length <= 256 &&
         id.none(Char::isISOControl) && "://" !in id && '?' !in id && '#' !in id
@@ -80,6 +80,8 @@ internal object PersonalBackup {
                 "lyricsOrder" -> LyricsOrder.valid(value)
                 "language" -> AppLanguage.all.any { it.label == value }
                 "equalizerGains" -> value.matches(Regex("-?\\d{1,2}(,-?\\d{1,2}){0,9}"))
+                "headphoneProfiles" -> com.ketvoice.app.player.HeadphoneProfiles.valid(value)
+                "headphoneLinks" -> com.ketvoice.app.player.HeadphoneEq.validLinks(value)
                 "translateLanguage", "translationSource" -> value in TranslationLanguages.codes ||
                     TranslationLanguages.codes.any { TranslationLanguages.name(it) == value }
                 else -> false

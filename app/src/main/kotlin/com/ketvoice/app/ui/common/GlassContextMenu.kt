@@ -279,6 +279,8 @@ private fun menuActions(request: ContextMenus.Request, haptic: (Haptics.Kind) ->
         MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },
         // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
         MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
+        // 9.0: write or fix this title's synced lyrics.
+        MenuAction("Éditer les paroles…", KetIcons.Lyrics, tag = "menu-lyrics-editor") { com.ketvoice.app.ui.player.LyricsEditor.open(track) },
         MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track },
         MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
 }

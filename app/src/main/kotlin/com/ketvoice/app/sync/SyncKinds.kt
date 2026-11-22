@@ -151,7 +151,7 @@ internal object SettingsKind : SyncKind {
         "fullArtwork", "panoramicCanvas", "sonicCanvas", "artistPhotos", "lyricsTextSize", "lyricsMode", "syncedLyrics",
         "lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "lyricsBlur", "automixOn", "automixIntensity",
         "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixOnSkip", "ketmixHaptics", "smartShuffle", "volumeLeveling",
-        "skipSilence", "equalizerEnabled", "equalizerGains", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
+        "skipSilence", "equalizerEnabled", "equalizerGains", "headphoneEq", "headphoneProfiles", "headphoneLinks", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
         "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound")
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {

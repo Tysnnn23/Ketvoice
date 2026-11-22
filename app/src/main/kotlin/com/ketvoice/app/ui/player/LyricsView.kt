@@ -95,15 +95,19 @@ internal val LocalLyricsOffset = staticCompositionLocalOf { 0 }
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         modifier: Modifier = Modifier,
                         onEmptyTap: () -> Unit = {},
-                        fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
-    val lyrics by LyricsRepo.state.collectAsState()
+                        fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value),
+                        /** « Éditeur de paroles » (9.0): lines being timed, shown in this same view in place of the title's lyrics. */
+                        preview: LyricsRepo.State? = null) {
+    val repoLyrics by LyricsRepo.state.collectAsState()
+    val lyrics = preview ?: repoLyrics
     // Lines held for a "Moment" card: a long-press starts the selection, a tap extends it.
     var moment by remember(track.id) { mutableStateOf(listOf<Int>()) }
     val momentHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val offsets by LyricsOffsets.values.collectAsState()
     // The voice stage plays the sound a little later (6.0.0 Beta 4): the lyrics follow the sound heard.
     val stageDelay by com.ketvoice.app.stems.VoiceLevel.delayMs.collectAsState()
-    val offsetMs = (offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0) - stageDelay
+    // A preview is timed on the sound itself: the title's offset (kept for online lyrics) does not apply to it.
+    val offsetMs = (if (preview != null) 0 else offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0) - stageDelay
 
     // The sung line breathes with the bass (5.9.0): read in the line's layer, never recomposing the list.
     val breathing = !Motion.reduced && !AppSettings.highPerformanceMode.value && Player.state.collectAsState().value.isPlaying
@@ -762,6 +766,17 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
                         com.ketvoice.app.data.CustomLyrics.forget(track.id); custom = null; LyricsRepo.load(track, force = true)
                     }, destructive = true)
                 }
+            }
+            // 9.0: write or fix this title's synced lyrics, saved as its own file (the row above).
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onClose(); LyricsEditor.open(track) }
+                .padding(horizontal = 12.dp, vertical = 11.dp).testTag("lyrics-editor-open"), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Éditeur de paroles", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.body)
+                    Text("Créer ou corriger des paroles synchronisées en tapant en rythme", color = Color.White.copy(alpha = .78f),
+                        style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(com.ketvoice.app.ui.common.KetIcons.Lyrics, null, tint = Color.White.copy(alpha = .78f), modifier = Modifier.size(20.dp))
             }
             (listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF).forEach { source ->
                 val status = results[source]

@@ -63,6 +63,23 @@ object CustomLyrics {
         } ?: throw IllegalArgumentException("Fichier illisible")
         val (format, lines) = parse(decode(bytes))
         require(lines.isNotEmpty()) { "Aucune parole trouvée dans ce fichier" }
+        return keep(trackId, name, format, bytes)
+    }
+
+    /**
+     * « Éditeur de paroles » (9.0): lyrics written in the editor (LRC or enhanced LRC) become the title's own file, used
+     * from then on before any online source, exactly as a file the listener chose.
+     */
+    fun saveText(context: Context, trackId: String, name: String, text: String): Entry {
+        init(context)
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        require(bytes.size <= MAX_BYTES) { "Fichier trop volumineux (2 Mo maximum)" }
+        val (format, lines) = parse(text)
+        require(lines.any { it.timeMs >= 0 }) { "Aucune parole synchronisée à enregistrer" }
+        return keep(trackId, name, format, bytes)
+    }
+
+    private fun keep(trackId: String, name: String, format: String, bytes: ByteArray): Entry {
         val stored = "${trackId.hashCode().toUInt().toString(16)}-${System.currentTimeMillis()}.txt"
         synchronized(this) {
             entry(trackId)?.let { File(folder, it.file).delete() }

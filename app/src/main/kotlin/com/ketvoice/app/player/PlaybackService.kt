@@ -111,6 +111,8 @@ class PlaybackService : MediaLibraryService() {
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
         // « Choix de la sortie audio » (8.4): Ketvoice's own decks go to the output the listener picked.
         serviceScope.launch { AudioOutputs.chosen.collect { applyOutput() } }
+        // « Égaliseur par casque » (9.0): the correction linked to the output playing follows connections and the choice.
+        serviceScope.launch { HeadphoneEq.watch(this@PlaybackService).collect {} }
         // A title separated while it plays (the voice slider, 6.0.0 Beta 3) has its voice level at once.
         serviceScope.launch { com.ketvoice.app.stems.VoiceSeparation.separated.collect { takeUpVoice(it) } }
         // A library session (Android Auto, 6.0.0): the browse tree and the car's requests live in AutoLibrary.kt.
@@ -357,7 +359,7 @@ class PlaybackService : MediaLibraryService() {
                     .setAudioTrackBufferSizeProvider(buffers)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(
-                        com.ketvoice.app.automix.DeckMixProcessor(deck), LevelingAudioProcessor(), ReverbAudioProcessor {
+                        com.ketvoice.app.automix.DeckMixProcessor(deck), HeadphoneEqProcessor(), LevelingAudioProcessor(), ReverbAudioProcessor {
                         if (::player.isInitialized && owner === this@PlaybackService.player) ReverbControl.notePcm()
                     }, TeeAudioProcessor(meter))).build(), if (exactRequested) null else deck)
                 if (exactRequested && android.os.Build.VERSION.SDK_INT >= 34) return BitPerfectAudioSink(context, fallback)
