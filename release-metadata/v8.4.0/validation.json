@@ -1,0 +1,228 @@
+{
+  "schema": 8,
+  "version": "8.4.0",
+  "versionCode": 152,
+  "source_commit": "5dfb87a3ab08ff906aec7271bcd253ebaadd6185",
+  "created_at": "2026-11-22T13:42:36.089938+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 45025596311,
+    "artifact": {
+      "id": 14756459156,
+      "sha256": "051ac758c81b85a388e97b40d1384e8a64fa09a8cbd2bb548bdcedbc47e04f9d"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 45025596311: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host: Crystal tab bar (expanded, folded, lifted pill), page and title menus, audio output sheet, settings search, Ketogether host screens, lyrics order sheet; RenderEffect blur and the backdrop lens are not drawn by Robolectric, so Crystal's glass was never seen rendered; nothing ran on a device or in a car",
+    "features_8_4": "Crystal glass look (key glassLook 0/1, default Liquid 27 unchanged): control glass saturation 1.5, blur 8 dp, lens 24/24 dp with depth and chromatic aberration on API 33+, highlight 0.5 dp 45 deg, shadow 24 dp, tint 40 %, sampled at 0.33 (0.25 performance, no lens); menu frost saturation 1.8 blur 24 dp; pill springs travel 280/31.4, lift 250/19-22.1, material 1000/63.3, squash <= 12 %; built on backdrop 1.0.0-rc02 public API, pill constants MIT (liquid_glass_easy). Android Auto (mobile flavour): play-from-search with extras and phrases in ten languages, resume on empty query, four tabs with content-style hints and Play all/Shuffle rows, car queue window of 150 titles, custom commands Like/Shuffle/Repeat/Radio/Ketmix on the shared session (also in the phone notification), disk-cached artwork. Ketmix: sub-frame beat/downbeat refinement (log-activation parabola), window length read from the model (published model fixed at 500 frames), MixStyle.Bridge ordinal 9 (4-bar instrumental loop from lyrics + voice mask, tempo glide <= 2.5 BPM/bar with folding, bass swap half-way, high-pass exit, TempoReturn). Everyday: audio output picker via setPreferredAudioDevice on every deck (not saved), accent-insensitive settings search index, WorkManager playlist update notifications every 6 h (key playlistUpdates), recap soundtrack on separate players with 1.2 s crossfade (key wrappedSound), Ketogether host limit 2-10 / signed removal / 2-min away state / 8-entry log / drift in pings (no SQL change), draggable lyrics provider order (key lyricsOrder)",
+    "after_local_run": "full local runs on b25f17a: mobile 2141 tests with 1 failure and quest 2122 with 1 failure, both SettingsSearchTest.everyRowThePagesDrawIsIndexed (the Crystal glass style row was missing from the settings search index after merging); lite 2130 tests 0 failures; mobile release lint found 3 UnsafeOptInUsageError in CarControls.kt; d17d172 indexes the row and 5dfb87a adds the opt-ins; re-runs after the fixes: mobile SettingsSearch/CarControls/Auto 77 tests 0 failures, quest SettingsSearch 9 tests 0 failures, release lint 0 errors on the three flavors; UI text audit clean; each part was also tested on its own branch before merging (Crystal 161/160/164, Android Auto 2044 mobile with one tablet picker failure that did not reproduce in the full run, Ketmix 272/260/260, everyday features 2063 mobile)",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "after the last complete runs only SettingsSearch.kt (one index row) and CarControls.kt (two opt-in annotations) changed, both re-tested above; CI run 45025596311 ran every suite on the release commit and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 2141,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 2122,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 52
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 2130,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 368,
+      "Hint": 31
+    },
+    "quest": {
+      "Warning": 364,
+      "Hint": 31
+    },
+    "lite": {
+      "Warning": 385,
+      "Hint": 31
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-8.4.0.apk",
+      "sha256": "21a05220b00e3748c270138498f1f0b56f5697d07a84c291c1a9b8fdf321d20d",
+      "bytes": 107329274,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.4.0",
+      "versionCode": 152,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.4.0-Quest.apk",
+      "sha256": "5e4f24ab3966eae8245b452f98c556a36a61bdd0e0a3ebf0e29780c2823d52c8",
+      "bytes": 119664010,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.4.0",
+      "versionCode": 152,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.4.0-Lite.apk",
+      "sha256": "42cf005aa4e95235ee5e9dc5c435ccb4fe6ed06575e4b11ec3ce38fc1ecc3191",
+      "bytes": 34710402,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.4.0",
+      "versionCode": 152,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4013,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-22T13:42:36.089938+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 8.4.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_22_8_4_0": {
+    "statements": [
+      "« [the reference player] a aussi un modèle AI d'automix, analyse-le, dis-moi s'il est meilleur que le nôtre et intègre-le à l'app si je le décide, et cherche d'autres modèles d'automix. Propose des améliorations UI que [it] a et que nous non. Aussi fais un mode liquid glass nouveau que tu nommes comme tu veux mais qui a EXACTEMENT les animations et liquid glass de [it]. Aussi améliore grandement l'app Android Auto pour que même au volant elle puisse être contrôlée comme Apple Music. »"
+    ],
+    "picks": [
+      "Mix en boucle tous tempos",
+      "Temps plus précis",
+      "Choix de la sortie audio",
+      "Recherche dans les réglages",
+      "Playlists téléchargées à jour",
+      "Bande-son du récap annuel",
+      "Ketogether pour l'hôte",
+      "Ordre des sources de paroles"
+    ],
+    "model_verdict": "the reference player's models (Beat This! final0 int8, Open-Unmix UMX-HQ vocals int8) were judged not better than Ketvoice's (Beat This! small, Spleeter/UVR-MDX); no model was integrated; only ideas were reimplemented",
+    "licence": "the reference player is GPL/AGPL: its code was read to understand the behaviour and never copied; Crystal reproduces its parameters with Ketvoice's own code",
+    "done": "all picks, the Crystal look and the Android Auto work; nothing was seen on a device or in a car"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 8.4.0",
+    "Crystal's blur, lens and chromatic aberration as drawn by a real GPU (Robolectric does not draw RenderEffect or the backdrop lens), and its frame times",
+    "Android Auto in a car or the Desktop Head Unit: the queue screen, the placement and icons of the five buttons, tab and category icons, grids, the recent resume card and paging while driving",
+    "real Google Assistant phrases and the extras the assistant actually sends for radio, shuffle and genre requests",
+    "the five session buttons in the phone notification and on the lock screen",
+    "audio output routing on real Bluetooth, USB and hearing-aid devices",
+    "the loop bridge and the sub-frame beats on real music through real decks",
+    "Ketogether host controls between real devices over Supabase Realtime",
+    "the recap soundtrack and playlist update notifications on a device",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "Streaming voice separation does not cover HLS streams.",
+    "A listener who picked the Liquid Glass icon before 7.6 is moved to the GTA VI icon like everyone else.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
