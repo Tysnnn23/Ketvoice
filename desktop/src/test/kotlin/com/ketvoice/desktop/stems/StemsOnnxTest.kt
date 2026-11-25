@@ -115,7 +115,7 @@ class StemsOnnxTest {
         for (p in parts) assertEquals(pins[p.name], p.sha256)
         val workflow = File("../.github/workflows/publish-stem-models-onnx.yml").readText()
         assertTrue("TAG: ketmix-stems-onnx-v1" in workflow)
-        for (p in parts) { assertTrue(p.sha256 in workflow, p.name); assertTrue(p.source in workflow || p.source.substringAfterLast('/') in workflow, p.source) }
+        for (p in parts) { val source = p.source!!; assertTrue(p.sha256 in workflow, p.name); assertTrue(source in workflow || source.substringAfterLast('/') in workflow, source) }
         // The phone's LiteRT tags are never touched.
         assertTrue("ketmix-stems-v1" !in workflow.replace("ketmix-stems-onnx-v1", "") && "ketmix-stems-v2" !in workflow)
     }

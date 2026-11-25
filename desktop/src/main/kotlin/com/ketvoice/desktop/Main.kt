@@ -296,6 +296,8 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     com.ketvoice.app.automix.WaveStore.init(context)
     // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
     com.ketvoice.app.stems.StemLibrary.start()
+    // Windows 2.0 « Puissance de Ketmix »: large models, GPU, idle preparation, live mix view, « Ketmix apprend ».
+    com.ketvoice.desktop.ketmix.KetmixPc.start(context, engine, scope)
     // Audio files opened with Ketvoice (file associations), from this launch and later ones.
     com.ketvoice.desktop.library.OpenFiles.start(scope, java.io.File(context.cacheDir, "local-covers")) { Player.playQueue(it, 0) }
     // Updates from the windows-v* releases (at most once per 6 h; Settings › À propos checks now).

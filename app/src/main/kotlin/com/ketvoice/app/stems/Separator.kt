@@ -24,7 +24,7 @@ internal interface StemNet : AutoCloseable {
 internal class StemMask(val startUs: Long, val frames: Int, val packed: ByteArray,
                         /** Per frame, how much of the voice band is voice (0..255), and how loud that voice is (0..255 for -96..0 dB). Null in separations of 5.10.0. */
                         val voiceShare: ByteArray? = null, val voiceLevel: ByteArray? = null,
-                        /** Which model found it: [FAST] (Spleeter) or [HIGH] (UVR MDX-Net). */
+                        /** Which model found it: [FAST] (Spleeter), [HIGH] (UVR MDX-Net) or [STUDIO] (Mel-Band RoFormer, desktop only). */
                         val quality: Int = FAST) {
     init {
         require(packed.size == frames * StemDsp.NET_BINS / 2)
@@ -53,6 +53,8 @@ internal class StemMask(val startUs: Long, val frames: Int, val packed: ByteArra
     companion object {
         const val FAST = 0
         const val HIGH = 1
+        /** Windows 2.0 « Maximum »: the studio voice model (Mel-Band RoFormer); never produced on the phone. */
+        const val STUDIO = 2
         private val LEVELS = FloatArray(16) { val r = it / 15f; r * r }
 
         fun quantize(value: Float): Int = (sqrt(value.coerceIn(0f, 1f)) * 15f + .5f).toInt().coerceIn(0, 15)
@@ -209,7 +211,7 @@ internal object Separator {
      * taken away, on the same grid and in the same small form as [mask].
      */
     fun maskFromVoice(left: FloatArray, right: FloatArray, voiceL: FloatArray, voiceR: FloatArray, startUs: Long,
-                      cancelled: () -> Boolean = { false }): StemMask? {
+                      cancelled: () -> Boolean = { false }, quality: Int = StemMask.HIGH): StemMask? {
         val frames = StemDsp.frames(left.size)
         if (frames <= 0) return null
         val out = MaskWriter(frames)
@@ -228,7 +230,7 @@ internal object Separator {
             }
             out.endFrame(t)
         }
-        return out.result(startUs, StemMask.HIGH)
+        return out.result(startUs, quality)
     }
 
     /**

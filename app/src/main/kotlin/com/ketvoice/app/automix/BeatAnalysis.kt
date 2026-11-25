@@ -60,7 +60,13 @@ internal data class SegmentAnalysis(
     val gapFromMs: Long = -1,
     val gapUntilMs: Long = -1,
     /** 7.1: how busy the sound is (mean spectral flux of its audible part, see [OnsetTracker]); 0 when unknown. */
-    val activity: Float = 0f
+    val activity: Float = 0f,
+    /**
+     * Windows 2.0 (« Maximum »): where the title's sections start (intro, verse, chorus…, from its whole-title structure
+     * analysis), in ms; null when unknown, as always on the phone. When some lie in a window, [phraseStarts] gives
+     * those, so that exits and entries land where the song itself turns a page.
+     */
+    val sectionStartsMs: List<Double>? = null
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -79,7 +85,9 @@ internal data class SegmentAnalysis(
 
     /** The phrase starts between [fromMs] and [untilMs], earliest first. */
     fun phraseStarts(fromMs: Double, untilMs: Double): List<Double> {
-        if (!hasPhrases || untilMs < fromMs) return emptyList()
+        if (untilMs < fromMs) return emptyList()
+        sectionStartsMs?.filter { it >= fromMs - 1e-6 && it <= untilMs + 1e-6 }?.takeIf { it.isNotEmpty() }?.let { return it.sorted() }
+        if (!hasPhrases) return emptyList()
         val period = phraseMs
         var at = phraseAtMs + kotlin.math.ceil((fromMs - phraseAtMs) / period - 1e-6) * period
         val found = ArrayList<Double>()

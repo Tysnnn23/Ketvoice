@@ -81,7 +81,14 @@ internal data class MixContext(
     /** The kinds of the last transitions of this listening, oldest first (6.9, see [MixVariety]). */
     val recentKinds: List<MixKind> = emptyList(),
     /** The last transition was a « boucle » blend: two in a row would be heard as a trick (see [LoopBlend]). */
-    val loopedLast: Boolean = false
+    val loopedLast: Boolean = false,
+    /**
+     * Windows 2.0 energy matching: the energy of the incoming title's start minus that of the outgoing title's end
+     * (desktop `EnergyCurve`, 0..1 scale); NaN when unknown, as always on the phone.
+     */
+    val energyStep: Float = Float.NaN,
+    /** Windows 2.0 « Ketmix apprend »: kinds of transition the listener keeps turning down; empty on the phone. */
+    val avoid: Set<MixKind> = emptySet()
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
@@ -231,6 +238,8 @@ internal object TransitionPlanner {
     private const val RING_BEAT_MS = 500f
     /** How long an echo may ring past the end of the outgoing title. */
     internal const val MAX_TAIL_MS = 6_000L
+    /** Windows 2.0: an energy change between the two titles this large (on the 0..1 scale) shapes the way across. */
+    internal const val ENERGY_STEP = .15f
 
     /** True when the listener chose a point or an overlap for this pair in the DJ editor. */
     fun listener(out: MixFacts, incoming: MixFacts, context: MixContext): Boolean =
@@ -297,19 +306,22 @@ internal object TransitionPlanner {
             cutOn(settings.style == MixStyle.Drop)?.let { return it }
         // Left to Ketmix, a drop takes a turn among the ways out on the beat when the next title has a clear one (not twice running).
         fun dropTurn() = if (settings.style == MixStyle.Auto && settings.echo && beats && !context.loop && !a.fadeOut && context.lastExit != 2 &&
+            !(context.energyStep <= -ENERGY_STEP) && MixKind.Rise !in context.avoid &&
             !MixVariety.tired(context.recentKinds, MixKind.Rise) && StyleCuts.dropAt(b, incoming) != null) cutOn(drop = true)?.takeIf { it.reason == "drop" } else null
-        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
-        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo)
+        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo && MixKind.Echo !in context.avoid)
+        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo && MixKind.Rise !in context.avoid)
         fun onTheBeat() = beatExit(a, b, context, settings, end, start, sungUntil, gain, variant, beats, echoAllowed, riseAllowed, ::measured)
         // 7.1: two titles too far apart change over as on the radio; a last note at full level still rings out whole.
         if (settings.style == MixStyle.Auto && !context.loop && !(a.hardEnding && !a.fadeOut))
             PairFit.radio(a, b, end, gain)?.let { p -> measured(p).takeIf { it.mixes }?.let { return it } }
+        // Windows 2.0 energy matching: a clearly more intense next title drops in on its beat when it has a drop.
+        if (settings.style == MixStyle.Auto && context.energyStep >= ENERGY_STEP && !(a.hardEnding && !a.fadeOut)) dropTurn()?.let { return it }
         // 0. Variety (6.9): after two blends in time running, a way out on the beat takes a turn when this pair has one.
         if (settings.style == MixStyle.Auto && MixVariety.tired(context.recentKinds, MixKind.Beatmatch) && !(a.hardEnding && !a.fadeOut))
             (dropTurn() ?: onTheBeat())?.let { return it }
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
         if (beats && BlendFit.steady(a, b) && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise &&
-            !StyleCuts.cuts(settings.style)) {
+            !StyleCuts.cuts(settings.style) && !(settings.style == MixStyle.Auto && MixKind.Beatmatch in context.avoid)) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
             if (abs(context.speed * rate - 1f) <= settings.tempoRange) {

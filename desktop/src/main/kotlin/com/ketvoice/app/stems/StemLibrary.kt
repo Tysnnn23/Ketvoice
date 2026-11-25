@@ -100,8 +100,9 @@ internal object StemLibrary {
         if (!goAhead()) return
         val list = items().take(MAX_TITLES).filter { it.path !in unreadable }
         // First pass: the quick model on every title without a separation. Second: the best model where it is wanted.
+        // The studio model of « Maximum » (Windows 2.0) runs only while the PC is idle: `desktop/ketmix/LibraryPrep`.
         val passes = listOfNotNull(StemMask.FAST.takeIf { StemModel.fast.ready || testQuality != null },
-            (testQuality ?: StemEngine.wanted())?.takeIf { it > StemMask.FAST }).distinct()
+            (testQuality ?: StemEngine.wanted())?.takeIf { it == StemMask.HIGH }).distinct()
         for (quality in passes) {
             val todo = list.filter { (StemStore.wholeQuality(it.id) ?: -1) < quality }
             _progress.value = Progress(0, todo.size, running = todo.isNotEmpty())

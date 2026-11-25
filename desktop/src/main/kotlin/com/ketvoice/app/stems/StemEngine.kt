@@ -7,11 +7,8 @@ import ai.onnxruntime.TensorInfo
 import java.io.File
 import java.nio.FloatBuffer
 
-private fun onnxSession(file: File, threads: Int): OrtSession =
-    OrtEnvironment.getEnvironment().createSession(file.path, OrtSession.SessionOptions().apply {
-        setIntraOpNumThreads(threads)
-        setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-    })
+/** Windows 2.0: on the graphics card when [OrtAccel] checked it, else on the processor. */
+private fun onnxSession(file: File, threads: Int): OrtSession = OrtAccel.session(file, threads)
 
 private fun OrtSession.runOne(input: FloatArray, shape: LongArray, into: FloatArray) {
     val env = OrtEnvironment.getEnvironment()
@@ -65,11 +62,19 @@ internal object StemEngine {
 
     @Volatile private var net: StemNet? = null
     @Volatile private var uvr: UvrNet? = null
+    @Volatile private var roformer: RoformerNet? = null
     /** Set by tests: the networks to use instead of the downloaded ones. */
     @Volatile internal var testNet: StemNet? = null
     @Volatile internal var testUvr: UvrNet? = null
+    @Volatile internal var testRoformer: RoformerNet? = null
+    /** The studio model (« Maximum », Windows 2.0): set by the app from `PcModels` when the tier has it ready. */
+    @Volatile internal var studioFile: () -> File? = { null }
 
-    private fun threads() = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
+    /**
+     * Half the cores for the quick and UVR models, which run while the listener uses the PC (Windows 2.0: no longer
+     * capped at 4); the studio model gets every core (it runs at idle, or on the graphics card).
+     */
+    private fun threads() = OrtAccel.threads(background = true).coerceAtLeast(2)
 
     @Synchronized private fun network(): StemNet? {
         testNet?.let { return it }
@@ -92,14 +97,39 @@ internal object StemEngine {
         }.getOrNull()?.also { uvr = it }
     }
 
-    @Synchronized fun close() { net?.close(); net = null; uvr?.close(); uvr = null }
+    @Synchronized private fun studio(): RoformerNet? {
+        testRoformer?.let { return it }
+        roformer?.let { return it }
+        val f = studioFile() ?: return null
+        return runCatching { OnnxRoformerNet(f, OrtAccel.threads(background = false), gpu = true) }.onFailure {
+            android.util.Log.w("KetvoiceStems", "studio model failed to load: $it")
+        }.getOrNull()?.also { roformer = it }
+    }
+
+    /** Whether the studio model can separate now. */
+    fun studioReady(): Boolean = testRoformer != null || studioFile() != null
+
+    @Synchronized fun close() { net?.close(); net = null; uvr?.close(); uvr = null; roformer?.close(); roformer = null }
 
     /** Which model separates right now, from the setting and the mains power; null when none is there. */
-    fun wanted(): Int? = testUvr?.let { StemMask.HIGH } ?: testNet?.let { StemMask.FAST }
-        ?: StemModel.charging().let { StemModel.quality(com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value, it) }
+    fun wanted(): Int? = testRoformer?.let { StemMask.STUDIO } ?: testUvr?.let { StemMask.HIGH } ?: testNet?.let { StemMask.FAST }
+        ?: StemModel.charging().let { charging ->
+            // « Maximum »: the studio model takes the place of « the best » when it runs on the card (never « always quick »).
+            val setting = com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value
+            // On the processor a whole title takes minutes with it: there it is left to the idle preparation.
+            val studio = studioFile() != null && OrtAccel.status.value == OrtAccel.Status.Gpu
+            if (setting != 2 && (charging || setting == 1) && studio) StemMask.STUDIO else StemModel.quality(setting, charging)
+        }
 
     /** Separates [left]/[right] (44.1 kHz) with the model of [quality]. */
     internal fun separate(left: FloatArray, right: FloatArray, startUs: Long, quality: Int, cancelled: () -> Boolean): StemMask? {
+        if (quality == StemMask.STUDIO) {
+            val model = studio() ?: return separate(left, right, startUs, StemMask.HIGH, cancelled)
+            return synchronized(this) {
+                val (vl, vr) = RoformerSeparator(model).voice(left, right, cancelled) ?: return null
+                Separator.maskFromVoice(left, right, vl, vr, startUs, cancelled, StemMask.STUDIO)
+            }
+        }
         if (quality == StemMask.HIGH) {
             val model = highQuality() ?: return null
             return synchronized(this) {

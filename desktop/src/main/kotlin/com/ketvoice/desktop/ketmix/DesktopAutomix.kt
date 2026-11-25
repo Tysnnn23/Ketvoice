@@ -96,6 +96,7 @@ object DesktopAutomix {
         // A transition set and then dropped (a seek, a queue change) may be planned again.
         if (status.phase == FfmpegAudioEngine.MixPhase.Idle && _ui.value.phase == Phase.Ready) doneKey = null
         val p = pair
+        KetmixFeedback.playing(status.phase == FfmpegAudioEngine.MixPhase.Mixing)
         _ui.value = when (status.phase) {
             FfmpegAudioEngine.MixPhase.Idle -> if (_ui.value.phase == Phase.Preparing) _ui.value else Ui()
             FfmpegAudioEngine.MixPhase.Scheduled -> Ui(Phase.Ready, p?.first, p?.second)
@@ -118,6 +119,7 @@ object DesktopAutomix {
             val state = Player.state.value
             val current = state.current ?: continue
             if (!state.isPlaying) continue
+            reorderOnce(state, current, e.durationMs())
             val next = Player.automixNext() ?: continue
             val key = (state.queueEntryIds.getOrNull(state.index) ?: continue) + ">" + next.entryId
             if (key == doneKey) continue
@@ -137,6 +139,17 @@ object DesktopAutomix {
     }
 
     private suspend fun currentCoroutineContextActive() = kotlinx.coroutines.currentCoroutineContext().isActive
+
+    /** The entry whose followers were already ordered by sound. */
+    @Volatile private var reorderedFor: String? = null
+
+    /** Windows 2.0 « Maximum »: in shuffle, the next title is the one that sounds closest ([SoundQueue]), once per title. */
+    private fun reorderOnce(state: com.ketvoice.app.player.PlayerUiState, current: Track, duration: Long) {
+        val entry = state.queueEntryIds.getOrNull(state.index) ?: return
+        if (entry == reorderedFor || duration <= 0) return
+        reorderedFor = entry
+        runCatching { SoundQueue.reorder(current, duration) }.onFailure { AppLog.w("ketmix", "sound order: $it") }
+    }
 
     private fun stillPair(key: String): Boolean {
         val s = Player.state.value
@@ -168,14 +181,18 @@ object DesktopAutomix {
         if (!stillPair(key) || e.mixStatus.value.phase != FfmpegAudioEngine.MixPhase.Idle) { _ui.value = Ui(); return }
         val inLyrics = withContext(Dispatchers.IO) { firstLines(next, nextDuration) }
         val outLyrics = com.ketvoice.app.data.LyricsRepo.state.value.takeIf { it.trackId == current.id }?.lines.orEmpty()
-        val (out, incoming) = voiced(MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration)),
-            MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.id, nextDuration)),
+        // Windows 2.0 « Maximum »: sections, S-KEY's key and the energy of both titles, when the idle preparation has them.
+        val outFacts = if (KetmixPc.maximum()) TrackFactsStore.get(current.id, duration) else null
+        val inFacts = if (KetmixPc.maximum()) TrackFactsStore.get(next.id, nextDuration) else null
+        val energyStep = PcInputs.energyStep(outFacts, inFacts, outro, intro)
+        val (out, incoming) = voiced(MixFacts(duration, PcInputs.analysis(outro, outFacts), userExitMs = MixPointStore.exitOf(current.id, duration)),
+            MixFacts(nextDuration, PcInputs.analysis(intro, inFacts), userEntryMs = MixPointStore.entryOf(next.id, nextDuration)),
             LyricTimes.lines(outLyrics, duration), inLyrics, stems)
         val outSpeed = e.speed()
         val choice = MixPointStore.pair(current.id, next.id)
-        var plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed), choice, outSpeed, beats = true)
+        var plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed, energyStep), choice, outSpeed, beats = true)
         if (plan.mixes && plan.beatTied && e.renderedMs() > plan.outMs - preRoll(plan) - 1_000L)
-            plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed), choice, outSpeed, beats = false)
+            plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed, energyStep), choice, outSpeed, beats = false)
         if (!plan.mixes || e.renderedMs() > plan.outMs - preRoll(plan) - 300L) {
             AppLog.i("ketmix", "no mix: ${plan.reason.ifBlank { "late" }}")
             _ui.value = Ui(); return
@@ -185,6 +202,8 @@ object DesktopAutomix {
         pair = current to next
         e.mixIntoNext(plan, preRoll(plan), stems?.let { it.out to it.incoming }) { ok -> if (!ok) { _ui.value = Ui() } }
         remember(plan)
+        KetmixFeedback.planned(plan, current, next)
+        LiveMix.planned(plan, current, next, outSource, inSource, out.analysis, incoming.analysis, scope)
         AppLog.i("ketmix", "mix planned: ${plan.kind} at ${plan.outMs} ms into ${plan.inMs} ms, ${plan.overlapMs} ms, speed ${plan.rate}")
     }
 
@@ -198,7 +217,8 @@ object DesktopAutomix {
     }
 
     /** The pair's context for the planner, from the queue and the settings. */
-    internal fun contextFor(state: com.ketvoice.app.player.PlayerUiState, current: Track, next: Track, outSpeed: Float): MixContext = MixContext(
+    internal fun contextFor(state: com.ketvoice.app.player.PlayerUiState, current: Track, next: Track, outSpeed: Float,
+                            energyStep: Float = Float.NaN): MixContext = MixContext(
         sameAlbumInOrder = !state.repeatOne && !state.shuffle && current.album.isNotBlank() &&
             current.album.equals(next.album, ignoreCase = true) && current.artist.equals(next.artist, ignoreCase = true),
         repeatOne = state.repeatOne,
@@ -209,7 +229,9 @@ object DesktopAutomix {
         lastVariant = lastVariant, lastExit = lastExit, recentKinds = recentKinds,
         userOverlapMs = MixPointStore.pair(current.id, next.id)?.overlapMs ?: -1L,
         // The desktop decks loop bars as the phone's do (« Boucle », « Pont en boucle »): never twice running.
-        loopedLast = loopedLast)
+        loopedLast = loopedLast,
+        // Windows 2.0: energy matching and what « Ketmix apprend » learnt to leave out (both empty without them).
+        energyStep = energyStep, avoid = KetmixFeedback.avoid())
 
     /**
      * The plan for a pair, as the phone makes it: the planner (the « Pont en boucle » included), the listener's shape,
