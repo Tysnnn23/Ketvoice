@@ -63,6 +63,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,20 +117,24 @@ fun KetIconButton(icon: ImageVector, label: String, onClick: () -> Unit, modifie
     val ket = LocalKet.current
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
+    val click by rememberUpdatedState(onClick)
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) .88f else 1f, Motion.pressSpring(pressed))
+    // A press sinks it, the release bounces it back; under the pointer the glyph swells a little, as through a drop.
+    val scale by animateFloatAsState(if (pressed) .86f else 1f, Motion.pressSpring(pressed))
+    val lens by animateFloatAsState(if (hovered && enabled && !Motion.reduced) 1.12f else 1f,
+        androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 520f))
     Tooltip(label) {
         Box(
             modifier.size(size).graphicsLayer { scaleX = scale; scaleY = scale }.clip(CircleShape)
                 .background(if (hovered && enabled) ket.hover else Color.Transparent)
                 .hoverable(source)
                 .pointerInput(enabled) {
-                    detectTapGestures(onPress = { if (enabled) { pressed = true; tryAwaitRelease(); pressed = false } }, onTap = { if (enabled) onClick() })
+                    detectTapGestures(onPress = { if (enabled) { pressed = true; tryAwaitRelease(); pressed = false } }, onTap = { if (enabled) click() })
                 }
                 .semantics { contentDescription = AppText.t(label) },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, Modifier.size(glyph), tint = when {
+            Icon(icon, null, Modifier.size(glyph).graphicsLayer { scaleX = lens; scaleY = lens }, tint = when {
                 !enabled -> ket.tertiary
                 active -> ket.accent
                 tint != Color.Unspecified -> tint
@@ -146,10 +151,17 @@ fun CapsuleButton(label: String, icon: ImageVector?, onClick: () -> Unit, filled
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
     val bg = if (filled) accent else ket.fill
+    val click by rememberUpdatedState(onClick)
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) .94f else 1f, Motion.pressSpring(pressed))
     Row(
-        modifier.height(36.dp).widthIn(min = 120.dp).clip(RoundedCornerShape(10.dp))
+        modifier.magnetic(.12f, 3f).height(40.dp).widthIn(min = 128.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(20.dp))
             .background(if (hovered) bg.copy(alpha = (bg.alpha * .85f)) else bg)
-            .hoverable(source).clickable(onClick = onClick).padding(horizontal = 18.dp),
+            .hoverable(source)
+            .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }, onTap = { click() }) }
+            .semantics(mergeDescendants = true) { role = androidx.compose.ui.semantics.Role.Button }
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
         val fg = if (filled) Color.White else accent
@@ -163,7 +175,7 @@ fun CapsuleButton(label: String, icon: ImageVector?, onClick: () -> Unit, filled
 fun SectionHeader(title: String, modifier: Modifier = Modifier, action: (@Composable RowScope.() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().padding(top = Ket27Desk.Space.sectionTop, bottom = Ket27Desk.Space.sectionBottom),
         verticalAlignment = Alignment.CenterVertically) {
-        KText(title, Ket27Desk.Type.title2, Modifier.weight(1f))
+        KText(title, Ket27Desk.Type.title2, Modifier.weight(1f), weight = FontWeight.Bold)
         action?.invoke(this)
     }
 }
@@ -190,6 +202,10 @@ fun ThinSlider(value: Float, onChange: (Float) -> Unit, modifier: Modifier = Mod
     var dragging by remember { mutableStateOf(false) }
     var width by remember { mutableStateOf(1f) }
     var local by remember { mutableStateOf(value) }
+    // Dragged past an end, the bar stretches that way (a rubber band) and springs back when let go.
+    var pull by remember { mutableStateOf(0f) }
+    val stretch by animateFloatAsState(if (dragging) pull else 0f, if (dragging) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(dampingRatio = .42f, stiffness = 420f))
     if (!dragging) local = value
     val active = hovered || dragging
     val h by animateFloatAsState(if (active) 6f else 4f, Motion.Springs.SNAPPY.motion())
@@ -201,10 +217,15 @@ fun ThinSlider(value: Float, onChange: (Float) -> Unit, modifier: Modifier = Mod
             }
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { o -> dragging = true; local = (o.x / width).coerceIn(0f, 1f); onChange(local) },
-                    onDragEnd = { dragging = false; onDone(local) },
-                    onDragCancel = { dragging = false },
-                ) { change, _ -> local = (change.position.x / width).coerceIn(0f, 1f); onChange(local) }
+                    onDragStart = { o -> dragging = true; pull = 0f; local = (o.x / width).coerceIn(0f, 1f); onChange(local) },
+                    onDragEnd = { dragging = false; pull = 0f; onDone(local) },
+                    onDragCancel = { dragging = false; pull = 0f },
+                ) { change, _ ->
+                    val raw = change.position.x / width
+                    local = raw.coerceIn(0f, 1f)
+                    pull = if (Motion.reduced) 0f else ElasticSlider.pull((raw - local) * width, width)
+                    onChange(local)
+                }
             },
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -212,12 +233,26 @@ fun ThinSlider(value: Float, onChange: (Float) -> Unit, modifier: Modifier = Mod
         val bg = if (track == Color.Unspecified) ket.fill else track
         Canvas(Modifier.fillMaxWidth().height(12.dp)) {
             val y = size.height / 2
-            val hp = h.dp.toPx()
-            drawLine(bg, Offset(0f, y), Offset(size.width, y), hp, StrokeCap.Round)
-            drawLine(fg, Offset(0f, y), Offset(size.width * local, y), hp, StrokeCap.Round)
-            if (active) drawCircle(Color.White, 6.dp.toPx(), Offset(size.width * local, y))
+            val s = stretch
+            // The stretched end moves out, the bar thins a little as it is pulled.
+            val start = if (s < 0f) s else 0f
+            val end = size.width + (if (s > 0f) s else 0f)
+            val hp = h.dp.toPx() * ElasticSlider.thin(s, size.width)
+            drawLine(bg, Offset(start, y), Offset(end, y), hp, StrokeCap.Round)
+            drawLine(fg, Offset(start, y), Offset(start + (end - start) * local, y), hp, StrokeCap.Round)
+            if (active) drawCircle(Color.White, 6.dp.toPx(), Offset(start + (end - start) * local, y))
         }
     }
+}
+
+/** The rubber band of [ThinSlider]: how far its end follows a drag past it, and how it thins. */
+internal object ElasticSlider {
+    /** At most this share of the bar's width. */
+    const val MAX = .06f
+
+    fun pull(over: Float, width: Float): Float = FluidScroll.rubber(over, width * MAX)
+
+    fun thin(pull: Float, width: Float): Float = 1f - (kotlin.math.abs(pull) / (width * MAX).coerceAtLeast(1f)) * .25f
 }
 
 /* ── Drag a title onto a playlist of the sidebar ── */
@@ -285,7 +320,9 @@ fun Modifier.contextMenu(state: MenuState, items: () -> List<MenuItem>): Modifie
 class MenuState {
     var items by mutableStateOf<List<MenuItem>>(emptyList()); private set
     var at by mutableStateOf(IntOffset.Zero); private set
-    fun open(list: List<MenuItem>, position: IntOffset) { items = list; at = position }
+    /** The point the menu grows out of (the button that opened it, or the pointer). */
+    var from by mutableStateOf<IntOffset?>(null); private set
+    fun open(list: List<MenuItem>, position: IntOffset, from: IntOffset? = null) { items = list; at = position; this.from = from ?: position }
     fun close() { items = emptyList() }
     val isOpen get() = items.isNotEmpty()
 }
@@ -307,19 +344,22 @@ fun ContextMenuHost(state: MenuState) {
         onDismissRequest = { state.close() },
         properties = PopupProperties(focusable = true),
     ) {
-        MenuPanel(state.items, onPick = { state.close(); it.action() })
+        var placed by remember { mutableStateOf(IntOffset.Zero) }
+        Box(Modifier.onGloballyPositioned { val p = it.positionInWindow(); placed = IntOffset(p.x.toInt(), p.y.toInt()) }) {
+            MenuPanel(state.items, onPick = { state.close(); it.action() }, origin = { size -> MenuGrow.origin(state.from, placed, size) })
+        }
     }
 }
 
 @Composable
-private fun MenuPanel(items: List<MenuItem>, onPick: (MenuItem) -> Unit) {
+private fun MenuPanel(items: List<MenuItem>, onPick: (MenuItem) -> Unit, origin: (androidx.compose.ui.geometry.Size) -> TransformOrigin = { TransformOrigin(0f, 0f) }) {
     val ket = LocalKet.current
-    val grow = remember { Animatable(if (Motion.reduced) 1f else .92f) }
+    val grow = remember { Animatable(if (Motion.reduced) 1f else .82f) }
     LaunchedEffect(Unit) { grow.animateTo(1f, Motion.Springs.GROW.motion()) }
     var submenu by remember { mutableStateOf<MenuItem?>(null) }
     Row {
         Column(
-            Modifier.graphicsLayer { scaleX = grow.value; scaleY = grow.value; alpha = ((grow.value - .92f) / .08f).coerceIn(0f, 1f); transformOrigin = TransformOrigin(0f, 0f) }
+            Modifier.graphicsLayer { scaleX = grow.value; scaleY = grow.value; alpha = ((grow.value - .82f) / .18f).coerceIn(0f, 1f); transformOrigin = origin(size) }
                 .width(IntrinsicSize.Max).widthIn(min = 220.dp)
                 .shadow(16.dp, RoundedCornerShape(Ket27Desk.Radius.menu), ambientColor = Color.Black.copy(.3f), spotColor = Color.Black.copy(.3f))
                 .clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.raised)
@@ -332,6 +372,14 @@ private fun MenuPanel(items: List<MenuItem>, onPick: (MenuItem) -> Unit) {
             }
         }
         submenu?.let { sub -> Box(Modifier.padding(start = 4.dp, top = 5.dp)) { MenuPanel(sub.children, onPick) } }
+    }
+}
+
+/** Where a menu grows from, as a fraction of its own size: the button's place relative to where the menu landed. */
+internal object MenuGrow {
+    fun origin(from: IntOffset?, placed: IntOffset, size: androidx.compose.ui.geometry.Size): TransformOrigin {
+        if (from == null || size.width <= 0f || size.height <= 0f) return TransformOrigin(0f, 0f)
+        return TransformOrigin(((from.x - placed.x) / size.width).coerceIn(0f, 1f), ((from.y - placed.y) / size.height).coerceIn(0f, 1f))
     }
 }
 

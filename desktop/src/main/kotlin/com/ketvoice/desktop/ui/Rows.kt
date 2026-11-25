@@ -168,21 +168,23 @@ fun TrackColumns(tracks: List<Track>, columns: Int = 3, rows: Int = 4) {
 /** A cover with its title and artist; Play appears on hover. */
 @Composable
 fun AlbumCard(album: AlbumRef, width: Dp, onOpen: () -> Unit, onPlay: (() -> Unit)? = null, subtitle: String = album.artist,
-              menu: (() -> List<MenuItem>)? = null) {
+              menu: (() -> List<MenuItem>)? = null, shared: Boolean = true) {
     val ket = LocalKet.current
     val (source, hovered) = rememberHover()
-    val lift by animateFloatAsState(if (hovered) 1.015f else 1f, Motion.Springs.SNAPPY.motion())
+    val lift by animateFloatAsState(if (hovered) 1.03f else 1f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .6f, stiffness = 420f))
     val menuState = LocalMenu.current
     Column(Modifier.width(width).hoverable(source).then(if (menu != null) Modifier.contextMenu(menuState, menu) else Modifier).testTag("album:${album.title}")) {
         Box(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.androidxClickable(onOpen)) {
-            Artwork(album.cover, width, radius = Ket27Desk.Radius.artwork, shadow = if (hovered) 10.dp else 2.dp)
+            Artwork(album.cover, width, if (shared) Modifier.sharedCover(SharedMotion.albumKey(album)) else Modifier, radius = Ket27Desk.Radius.artwork,
+                shadow = if (hovered) 18.dp else 4.dp)
             if (hovered && onPlay != null) Box(Modifier.align(Alignment.BottomStart).padding(10.dp).size(34.dp)
                 .shadow(4.dp, CircleShape).clip(CircleShape).background(ket.accent).androidxClickable(onPlay), contentAlignment = Alignment.Center) {
                 Icon(KetIcons.Play, null, Modifier.size(15.dp), tint = Color.White)
             }
         }
-        Spacer(Modifier.height(8.dp))
-        KText(album.title, Ket27Desk.Type.footnote, weight = FontWeight.Medium, translate = false)
+        Spacer(Modifier.height(10.dp))
+        KText(album.title, Ket27Desk.Type.subheadline, weight = FontWeight.SemiBold, translate = false)
         KText(subtitle, Ket27Desk.Type.footnote, color = ket.secondary, translate = false)
     }
 }
@@ -204,12 +206,12 @@ fun ArtistCard(artist: ArtistRef, width: Dp, onOpen: () -> Unit) {
 
 /** A horizontal shelf of covers. */
 @Composable
-fun AlbumShelf(albums: List<AlbumRef>, onPlay: ((AlbumRef) -> Unit)? = null) {
+fun AlbumShelf(albums: List<AlbumRef>, onPlay: ((AlbumRef) -> Unit)? = null, contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
     val nav = LocalNavigator.current
     val catalog = LocalCatalog.current
     val actions = LocalTrackActions.current
     fun items(a: AlbumRef) = actions.collectionMenu { catalog.album(a)?.tracks.orEmpty() }
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l), contentPadding = contentPadding) {
         items(albums, key = { it.title + "|" + it.artist + "|" + it.id }) { a ->
             AlbumCard(a, 176.dp, onOpen = { nav.push(Route.Album(a)) }, onPlay = { onPlay?.invoke(a) ?: items(a).first().action() },
                 subtitle = listOfNotNull(a.year, a.artist.takeIf { a.year == null }).joinToString(" · "), menu = { items(a) })
@@ -219,14 +221,14 @@ fun AlbumShelf(albums: List<AlbumRef>, onPlay: ((AlbumRef) -> Unit)? = null) {
 
 /** A shelf of titles shown as covers (Home's mixes): double-click plays, the card opens the album. */
 @Composable
-fun TrackShelf(tracks: List<Track>, width: Dp = 176.dp) {
+fun TrackShelf(tracks: List<Track>, width: Dp = 176.dp, contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
     val nav = LocalNavigator.current
     val actions = LocalTrackActions.current
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, t ->
             Box(Modifier.trackInteractions(t, tracks, i)) {
                 AlbumCard(AlbumRef(t.albumId, t.title, t.artist, t.coverUrl), width,
-                    onOpen = { actions.play(tracks, i) }, onPlay = { actions.play(tracks, i) })
+                    onOpen = { actions.play(tracks, i) }, onPlay = { actions.play(tracks, i) }, shared = false)
             }
         }
     }

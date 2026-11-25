@@ -1,93 +1,60 @@
 package com.ketvoice.desktop.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.ketvoice.app.data.AppText
-import com.ketvoice.app.ui.common.Icon
-import com.ketvoice.app.ui.common.Ket27Glyphs
 import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.app.ui.motion.Motion
-import com.ketvoice.desktop.ui.theme.DeskGlyphs
+import com.ketvoice.desktop.ui.glass.GlassBackdrop
+import com.ketvoice.desktop.ui.glass.GlassMode
+import com.ketvoice.desktop.ui.glass.GlassStyle
+import com.ketvoice.desktop.ui.glass.LocalGlassMode
+import com.ketvoice.desktop.ui.glass.glass
+import com.ketvoice.desktop.ui.glass.glassSource
+import com.ketvoice.desktop.ui.glass.rememberGlassBackdrop
 import com.ketvoice.desktop.ui.theme.Ket27Desk
 import com.ketvoice.desktop.ui.theme.KetDesktopTheme
 import com.ketvoice.desktop.ui.theme.LocalKet
-import java.awt.Cursor
 
-/** The window's whole content: sidebar, now-playing bar, pages, side panels and the full player. */
+/**
+ * The window's whole content (Windows 2.0): the pages edge to edge, a floating glass sidebar over them, the player
+ * as a glass island at the bottom centre that unfolds into the full player, the contextual glass panel on the right,
+ * and the overlays (full-screen player, Ketmix Studio, the lyrics editor, menus, dialogs).
+ */
 @Composable
 fun KetvoiceShell(
     player: PlayerControls = PlayerBridge,
@@ -96,11 +63,14 @@ fun KetvoiceShell(
     dark: Boolean? = null,
     navigator: Navigator = remember { Navigator(LastPage.startRoute()) },
     initialPanel: Panel = Panel.NONE,
-    initialSidebar: Dp = 248.dp,
+    initialSidebar: Dp = ShellMetrics.SIDEBAR_WIDE,
     initialQuery: String = "",
     initialFullPlayer: Boolean = false,
-    /** « Verre Windows 11 » is showing (WindowGlass.active): Mica under the window, Acrylic sidebar and bar. */
+    /** « Verre Windows 11 » is showing (WindowGlass.active): Mica under the window, which the glass sits above. */
     glass: Boolean = false,
+    /** How the glass surfaces draw ([com.ketvoice.desktop.ui.glass.GlassPolicy]); the window passes its own. */
+    glassMode: GlassMode = GlassMode.LIQUID,
+    shell: ShellState = remember { ShellState(initialPanel.tab, initialFullPlayer, sidebarWidth = initialSidebar) },
 ) {
     val content: @Composable () -> Unit = {
         val search = remember { SearchState().apply { query = initialQuery } }
@@ -112,24 +82,22 @@ fun KetvoiceShell(
         CompositionLocalProvider(
             LocalPlayer provides player, LocalLibrary provides library, LocalCatalog provides catalog,
             LocalNavigator provides navigator, LocalSearch provides search, LocalMenu provides menu,
-            LocalTrackDrag provides drag, LocalTrackActions provides actions,
-        ) { ShellLayout(initialPanel, initialSidebar, initialFullPlayer) }
+            LocalTrackDrag provides drag, LocalTrackActions provides actions, LocalShell provides shell, LocalGlassMode provides glassMode,
+        ) { ShellLayout() }
     }
     if (dark == null) KetDesktopTheme(glass = glass, content = content) else KetDesktopTheme(dark, glass, content)
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlayer: Boolean) {
+private fun ShellLayout() {
     val ket = LocalKet.current
     val player = LocalPlayer.current
     val nav = LocalNavigator.current
     val search = LocalSearch.current
     val menu = LocalMenu.current
     val actions = LocalTrackActions.current
-    val state by player.state.collectAsState()
-    var panel by remember { mutableStateOf(initialPanel) }
-    var fullPlayer by remember { mutableStateOf(initialFullPlayer) }
-    var sidebar by remember { mutableStateOf(initialSidebar) }
+    val shell = LocalShell.current
     var searchFocused by remember { mutableStateOf(false) }
     val rootFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
@@ -138,10 +106,10 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
     // The window's shortcuts (Shortcuts.list, shown in Settings); text fields keep Space and the arrows.
     val keys = object : Shortcuts.Target {
         override val typing get() = searchFocused || TextEntry.active
-        override val fullPlayer get() = fullPlayer
+        override val fullPlayer get() = shell.fullPlayer
         override fun focusSearch() { runCatching { searchFocus.requestFocus() } }
         override fun leaveField() { runCatching { rootFocus.requestFocus() } }
-        override fun setFullPlayer(open: Boolean) { fullPlayer = open }
+        override fun setFullPlayer(open: Boolean) { shell.fullPlayer = open }
         override fun settings() { nav.root(Route.Settings) }
         override fun back() = nav.back()
     }
@@ -149,39 +117,35 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         else if (LyricsEditorDesk.request.value != null) LyricsEditorKeys.handle(e)
         else Shortcuts.handle(e, player, actions, keys)
 
-    Box(Modifier.fillMaxSize().background(ket.window).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
-        Backdrop(state.current?.coverUrl)
-        Row(Modifier.fillMaxSize()) {
-            Sidebar(sidebar, searchFocus, onSearchFocus = { searchFocused = it })
-            // The resize handle: 220–320 dp.
-            val density = LocalDensity.current
-            Box(Modifier.width(5.dp).fillMaxHeight().offset(x = (-2).dp).pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                .pointerInput(Unit) { detectHorizontalDragGestures { _, d -> sidebar = (sidebar + with(density) { d.toDp() }).coerceIn(220.dp, 320.dp) } }
-                .testTag("sidebar-resize")) {
-                Box(Modifier.align(Alignment.Center).width(.5.dp).fillMaxHeight().background(ket.hairline))
-            }
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                Box(Modifier.fillMaxWidth().material(ket, if (ket.acrylic) ket.material else ket.material.copy(alpha = ket.material.alpha * .6f))) {
-                    NowPlayingBar(panel, { panel = it }, onOpenPlayer = { fullPlayer = true })
-                }
-                Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline))
-                Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f).fillMaxHeight().background(ket.ground)) { Pages() }
-                    val width by animateDpAsState(if (panel == Panel.NONE) 0.dp else 330.dp, Motion.Springs.SHEET.motion())
-                    if (width > 0.dp) Row(Modifier.width(width).fillMaxHeight()) {
-                        Box(Modifier.width(.5.dp).fillMaxHeight().background(ket.hairline))
-                        Box(Modifier.width(330.dp).fillMaxHeight().material(ket)) {
-                            when (panel) { Panel.QUEUE -> QueuePanel(); Panel.LYRICS -> LyricsPanel(); Panel.NONE -> {} }
-                        }
+    BoxWithConstraints(Modifier.fillMaxSize().background(ket.window).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
+        val window = maxWidth
+        val icons = ShellMetrics.collapsed(window)
+        val sidebar = ShellMetrics.sidebar(window, shell.sidebarWidth)
+        val panelOpen = shell.panel != null
+        val panelWidth = ShellMetrics.panel(window, shell.panelWidth)
+        val motion = if (Motion.reduced) androidx.compose.animation.core.snap() else spring<Dp>(dampingRatio = .86f, stiffness = 360f)
+        val sideAnimated by animateDpAsState(sidebar, motion)
+        val endInset by animateDpAsState(if (panelOpen) ShellMetrics.MARGIN + panelWidth + ShellMetrics.GAP else 0.dp, motion)
+        val insets = PaddingValues(start = ShellMetrics.MARGIN + sideAnimated + ShellMetrics.GAP, end = endInset,
+            bottom = ShellMetrics.ISLAND_HEIGHT + ShellMetrics.ISLAND_FOOT * 2)
+        val backdrop = rememberGlassBackdrop()
+        SharedTransitionLayout(Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalSharedScope provides this, LocalShellInsets provides insets) {
+                Box(Modifier.fillMaxSize()) {
+                    // What the glass refracts: the pages, edge to edge, on the window's ground (Mica shows through it).
+                    Box(Modifier.fillMaxSize().glassSource(backdrop)) {
+                        Box(Modifier.fillMaxSize().background(ket.ground))
+                        Pages()
                     }
+                    Sidebar(backdrop, sideAnimated, icons, searchFocus, { searchFocused = it }, Modifier.padding(ShellMetrics.MARGIN))
+                    if (nav.canGoBack) BackButton(backdrop, Modifier.padding(start = insets.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr) + 10.dp, top = 16.dp))
+                    RightPanel(backdrop, panelWidth, panelOpen)
+                    PlayerLayer(backdrop, window, insets)
+                    DragChip()
                 }
             }
         }
-        DragChip()
-        AnimatedVisibility(fullPlayer, enter = EnterTransition.None, exit = fadeOut(Motion.Springs.DISMISS.motion())) {
-            FullPlayer(onClose = { fullPlayer = false })
-        }
-        if (PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
+        if (com.ketvoice.desktop.ui.PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
         KetmixStudioHost()
         LyricsEditorHost()
         PlaybackToast()
@@ -196,159 +160,86 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
     LaunchedEffect(search.query) { if (search.query.isNotEmpty() && nav.current != Route.Search) nav.root(Route.Search) }
 }
 
-/** The glass's backdrop: the current cover, blurred far and faint, under the translucent sidebar and bar. */
+/** The right panel slides in from the window's edge on a spring and out again, keeping its last tab while it leaves. */
 @Composable
-private fun Backdrop(cover: String?) {
-    val ket = LocalKet.current
-    val image = rememberCover(cover)
-    if (image == null) return
-    Image(image, null, Modifier.fillMaxSize().blur(140.dp).graphicsLayer { alpha = if (ket.dark) .22f else .16f }, contentScale = ContentScale.Crop)
+private fun RightPanel(backdrop: GlassBackdrop, width: Dp, open: Boolean) {
+    val slide by animateDpAsState(if (open) 0.dp else width + ShellMetrics.MARGIN * 2,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .84f, stiffness = 380f))
+    if (!open && slide >= width + ShellMetrics.MARGIN * 2 - 1.dp) return
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+        SidePanel(backdrop, width, Modifier.offset { IntOffset(slide.roundToPx(), 0) }.padding(ShellMetrics.MARGIN))
+    }
 }
 
+/**
+ * The island at the bottom centre of the room between the sidebar and the panel, or the full player: one swaps for
+ * the other in a shared transition, so the cover, the title and the buttons travel between them.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun PlayerLayer(backdrop: GlassBackdrop, window: Dp, insets: PaddingValues) {
+    val shell = LocalShell.current
+    val reduced = Motion.reduced
+    val start = insets.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+    val end = insets.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+    AnimatedContent(shell.fullPlayer, Modifier.fillMaxSize(), transitionSpec = { SharedMotion.player(reduced) }, label = "player") { full ->
+        CompositionLocalProvider(LocalPlayerScope provides this) {
+            if (full) FullPlayer(onClose = { shell.fullPlayer = false })
+            else Box(Modifier.fillMaxSize().padding(start = start - ShellMetrics.GAP, end = (end - ShellMetrics.GAP).coerceAtLeast(0.dp)),
+                contentAlignment = Alignment.BottomCenter) {
+                val room = window - start - end + ShellMetrics.GAP * 2
+                Island(backdrop, room, onOpenPlayer = { shell.fullPlayer = true }, Modifier.padding(bottom = ShellMetrics.ISLAND_FOOT))
+            }
+        }
+    }
+}
+
+/** « Retour » as a round glass drop above the page, beside the sidebar. */
+@Composable
+private fun BackButton(backdrop: GlassBackdrop, modifier: Modifier) {
+    val ket = LocalKet.current
+    val nav = LocalNavigator.current
+    Box(modifier.glassShadow(20.dp, 10.dp).glass(backdrop, 20.dp, ket.glassTint, GlassStyle.Drop, rim = ket.glassRim)) {
+        KetIconButton(KetIcons.ArrowLeft, "Retour", { nav.back() }, Modifier.testTag("back"), size = 40.dp, glyph = 17.dp)
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun Pages() {
     val nav = LocalNavigator.current
     val reduced = Motion.reduced
-    AnimatedContent(nav.current, Modifier.fillMaxSize(), transitionSpec = {
-        if (reduced) ContentTransform(EnterTransition.None, ExitTransition.None)
-        else when (nav.direction) {
-            1 -> (slideInHorizontally(Motion.Springs.PUSH.spec()) { it / 6 } + fadeIn(Motion.Springs.SMOOTH.spec())) togetherWith
-                (slideOutHorizontally(Motion.Springs.PUSH.spec()) { -it / 12 } + fadeOut(Motion.Springs.DISMISS.spec()))
-            -1 -> (slideInHorizontally(Motion.Springs.PUSH.spec()) { -it / 12 } + fadeIn(Motion.Springs.SMOOTH.spec())) togetherWith
-                (slideOutHorizontally(Motion.Springs.PUSH.spec()) { it / 6 } + fadeOut(Motion.Springs.DISMISS.spec()))
-            else -> (fadeIn(Motion.Springs.SMOOTH.spec()) + scaleIn(Motion.Springs.APPEAR.spec(), initialScale = .985f)) togetherWith
-                fadeOut(Motion.Springs.DISMISS.spec())
-        }
-    }, contentKey = { it }) { route ->
-        Box(Modifier.fillMaxSize()) {
-            when (route) {
-                Route.Home -> HomePage()
-                Route.Explore -> ExplorePage()
-                Route.Search -> SearchPage()
-                Route.RecentlyAdded -> RecentlyAddedPage()
-                Route.Artists -> ArtistsPage()
-                Route.Albums -> AlbumsPage()
-                Route.Songs -> SongsPage()
-                Route.Downloads -> DownloadsPage()
-                Route.Favorites -> FavoritesPage()
-                Route.Stats -> StatsPage()
-                Route.Settings -> SettingsPage()
-                Route.Equalizer -> EqualizerPage()
-                is Route.Playlist -> PlaylistPage(route.id)
-                is Route.Album -> AlbumPage(route.ref)
-                is Route.Artist -> ArtistPage(route.ref)
-                is Route.Category -> CategoryPage(route.category)
-            }
-            if (nav.canGoBack && route == nav.current) KetIconButton(KetIcons.ArrowLeft, "Retour", { nav.back() },
-                Modifier.align(Alignment.TopStart).padding(6.dp).testTag("back"), size = 28.dp, glyph = 15.dp)
+    AnimatedContent(nav.current, Modifier.fillMaxSize(), transitionSpec = { SharedMotion.pages(nav.direction, reduced) }, contentKey = { it },
+        label = "pages") { route ->
+        CompositionLocalProvider(LocalPageScope provides this) {
+            Box(Modifier.fillMaxSize()) { PageFor(route) }
         }
     }
 }
 
-/* ── Sidebar ── */
-
+/** The page of [route]: the built-in pages, then those of [PageRegistry]. */
 @Composable
-private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Boolean) -> Unit) {
-    val ket = LocalKet.current
-    val nav = LocalNavigator.current
-    val library = LocalLibrary.current
-    val playlists by library.playlists.collectAsState()
-    Column(Modifier.width(width).fillMaxHeight().material(ket).testTag("sidebar")) {
-        SearchField(searchFocus, onSearchFocus)
-        LazyColumn(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-            // Settings › Disposition: the sidebar's entries in the listener's order (`layoutTabs`, as the phone's tabs).
-            DeskLayout.sidebarRows().forEach { row -> item("side:$row") { SidebarRow(row) } }
-            item {
-                SideHeader("Playlists") {
-                    KetIconButton(KetIcons.Link, "Importer des playlists", { ImportDialog.open.value = true },
-                        size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("import-playlist"))
-                    KetIconButton(KetIcons.Plus, "Nouvelle playlist", {
-                        library.createPlaylist(AppText.t("Nouvelle playlist")) { id -> nav.root(Route.Playlist(id)) }
-                    }, size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("new-playlist"))
-                }
-            }
-            DeskLayout.sortedPlaylists(playlists).forEach { p -> item(p.id) { PlaylistItem(p) } }
-        }
-        Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline))
-        Box(Modifier.padding(10.dp)) { SideItem(KetIcons.Settings, "Réglages", Route.Settings) }
+internal fun PageFor(route: Route) {
+    when (route) {
+        Route.Home -> HomePage()
+        Route.Explore -> ExplorePage()
+        Route.Search -> SearchPage()
+        Route.RecentlyAdded -> RecentlyAddedPage()
+        Route.Artists -> ArtistsPage()
+        Route.Albums -> AlbumsPage()
+        Route.Songs -> SongsPage()
+        Route.Downloads -> DownloadsPage()
+        Route.Favorites -> FavoritesPage()
+        Route.Stats -> StatsPage()
+        Route.Settings -> SettingsPage()
+        Route.Equalizer -> EqualizerPage()
+        is Route.Playlist -> PlaylistPage(route.id)
+        is Route.Album -> AlbumPage(route.ref)
+        is Route.Artist -> ArtistPage(route.ref)
+        is Route.Category -> CategoryPage(route.category)
+        is Route.Extra -> PageRegistry.find(route.id)?.content?.invoke(route.arg)
+            ?: Page(null, "missing") { item { EmptyMessage("Page indisponible", "Cette page n'est plus disponible.") } }
     }
-}
-
-@Composable
-private fun SearchField(focus: FocusRequester, onFocus: (Boolean) -> Unit) {
-    val ket = LocalKet.current
-    val search = LocalSearch.current
-    val nav = LocalNavigator.current
-    Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 10.dp).fillMaxWidth().height(30.dp)
-        .clip(RoundedCornerShape(8.dp)).background(ket.fill).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(KetIcons.Search, null, Modifier.size(14.dp), tint = ket.secondary)
-        Spacer(Modifier.width(6.dp))
-        Box(Modifier.weight(1f)) {
-            if (search.query.isEmpty()) KText("Rechercher", Ket27Desk.Type.subheadline, color = ket.secondary)
-            BasicTextField(search.query, { search.query = it },
-                Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { onFocus(it.isFocused); if (it.isFocused) nav.root(Route.Search) }.testTag("search-field"),
-                singleLine = true, cursorBrush = SolidColor(ket.accent),
-                textStyle = androidx.compose.material3.LocalTextStyle.current.merge(Ket27Desk.Type.subheadline).copy(color = ket.label),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { nav.root(Route.Search) }))
-        }
-        if (search.query.isNotEmpty()) KetIconButton(KetIcons.Close, "Effacer", { search.query = "" }, size = 18.dp, glyph = 10.dp)
-    }
-}
-
-@Composable
-private fun SideHeader(label: String, trailing: (@Composable () -> Unit)? = null) {
-    val ket = LocalKet.current
-    Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 4.dp, top = 18.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        KText(label, Ket27Desk.Type.caption, Modifier.weight(1f), color = ket.secondary, weight = FontWeight.SemiBold)
-        trailing?.invoke()
-    }
-}
-
-@Composable
-private fun SideRow(icon: ImageVector?, label: String, selected: Boolean, tag: String, translate: Boolean = true, dropHover: Boolean = false,
-                    modifier: Modifier = Modifier, leading: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
-    val ket = LocalKet.current
-    val (source, hovered) = rememberHover()
-    Row(modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(8.dp))
-        .background(when { dropHover -> ket.accent.copy(alpha = .22f); selected -> ket.selected; hovered -> ket.hover; else -> Color.Transparent })
-        .hoverable(source).clickable(onClick = onClick).padding(horizontal = 10.dp).testTag(tag), verticalAlignment = Alignment.CenterVertically) {
-        if (leading != null) leading() else if (icon != null) Icon(icon, null, Modifier.size(17.dp), tint = ket.accent)
-        Spacer(Modifier.width(10.dp))
-        KText(label, Ket27Desk.Type.subheadline, color = ket.label, weight = if (selected) FontWeight.SemiBold else null, translate = translate)
-    }
-}
-
-/** One row of the sidebar's upper part ([DeskLayout.sidebarRows]). */
-@Composable
-private fun SidebarRow(row: String) {
-    when (row) {
-        "home" -> SideItem(Ket27Glyphs.Home, "Accueil", Route.Home)
-        "explore" -> SideItem(Ket27Glyphs.Explore, "Explorer", Route.Explore)
-        "search" -> SideItem(KetIcons.Search, "Rechercher", Route.Search)
-        "favorites" -> SideItem(Ket27Glyphs.Heart, "Favoris", Route.Favorites)
-        "header" -> SideHeader("Bibliothèque")
-        "recent" -> SideItem(KetIcons.Clock, "Récemment ajouté", Route.RecentlyAdded)
-        "artists" -> SideItem(KetIcons.Account, "Artistes", Route.Artists)
-        "albums" -> SideItem(KetIcons.Album, "Albums", Route.Albums)
-        "songs" -> SideItem(KetIcons.Music, "Titres", Route.Songs)
-        "downloads" -> SideItem(KetIcons.Download, "Téléchargements", Route.Downloads)
-        "stats" -> SideItem(DeskGlyphs.Stats, "Statistiques", Route.Stats)
-    }
-}
-
-@Composable
-private fun SideItem(icon: ImageVector, label: String, route: Route) {
-    val nav = LocalNavigator.current
-    SideRow(icon, label, nav.section == route, "nav:$label") { nav.root(route) }
-}
-
-@Composable
-private fun PlaylistItem(p: UserPlaylist) {
-    val nav = LocalNavigator.current
-    val drag = LocalTrackDrag.current
-    DisposableEffect(p.id) { onDispose { drag.unregister(p.id) } }
-    SideRow(null, p.name, nav.section == Route.Playlist(p.id), "playlist:${p.id}", translate = false, dropHover = drag.hoveredTarget == p.id,
-        modifier = Modifier.dropTarget(p.id, drag), leading = { Mosaic(p.tracks, 20.dp) }) { nav.root(Route.Playlist(p.id)) }
 }
 
 /** The title being dragged, under the pointer. */
@@ -358,9 +249,9 @@ private fun DragChip() {
     val ket = LocalKet.current
     val t = drag.track ?: return
     val p = drag.pointer
-    Row(Modifier.offset { IntOffset(p.x.toInt() + 12, p.y.toInt() + 8) }.shadow(10.dp, RoundedCornerShape(8.dp)).clip(RoundedCornerShape(8.dp))
+    Row(Modifier.offset { IntOffset(p.x.toInt() + 12, p.y.toInt() + 8) }.shadow(10.dp, RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp))
         .background(ket.raised).padding(6.dp).testTag("drag-chip"), verticalAlignment = Alignment.CenterVertically) {
-        Artwork(t.coverUrl, 28.dp, radius = 4.dp)
+        Artwork(t.coverUrl, 28.dp, radius = 6.dp)
         Spacer(Modifier.width(8.dp))
         KText(t.title, Ket27Desk.Type.footnote, Modifier.width(160.dp), weight = FontWeight.Medium, translate = false)
     }

@@ -100,6 +100,19 @@ object DeskGlyphs {
         moveTo(15f, 20f); lineTo(15f, 15f); lineTo(20f, 15f); moveTo(4f, 15f); lineTo(9f, 15f); lineTo(9f, 20f)
     } }
     val ChevronUp: ImageVector by lazy { glyph("ChevronUp") { moveTo(6f, 15f); lineTo(12f, 9f); lineTo(18f, 15f) } }
+    /** The compact player: a screen with a small window in its corner. */
+    val Compact: ImageVector by lazy { glyph("Compact") {
+        moveTo(6f, 5f); lineTo(18f, 5f); curveTo(19.7f, 5f, 21f, 6.3f, 21f, 8f); lineTo(21f, 10f)
+        moveTo(10f, 19f); lineTo(6f, 19f); curveTo(4.3f, 19f, 3f, 17.7f, 3f, 16f); lineTo(3f, 8f); curveTo(3f, 6.3f, 4.3f, 5f, 6f, 5f)
+        moveTo(14.5f, 13f); lineTo(20f, 13f); curveTo(20.6f, 13f, 21f, 13.4f, 21f, 14f); lineTo(21f, 18f); curveTo(21f, 18.6f, 20.6f, 19f, 20f, 19f)
+        lineTo(14.5f, 19f); curveTo(13.9f, 19f, 13.5f, 18.6f, 13.5f, 18f); lineTo(13.5f, 14f); curveTo(13.5f, 13.4f, 13.9f, 13f, 14.5f, 13f); close()
+    } }
+    /** The right panel. */
+    val SidePanel: ImageVector by lazy { glyph("SidePanel") {
+        moveTo(6f, 4f); lineTo(18f, 4f); curveTo(19.7f, 4f, 21f, 5.3f, 21f, 7f); lineTo(21f, 17f); curveTo(21f, 18.7f, 19.7f, 20f, 18f, 20f)
+        lineTo(6f, 20f); curveTo(4.3f, 20f, 3f, 18.7f, 3f, 17f); lineTo(3f, 7f); curveTo(3f, 5.3f, 4.3f, 4f, 6f, 4f); close()
+        moveTo(15f, 4f); lineTo(15f, 20f)
+    } }
     val Stats: ImageVector by lazy { glyph("Stats") {
         moveTo(5f, 19f); lineTo(5f, 12f); moveTo(10f, 19f); lineTo(10f, 6f); moveTo(15f, 19f); lineTo(15f, 10f); moveTo(20f, 19f); lineTo(20f, 4f)
     } }

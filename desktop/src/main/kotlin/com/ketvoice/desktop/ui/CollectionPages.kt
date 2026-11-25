@@ -99,18 +99,19 @@ private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, tit
                              onDownload: (() -> Unit)? = null) {
     val ket = LocalKet.current
     val actions = LocalTrackActions.current
-    Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 26.dp), verticalAlignment = Alignment.Bottom) {
-        if (cover != null) { cover(); Spacer(Modifier.width(30.dp)) }
+    Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 34.dp), verticalAlignment = Alignment.Bottom) {
+        if (cover != null) { cover(); Spacer(Modifier.width(36.dp)) }
         Column(Modifier.weight(1f)) {
-            KText(kind, Ket27Desk.Type.caption2, color = ket.secondary)
-            Spacer(Modifier.height(4.dp))
-            if (titleSlot != null) titleSlot() else KText(title, Ket27Desk.Type.largeTitle, maxLines = 2, translate = false)
+            KText(AppText.t(kind).uppercase(), Ket27Desk.Type.eyebrow, color = ket.secondary, translate = false)
+            Spacer(Modifier.height(6.dp))
+            if (titleSlot != null) titleSlot() else KText(title, Ket27Desk.Type.display, maxLines = 2, translate = false)
             KText(subtitle, Ket27Desk.Type.title3, Modifier.then(if (onSubtitle != null) Modifier.clickable(onClick = onSubtitle) else Modifier),
                 color = accent, translate = false, weight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
             KText(meta, Ket27Desk.Type.footnote, color = ket.secondary, translate = false)
             Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // The buttons wrap in a narrow window instead of running out of the header (where they could not be clicked).
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 CapsuleButton("Lecture", KetIcons.Play, { if (tracks.isNotEmpty()) actions.play(tracks, 0) }, filled = true, accent = accent, modifier = Modifier.testTag("play-all"))
                 CapsuleButton("Aléatoire", KetIcons.Shuffle, { actions.playShuffled(tracks) }, filled = false, accent = accent, modifier = Modifier.testTag("shuffle-all"))
                 extraButtons()
@@ -137,7 +138,8 @@ fun AlbumPage(ref: AlbumRef) {
             item("header") {
                 val r = data?.ref ?: ref
                 val tracks = data?.tracks.orEmpty()
-                CollectionHeader(if (motion != null) null else ({ Artwork(cover, 270.dp, radius = Ket27Desk.Radius.artwork, shadow = 24.dp) }),
+                CollectionHeader(if (motion != null) null else ({ Artwork(cover, 300.dp, Modifier.sharedCover(SharedMotion.albumKey(ref)),
+                    radius = Ket27Desk.Radius.artwork, shadow = 30.dp) }),
                     r.type, r.title, r.artist, { nav.push(Route.Artist(ArtistRef(null, r.artist))) },
                     listOfNotNull(r.year, if (tracks.isNotEmpty()) durationLabel(tracks) else null).joinToString(" · "), accent, tracks)
             }
@@ -176,14 +178,19 @@ fun ArtistPage(ref: ArtistRef) {
     val image = rememberCover(photo)
     // The play button sits on the photo's dark scrim: legible on black in both themes.
     val accent = rememberCoverColors(photo)?.second?.let { legible(it, Color(0xFF1C1C1E), Color.White) } ?: ket.accent
-    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().testTag("page:artist")) {
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    val sides = PageEdges.sides()
+    val row = PageEdges.row()
+    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().fluidScroll(list).testTag("page:artist"), state = list,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = LocalShellInsets.current.calculateBottomPadding())) {
         item("hero") {
-            Box(Modifier.fillMaxWidth().height(380.dp).background(ket.card)) {
+            // The photo edge to edge, under the floating glass.
+            Box(Modifier.fillMaxWidth().height(460.dp).background(ket.card)) {
                 if (image != null) Image(image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopCenter)
                 // A scrim under the name only, so it stays legible on any photo.
                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(160.dp)
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .55f)))))
-                Row(Modifier.align(Alignment.BottomStart).padding(horizontal = Ket27Desk.Space.page, vertical = 26.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.align(Alignment.BottomStart).then(sides).padding(vertical = 30.dp), verticalAlignment = Alignment.CenterVertically) {
                     val top = data?.top.orEmpty()
                     Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(accent)
                         .clickable { if (top.isNotEmpty()) actions.play(top, 0) }.testTag("artist-play"), contentAlignment = Alignment.Center) {
@@ -191,7 +198,7 @@ fun ArtistPage(ref: ArtistRef) {
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
-                        KText(data?.ref?.name ?: ref.name, Ket27Desk.Type.largeTitle.copy(fontSize = Ket27Desk.Type.largeTitle.fontSize * 1.4f),
+                        KText(data?.ref?.name ?: ref.name, Ket27Desk.Type.hero,
                             color = Color.White, translate = false)
                         val listeners = data?.listeners.orEmpty()
                         if (listeners.isNotBlank()) KText(listeners, Ket27Desk.Type.subheadline, color = Color.White.copy(alpha = .75f), translate = false)
@@ -205,7 +212,7 @@ fun ArtistPage(ref: ArtistRef) {
                 }
             }
         }
-        val pad = Modifier.padding(horizontal = Ket27Desk.Space.page)
+        val pad = sides
         if (loader.state !is Load.Ready) { item("state") { Box(pad) { LoadState(loader) } }; return@LazyColumn }
         val d = data ?: return@LazyColumn
         if (d.top.isEmpty() && d.albums.isEmpty() && d.singles.isEmpty()) {
@@ -217,16 +224,16 @@ fun ArtistPage(ref: ArtistRef) {
         }
         if (d.albums.isNotEmpty()) {
             item("al-h") { Box(pad) { SectionHeader("Albums") } }
-            item("al") { Box(pad) { AlbumShelf(d.albums) } }
+            item("al") { AlbumShelf(d.albums, contentPadding = row) }
         }
         if (d.singles.isNotEmpty()) {
             item("si-h") { Box(pad) { SectionHeader("Singles et EP") } }
-            item("si") { Box(pad) { AlbumShelf(d.singles) } }
+            item("si") { AlbumShelf(d.singles, contentPadding = row) }
         }
         if (d.related.isNotEmpty()) {
             item("rel-h") { Box(pad) { SectionHeader("Artistes similaires") } }
             item("rel") {
-                androidx.compose.foundation.lazy.LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Ket27Desk.Space.page),
+                androidx.compose.foundation.lazy.LazyRow(contentPadding = row,
                     horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
                     items(d.related.size) { i -> val a = d.related[i]; ArtistCard(a, 150.dp) { nav.push(Route.Artist(a)) } }
                 }

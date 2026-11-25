@@ -2932,7 +2932,9 @@
   "Ketmix apprend de vos avis": "Ketmix learns from your ratings",
   "Oublier ce que Ketmix a appris": "Forget what Ketmix learned",
   "Préparation au repos": "Idle preparation",
-  "En attente du repos": "Waiting for idle time"
+  "En attente du repos": "Waiting for idle time",
+  "Page indisponible": "Page unavailable",
+  "Cette page n'est plus disponible.": "This page is no longer available."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5867,7 +5869,9 @@
   "Ketmix apprend de vos avis": "Ketmix आपकी रेटिंग से सीखता है",
   "Oublier ce que Ketmix a appris": "Ketmix ने जो सीखा उसे भूलें",
   "Préparation au repos": "निष्क्रिय समय में तैयारी",
-  "En attente du repos": "निष्क्रिय समय की प्रतीक्षा"
+  "En attente du repos": "निष्क्रिय समय की प्रतीक्षा",
+  "Page indisponible": "पेज उपलब्ध नहीं",
+  "Cette page n'est plus disponible.": "यह पेज अब उपलब्ध नहीं है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -8802,7 +8806,9 @@
   "Ketmix apprend de vos avis": "Ketmix があなたの評価から学習",
   "Oublier ce que Ketmix a appris": "Ketmix の学習内容を消去",
   "Préparation au repos": "アイドル時の準備",
-  "En attente du repos": "アイドル待ち"
+  "En attente du repos": "アイドル待ち",
+  "Page indisponible": "ページを利用できません",
+  "Cette page n'est plus disponible.": "このページはもう利用できません。"
  },
  "zh": {
   "Reverb": "混响",
@@ -11737,7 +11743,9 @@
   "Ketmix apprend de vos avis": "Ketmix 从你的评价中学习",
   "Oublier ce que Ketmix a appris": "清除 Ketmix 学到的内容",
   "Préparation au repos": "空闲时准备",
-  "En attente du repos": "等待空闲"
+  "En attente du repos": "等待空闲",
+  "Page indisponible": "页面不可用",
+  "Cette page n'est plus disponible.": "此页面已不再可用。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -14672,7 +14680,9 @@
   "Ketmix apprend de vos avis": "Ketmix учится на ваших оценках",
   "Oublier ce que Ketmix a appris": "Забыть то, чему научился Ketmix",
   "Préparation au repos": "Подготовка в простое",
-  "En attente du repos": "Ожидание простоя"
+  "En attente du repos": "Ожидание простоя",
+  "Page indisponible": "Страница недоступна",
+  "Cette page n'est plus disponible.": "Эта страница больше недоступна."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -17607,7 +17617,9 @@
   "Ketmix apprend de vos avis": "Ketmix impara dalle tue valutazioni",
   "Oublier ce que Ketmix a appris": "Dimentica ciò che Ketmix ha imparato",
   "Préparation au repos": "Preparazione a riposo",
-  "En attente du repos": "In attesa di inattività"
+  "En attente du repos": "In attesa di inattività",
+  "Page indisponible": "Pagina non disponibile",
+  "Cette page n'est plus disponible.": "Questa pagina non è più disponibile."
  },
  "es": {
   "Reverb": "Reverb",
@@ -20542,7 +20554,9 @@
   "Ketmix apprend de vos avis": "Ketmix aprende de tus valoraciones",
   "Oublier ce que Ketmix a appris": "Olvidar lo que Ketmix ha aprendido",
   "Préparation au repos": "Preparación en reposo",
-  "En attente du repos": "Esperando reposo"
+  "En attente du repos": "Esperando reposo",
+  "Page indisponible": "Página no disponible",
+  "Cette page n'est plus disponible.": "Esta página ya no está disponible."
  },
  "de": {
   "Reverb": "Reverb",
@@ -23477,7 +23491,9 @@
   "Ketmix apprend de vos avis": "Ketmix lernt aus deinen Bewertungen",
   "Oublier ce que Ketmix a appris": "Gelerntes von Ketmix vergessen",
   "Préparation au repos": "Vorbereitung im Leerlauf",
-  "En attente du repos": "Wartet auf Leerlauf"
+  "En attente du repos": "Wartet auf Leerlauf",
+  "Page indisponible": "Seite nicht verfügbar",
+  "Cette page n'est plus disponible.": "Diese Seite ist nicht mehr verfügbar."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -26412,7 +26428,9 @@
   "Ketmix apprend de vos avis": "O Ketmix aprende com as tuas avaliações",
   "Oublier ce que Ketmix a appris": "Esquecer o que o Ketmix aprendeu",
   "Préparation au repos": "Preparação em repouso",
-  "En attente du repos": "À espera de repouso"
+  "En attente du repos": "À espera de repouso",
+  "Page indisponible": "Página indisponível",
+  "Cette page n'est plus disponible.": "Esta página já não está disponível."
  },
  "ko": {
   "Reverb": "리버브",
@@ -29347,6 +29365,8 @@
   "Ketmix apprend de vos avis": "Ketmix가 평가로 학습",
   "Oublier ce que Ketmix a appris": "Ketmix 학습 내용 지우기",
   "Préparation au repos": "유휴 시 준비",
-  "En attente du repos": "유휴 대기 중"
+  "En attente du repos": "유휴 대기 중",
+  "Page indisponible": "페이지를 사용할 수 없음",
+  "Cette page n'est plus disponible.": "이 페이지는 더 이상 사용할 수 없습니다."
  }
 }

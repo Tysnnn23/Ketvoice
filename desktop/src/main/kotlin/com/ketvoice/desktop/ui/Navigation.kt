@@ -30,6 +30,8 @@ sealed interface Route {
     data class Album(val ref: AlbumRef) : Route
     data class Artist(val ref: ArtistRef) : Route
     data class Category(val category: com.ketvoice.desktop.ui.Category) : Route
+    /** A page another feature registered in [PageRegistry] (Connexions, Sources…), with an optional argument. */
+    data class Extra(val id: String, val arg: String? = null) : Route
 }
 
 /** A back stack: the sidebar replaces it, a link pushes onto it. */

@@ -8,6 +8,8 @@ import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -69,6 +71,8 @@ class PolishTest {
         setContent { KetvoiceShell(player, library, FixtureCatalog, dark = true, navigator = remember { Navigator(Route.Artist(Fixtures.artists[0])) }) }
         val ref = Fixtures.refs.first { it.artist == Fixtures.artists[0].name && it.type == "Album" }
         val i = Fixtures.refs.indexOf(ref)
+        // Windows 2.0: the artist's photo is taller, the albums start below the fold.
+        onNodeWithTag("page:artist").performScrollToNode(hasTestTag("album:${ref.title}"))
         onNodeWithTag("album:${ref.title}").performMouseInput { moveTo(center); press(MouseButton.Secondary); release(MouseButton.Secondary) }
         onNodeWithTag("menu:play-next").performClick()
         waitUntil(timeoutMillis = 3_000) { player.calls.count { it.startsWith("playNext:") } == Fixtures.albumTracks(i).size }
@@ -145,6 +149,8 @@ class PolishTest {
         }
         val nav = Navigator()
         setContent { KetvoiceShell(RecordingPlayer(), Fixtures.library(), offline, dark = true, navigator = nav) }
+        // Windows 2.0: Home's hero (the last title heard) comes first, the offline state below it.
+        onNodeWithTag("page:home").performScrollToNode(hasTestTag("state:offline"))
         onNodeWithTag("state:offline").assertExists()
         onNodeWithTag("state-action:1").performClick()
         onNodeWithTag("page:downloads").assertExists()

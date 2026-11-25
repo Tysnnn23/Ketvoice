@@ -115,7 +115,7 @@ fun BoxScope.PlaylistUpdateCard(pending: List<PlaylistFollow.Update> = PlaylistW
     val update = pending.firstOrNull() ?: return
     val ket = LocalKet.current
     val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 24.dp).widthIn(max = 320.dp).shadow(12.dp, shape).clip(shape)
+    Column(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = ShellMetrics.ISLAND_HEIGHT + ShellMetrics.ISLAND_FOOT * 2).widthIn(max = 320.dp).shadow(12.dp, shape).clip(shape)
         .background(ket.raised).border(.5.dp, ket.hairline, shape).padding(16.dp).testTag("playlist-update")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(KetIcons.Download, null, Modifier.size(16.dp), tint = ket.accent)

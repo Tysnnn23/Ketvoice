@@ -68,12 +68,43 @@ import com.ketvoice.desktop.ui.theme.DeskGlyphs
 class SearchState { var query by mutableStateOf("") }
 val LocalSearch = staticCompositionLocalOf { SearchState() }
 
-/** A page: its large title, then [content], with the window's page margins. */
+/**
+ * Windows 2.0's page margins: the pages run under the floating glass, edge to edge, and their words start beside the
+ * sidebar and end before the open panel ([LocalShellInsets]).
+ */
+internal object PageEdges {
+    /** After the sidebar's inset. */
+    val START = 26.dp
+    val TOP = 30.dp
+
+    @Composable fun padding(top: androidx.compose.ui.unit.Dp = TOP, bottom: androidx.compose.ui.unit.Dp = 56.dp): PaddingValues {
+        val insets = LocalShellInsets.current
+        val dir = androidx.compose.ui.unit.LayoutDirection.Ltr
+        return PaddingValues(start = insets.calculateLeftPadding(dir) + START, end = insets.calculateRightPadding(dir) + Ket27Desk.Space.page,
+            top = top, bottom = insets.calculateBottomPadding() + bottom)
+    }
+
+    /** The horizontal part as content padding, for a shelf that scrolls edge to edge. */
+    @Composable fun row(): PaddingValues {
+        val insets = LocalShellInsets.current
+        val dir = androidx.compose.ui.unit.LayoutDirection.Ltr
+        return PaddingValues(start = insets.calculateLeftPadding(dir) + START, end = insets.calculateRightPadding(dir) + Ket27Desk.Space.page)
+    }
+
+    /** The horizontal part only, for a page drawn edge to edge whose rows keep the margins. */
+    @Composable fun sides(): Modifier {
+        val insets = LocalShellInsets.current
+        val dir = androidx.compose.ui.unit.LayoutDirection.Ltr
+        return Modifier.padding(start = insets.calculateLeftPadding(dir) + START, end = insets.calculateRightPadding(dir) + Ket27Desk.Space.page)
+    }
+}
+
+/** A page: its large title, then [content], within [PageEdges]; the wheel glides and the edges give ([fluidScroll]). */
 @Composable
 fun Page(title: String?, tag: String, state: androidx.compose.foundation.lazy.LazyListState? = null, content: LazyListScope.() -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().testTag("page:$tag"), state = state ?: androidx.compose.foundation.lazy.rememberLazyListState(),
-        contentPadding = PaddingValues(start = Ket27Desk.Space.page, end = Ket27Desk.Space.page, top = 22.dp, bottom = 48.dp)) {
-        if (title != null) item("title") { KText(title, Ket27Desk.Type.largeTitle, Modifier.padding(bottom = 4.dp)) }
+    val list = state ?: androidx.compose.foundation.lazy.rememberLazyListState()
+    LazyColumn(Modifier.fillMaxSize().fluidScroll(list).testTag("page:$tag"), state = list, contentPadding = PageEdges.padding()) {
+        if (title != null) item("title") { KText(title, Ket27Desk.Type.largeTitle, Modifier.padding(bottom = 6.dp)) }
         content()
     }
 }
@@ -102,49 +133,59 @@ private fun Loading() { Box(Modifier.fillMaxWidth().padding(vertical = 60.dp), c
 fun HomePage() {
     val history by LocalLibrary.current.history.collectAsState()
     val loader = rememberLoad(Unit, empty = { it.forYou.isEmpty() && it.shelves.isEmpty() }) { home() }
-    Page("Accueil", "home") {
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    val home = loader.value
+    val hero = HomeHeroPick.pick(history, home?.forYou.orEmpty())
+    val sides = PageEdges.sides()
+    val row = PageEdges.row()
+    val insets = LocalShellInsets.current
+    LazyColumn(Modifier.fillMaxSize().fluidScroll(list).testTag("page:home"), state = list,
+        contentPadding = PaddingValues(bottom = insets.calculateBottomPadding() + 56.dp)) {
+        // The hero: the last title heard (or the first one picked for you), its Canvas or its cover edge to edge.
+        if (hero != null) item("hero") { HomeHero(hero) }
+        else item("title") { KText("Accueil", Ket27Desk.Type.largeTitle, sides.padding(top = PageEdges.TOP, bottom = 6.dp)) }
         // Offline, what was heard here still shows above the offline state.
         if (loader.state is Load.Failed && history.isNotEmpty()) {
-            item("rec-h") { SectionHeader("Écoutés récemment") }
-            item("rec") { TrackShelf(history.take(20)) }
+            item("rec-h") { Box(sides) { SectionHeader("Écoutés récemment") } }
+            item("rec") { TrackShelf(history.take(20), contentPadding = row) }
         }
-        loadStates(loader)
-        val home = loader.value ?: return@Page
-        val recent = (history + home.recent).distinctBy { it.id }
-        if (home.forYou.isEmpty() && recent.isEmpty() && home.shelves.isEmpty()) {
-            item { EmptyMessage("Accueil", "Écoutez quelques titres : Ketvoice prépare ici vos sélections.") }
-            return@Page
+        if (loader.state !is Load.Ready) { item("state") { Box(sides) { LoadState(loader) } }; return@LazyColumn }
+        val data = home ?: return@LazyColumn
+        val recent = (history + data.recent).distinctBy { it.id }
+        if (data.forYou.isEmpty() && recent.isEmpty() && data.shelves.isEmpty()) {
+            item { Box(sides) { EmptyMessage("Accueil", "Écoutez quelques titres : Ketvoice prépare ici vos sélections.") } }
+            return@LazyColumn
         }
         // Settings › Disposition: the sections in the listener's order (`layoutHome`, as the phone's Home).
         DeskLayout.homeSections().forEach { section ->
             when (section) {
-                "forYou" -> forYouSection(home)
-                "recent" -> recentSection(recent)
-                "catalog" -> shelvesSection(home)
+                "forYou" -> forYouSection(data, sides, row)
+                "recent" -> recentSection(recent, sides, row)
+                "catalog" -> shelvesSection(data, sides, row)
             }
         }
     }
 }
 
-private fun LazyListScope.forYouSection(home: HomeData) {
+private fun LazyListScope.forYouSection(home: HomeData, sides: Modifier, row: PaddingValues) {
     if (home.forYou.isEmpty()) return
-    item("fy-h") { SectionHeader("Pour toi") }
-    item("fy") { TrackShelf(home.forYou, 220.dp) }
+    item("fy-h") { Box(sides) { SectionHeader("Pour toi") } }
+    item("fy") { TrackShelf(home.forYou, 220.dp, contentPadding = row) }
 }
 
-private fun LazyListScope.recentSection(recent: List<Track>) {
+private fun LazyListScope.recentSection(recent: List<Track>, sides: Modifier, row: PaddingValues) {
     if (recent.isEmpty()) return
-    item("rec-h") { SectionHeader("Écoutés récemment") }
-    item("rec") { TrackShelf(recent.take(20)) }
+    item("rec-h") { Box(sides) { SectionHeader("Écoutés récemment") } }
+    item("rec") { TrackShelf(recent.take(20), contentPadding = row) }
 }
 
-private fun LazyListScope.shelvesSection(home: HomeData) {
+private fun LazyListScope.shelvesSection(home: HomeData, sides: Modifier, row: PaddingValues) {
     home.shelves.forEach { s ->
         item("s-${s.title}") {
             Column {
-                SectionHeader(s.title)
-                if (s.subtitle.isNotBlank()) KText(s.subtitle, Ket27Desk.Type.subheadline, Modifier.padding(bottom = 10.dp), color = LocalKet.current.secondary)
-                if (s.albums.isNotEmpty()) AlbumShelf(s.albums) else TrackShelf(s.tracks)
+                Box(sides) { SectionHeader(s.title) }
+                if (s.subtitle.isNotBlank()) KText(s.subtitle, Ket27Desk.Type.subheadline, sides.padding(bottom = 12.dp), color = LocalKet.current.secondary)
+                if (s.albums.isNotEmpty()) AlbumShelf(s.albums, contentPadding = row) else TrackShelf(s.tracks, contentPadding = row)
             }
         }
     }
@@ -365,6 +406,7 @@ fun SettingsPage() {
     Page("Réglages", "settings", list) {
         settingsSearch()
         accountSettings()
+        extraSettings("Compte Ketvoice")
         item("h:Général") { SectionHeader("Général") }
         item {
             SettingsCard {
@@ -373,14 +415,18 @@ fun SettingsPage() {
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
         }
+        extraSettings("Général")
         personalizeSettings()
+        extraSettings("Personnalisation")
         item("h:Ketmix") { SectionHeader("Ketmix") }
         item { KetmixSettings() }
+        extraSettings("Ketmix")
         item("h:Séparation des voix") { SectionHeader("Séparation des voix") }
         item { StemSettings() }
         // Windows 2.0: « Puissance de Ketmix » (KetmixPowerSection.kt, kept by Ketmix's side).
         item("h:Puissance de Ketmix") { SectionHeader("Puissance de Ketmix") }
         item { KetmixPowerSection() }
+        extraSettings("Séparation des voix")
         item("h:Lecteur") { SectionHeader("Lecteur") }
         item {
             SettingsCard {
@@ -391,10 +437,14 @@ fun SettingsPage() {
                 EqualizerRow()
             }
         }
+        extraSettings("Lecteur")
         lyricsSettings()
+        extraSettings("Paroles")
         downloadSettings()
         sourcesSettings() // Windows 2.0: « Sources » and « Lecture » (SourcesPage.kt)
+        extraSettings("Téléchargements")
         layoutSettings()
+        extraSettings("Disposition")
         item("h:Windows") { SectionHeader("Windows") }
         item {
             SettingsCard {
@@ -409,9 +459,12 @@ fun SettingsPage() {
                 }
             }
         }
+        extraSettings("Windows")
         item("h:Raccourcis clavier") { SectionHeader("Raccourcis clavier") }
         item { ShortcutsCard() }
+        extraSettings("Raccourcis clavier")
         localMusicSettings()
+        extraSettings("Musique locale")
         item("h:À propos") { SectionHeader("À propos") }
         item {
             SettingsCard {
@@ -429,6 +482,7 @@ fun SettingsPage() {
                 }
             }
         }
+        extraSettings("À propos")
     }
 }
 
