@@ -33,6 +33,26 @@ object LyricsRepo {
             else -> "texte non synchronisé"
         }
     }
+    /**
+     * Windows 2.0's lyrics engine (desktop only): more sources asked at once, the richest timing first ([LyricsRank]),
+     * the listener's choice of source per title, and lyrics timed word by word by the app's AI swapped in. Null on the
+     * phone, where every default below keeps the lookup exactly as it was.
+     */
+    interface Hooks {
+        /** The sources the automatic lookup asks, from [default] (the built-in ones, then the custom sources). */
+        fun sources(default: List<String>): List<String> = default
+        /** The source the listener chose for this title (asked with the others, and shown whenever it has lyrics). */
+        fun pinned(trackId: String): String? = null
+        /** How rich an answer's timing is; the highest is shown. */
+        fun rank(lines: List<MusicApi.LyricLine>): Int = ExtraLyricsProviders.rank(lines)
+        /** Each source's answer as it arrives ([order]: its place among the sources asked). */
+        fun answered(track: Track, source: String, label: String, lines: List<MusicApi.LyricLine>, order: Int) {}
+        /** The state about to be shown (never the listener's own lyrics): word timing by AI may replace line timing. */
+        fun shown(track: Track, state: State): State = state
+    }
+    @Volatile var hooks: Hooks? = null
+    private fun shown(track: Track, state: State): State = hooks?.shown(track, state) ?: state
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
@@ -61,14 +81,14 @@ object LyricsRepo {
         }
         // 7.0: a local file's own .lrc, or the lyrics fetched ahead for it.
         if (!refresh) runCatching { LocalLyrics.lines(track.id) }.getOrNull()?.let { (label, lines) ->
-            _state.value = State(loading = false, source = label, sourceKey = source, lines = lines, isTimed = lines.any { it.timeMs >= 0 },
-                wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed }, trackId = track.id)
+            _state.value = shown(track, State(loading = false, source = label, sourceKey = source, lines = lines, isTimed = lines.any { it.timeMs >= 0 },
+                wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed }, trackId = track.id))
             return
         }
         if (!refresh) {
             val local = runCatching { Downloader.localLyrics(track.id) }.getOrNull()
             if (local != null && local.second.isNotEmpty()) {
-                _state.value = State(
+                _state.value = shown(track, State(
                     loading = false,
                     source = "Téléchargé · ${local.first}",
                     sourceKey = source,
@@ -77,13 +97,15 @@ object LyricsRepo {
                     wordTimed = local.second.any { it.words.size >= 2 },
                     syllableTimed = local.second.any { it.syllableTimed },
                     trackId = track.id
-                )
+                ))
                 return
             }
         }
         _state.value = State(loading = true, sourceKey = source, trackId = track.id)
         val order = AppSettings.lyricsOrder.value
-        if (source == MusicApi.SRC_AUTO && LyricsOrder.custom(order)) {
+        val hooks = hooks
+        val pinned = if (source == MusicApi.SRC_AUTO) hooks?.pinned(track.id) else null
+        if (source == MusicApi.SRC_AUTO && LyricsOrder.custom(order) && pinned == null) {
             job = scope.launch { inOrder(track, LyricsOrder.parse(order) + SourceExtras.lyricsSources(), mode == 1, refresh, gen, source) }
             return
         }
@@ -91,21 +113,24 @@ object LyricsRepo {
             var bestRank = -1
             var bestPriority = Int.MAX_VALUE
             // Custom sources whose manifest declares lyrics come last (an extra provider, Windows 2.0).
-            val sources = if (source == MusicApi.SRC_AUTO) MusicApi.lyricSources + SourceExtras.lyricsSources() else listOf(source)
+            val sources = if (source == MusicApi.SRC_AUTO) (MusicApi.lyricSources + SourceExtras.lyricsSources()).let { hooks?.sources(it) ?: it }
+                else listOf(source)
             coroutineScope {
                 sources.forEachIndexed { priority, src -> launch {
                     val result = runCatching { MusicApi.lyrics(track, mode == 1, src, refresh) }.getOrNull() ?: return@launch
                     if (result.second.isEmpty()) return@launch
-                    val rank = ExtraLyricsProviders.rank(result.second)
+                    hooks?.answered(track, src, result.first, result.second, priority)
+                    // The listener's choice for this title wins whenever it has lyrics.
+                    val rank = if (pinned != null && src == pinned) Int.MAX_VALUE else hooks?.rank(result.second) ?: ExtraLyricsProviders.rank(result.second)
                     synchronized(lock) {
                         if (gen != generation || currentTrackId != track.id) return@synchronized
-                        val completeEnough = _state.value.lines.isEmpty() || result.second.size >= _state.value.lines.size * .55
+                        val completeEnough = rank == Int.MAX_VALUE || _state.value.lines.isEmpty() || result.second.size >= _state.value.lines.size * .55
                         if (completeEnough && (rank > bestRank || (rank == bestRank && priority < bestPriority))) {
                             bestRank = rank
                             bestPriority = priority
-                            _state.value = State(false, result.first, source, result.second,
+                            _state.value = shown(track, State(false, result.first, source, result.second,
                                 result.second.any { it.timeMs >= 0 }, result.second.any { it.words.size >= 2 },
-                                result.second.any { it.syllableTimed }, trackId = track.id)
+                                result.second.any { it.syllableTimed }, trackId = track.id))
                         }
                     }
                 } }
@@ -121,8 +146,8 @@ object LyricsRepo {
         val result = LyricsOrder.firstInOrder(sources, { it.second.isNotEmpty() }) { src -> MusicApi.lyrics(track, plain, src, refresh) }?.second
         if (result != null) synchronized(lock) {
             if (gen != generation || currentTrackId != track.id) return@synchronized
-            _state.value = State(false, result.first, sourceKey, result.second, result.second.any { it.timeMs >= 0 },
-                result.second.any { it.words.size >= 2 }, result.second.any { it.syllableTimed }, trackId = track.id)
+            _state.value = shown(track, State(false, result.first, sourceKey, result.second, result.second.any { it.timeMs >= 0 },
+                result.second.any { it.words.size >= 2 }, result.second.any { it.syllableTimed }, trackId = track.id))
         }
         if (gen == generation && _state.value.loading) _state.value = State(source = MusicApi.sourceName(sourceKey), sourceKey = sourceKey, trackId = track.id)
     }

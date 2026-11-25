@@ -147,6 +147,12 @@ fun main(args: Array<String>) {
                 // The compact player, always on top (Windows 2.0).
                 CheckboxItem(AppText.t("Mini-lecteur"), checked = com.ketvoice.desktop.ui.MiniPlayer.open.value,
                     onCheckedChange = { com.ketvoice.desktop.ui.MiniPlayer.open.value = it })
+                // « Paroles flottantes » (off by default); a locked band lets clicks through, so it is unlocked from here.
+                CheckboxItem(AppText.t("Paroles flottantes"), checked = com.ketvoice.desktop.lyrics.LyricsPcSettings.floating.value,
+                    onCheckedChange = { if (it != com.ketvoice.desktop.lyrics.LyricsPcSettings.floating.value) com.ketvoice.desktop.ui.FloatingLyrics.toggle() })
+                if (com.ketvoice.desktop.lyrics.LyricsPcSettings.floating.value) CheckboxItem(AppText.t("Verrouiller les paroles flottantes"),
+                    checked = com.ketvoice.desktop.lyrics.LyricsPcSettings.floatingLocked.value,
+                    onCheckedChange = { com.ketvoice.desktop.ui.FloatingLyrics.setLocked(it) })
                 Separator()
                 Item(AppText.t("Ouvrir"), onClick = ::show)
                 Item(AppText.t("Quitter"), onClick = ::quit)
@@ -269,6 +275,7 @@ fun main(args: Array<String>) {
             }
             KetvoiceShell(dark = dark, glass = WindowGlass.active.value, glassMode = glassMode)
         }
+        com.ketvoice.desktop.ui.FloatingLyricsWindow(when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() })
         com.ketvoice.desktop.ui.MiniPlayerWindow(icon, when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }, ::show)
     }
     // The probe ends here even if a library thread lingers (the class-data archive is written on this exit).
@@ -303,6 +310,8 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     // « Playlists téléchargées à jour »: new titles of downloaded playlists are offered in the window.
     com.ketvoice.desktop.library.PlaylistWatch.start(context, scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
+    // Windows 2.0: the lyrics engine and word sync by AI, the import page, followed playlists, drop anywhere, the watched library.
+    com.ketvoice.desktop.ui.PcLyricsLibrary.start(context, scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)
     // Phone control: this PC joins the account's private room while signed in.
     com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)

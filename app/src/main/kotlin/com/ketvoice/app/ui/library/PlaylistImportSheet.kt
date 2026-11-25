@@ -100,7 +100,7 @@ private fun ImportSources(link: String) {
     val current = remember(link) { runCatching { PlaylistImport.serviceOf(link) }.getOrNull() }
     FlowRow(Modifier.fillMaxWidth().testTag("playlist-import-sources"), horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ImportService.entries.forEach { service ->
+        ImportService.entries.filter { it != ImportService.YouTube }.forEach { service ->
             val on = service == current
             Box(Modifier.clip(RoundedCornerShape(50)).background(if (on) theme.accent.copy(alpha = .16f) else theme.onBackground.copy(alpha = .06f))
                 .padding(horizontal = 12.dp, vertical = 6.dp)) {

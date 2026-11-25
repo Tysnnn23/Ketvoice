@@ -72,3 +72,6 @@ data/LayoutSettings.kt
 data/PlaylistFollow.kt
 # Lyrics editor (Windows, 9.0): the pure draft, LRC and enhanced LRC.
 data/LyricsDraft.kt
+# Windows 2.0 import: the match report and YouTube playlists.
+smartlib/ImportReport.kt
+smartlib/YouTubeImport.kt

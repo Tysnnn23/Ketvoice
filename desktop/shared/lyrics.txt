@@ -11,3 +11,5 @@ data/CustomLyrics.kt
 data/LocalLyrics.kt
 data/LyricsTranslation.kt
 data/TranslationLanguages.kt
+# Windows 2.0 lyrics engine: the richest timing first, word timing by AI ranked between them.
+data/LyricsRank.kt

@@ -51,6 +51,12 @@ object PlaylistFollow {
     fun followed(known: Map<String, Set<String>>, playlist: LocalPlaylist): Map<String, Set<String>> =
         known + (playlist.id to ids(playlist).toSet())
 
+    /**
+     * Windows 2.0 « Suivre une playlist externe »: the songs of an outside playlist ([songIds], the service's own ids in
+     * its order) not seen at its last check ([known]), each once. A song that left and came back is not new.
+     */
+    fun outsideFresh(known: Set<String>, songIds: List<String>): List<String> = songIds.filter { it.isNotBlank() && it !in known }.distinct()
+
     fun decode(text: String?): Map<String, Set<String>> = runCatching {
         val root = JSONObject(text ?: return emptyMap())
         root.keys().asSequence().associateWith { key ->

@@ -36,6 +36,11 @@ internal object LocalLyrics {
         return LyricsDiskCache.read(key(trackId))?.takeIf { it.second.isNotEmpty() }
     }
 
+    /** Lyrics found for a local title some other way (Windows 2.0: written in the file's tags), kept as if fetched ahead. */
+    fun keep(trackId: String, result: Pair<String, List<MusicApi.LyricLine>>) {
+        if (trackId.startsWith("local:") && result.second.isNotEmpty()) LyricsDiskCache.write(key(trackId), result)
+    }
+
     private fun sidecar(trackId: String): Pair<String, List<MusicApi.LyricLine>>? {
         val uri = sidecars[trackId] ?: return null
         val context = app ?: return null

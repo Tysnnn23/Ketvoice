@@ -90,7 +90,6 @@ import com.ketvoice.app.ui.player.drawLiftedWord
 import com.ketvoice.app.ui.player.heldNow
 import com.ketvoice.app.ui.player.karaokeInk
 import com.ketvoice.app.ui.player.karaokeMasks
-import com.ketvoice.app.util.Romanizer
 import com.ketvoice.desktop.ui.theme.Ket27Desk
 import com.ketvoice.desktop.ui.theme.LocalKet
 import kotlinx.coroutines.Dispatchers
@@ -202,7 +201,7 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
     val across = remember(lyrics.lines, track.title, track.artist) { LyricsDuet.sides(lyrics.lines, track.title, track.artist) }
     val romanizationOn = AppSettings.lyricsRomanization.value
     val romanized by produceState<List<String?>>(emptyList(), lyrics.lines, romanizationOn) {
-        value = if (!romanizationOn || lyrics.lines.isEmpty()) emptyList() else withContext(Dispatchers.Default) { Romanizer.lines(lyrics.lines.map { it.text }) }
+        value = if (!romanizationOn || lyrics.lines.isEmpty()) emptyList() else withContext(Dispatchers.Default) { RomanCache.lines(lyrics.lines.map { it.text }) }
     }
     var translating by remember(track.id) { mutableStateOf(false) }
     val translated = remember(track.id, lyrics.lines) { mutableStateMapOf<Int, String>() }
@@ -227,6 +226,8 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
 
     Column(modifier.testTag("lyrics:${look.name.lowercase()}")) {
         LyricsHeader(track, lyrics, translating, { translating = !translating }, full)
+        // Windows 2.0: translation, translation under every line, romanisation, floating lyrics, the AI's word timing.
+        LyricsToggles(track, lyrics, translating, { translating = !translating }, full)
         if (lyrics.lines.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f).padding(24.dp), contentAlignment = Alignment.TopCenter) {
                 KText(if (lyrics.loading) "Recherche des paroles…" else "Aucune parole pour ce titre",
@@ -264,7 +265,7 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
                     val current = index == active || !lyrics.isTimed
                     val other = across.getOrNull(index) == true
                     LyricLineView(line, index, active, current, lyrics.isTimed, now, look, LineInk(label, sung), other, !following,
-                        romanized.getOrNull(index), translated[index]?.takeIf { translating && (current || !lyrics.isTimed) }) {
+                        romanized.getOrNull(index), translated[index]?.takeIf { translating && (current || !lyrics.isTimed || com.ketvoice.desktop.lyrics.LyricsPcSettings.translateEvery.value) }) {
                         if (line.timeMs >= 0) { player.seekTo(LyricsOffsets.seekPosition(line.timeMs, offset)); following = true }
                     }
                 }
@@ -294,7 +295,8 @@ private fun LyricsHeader(track: Track, lyrics: LyricsRepo.State, translating: Bo
                 val sources = listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF
                 menu.open(listOf(MenuItem("Romanisation", if (romanization.value) KetIcons.Check else null, "lyrics-romanization") {
                     romanization.value = !romanization.value
-                }, MenuItem("Éditeur de paroles", KetIcons.Lyrics, "lyrics-open-editor") { LyricsEditorDesk.open(track) }, MenuItem("-")) + sources.map { key ->
+                }, MenuItem("Éditeur de paroles", KetIcons.Lyrics, "lyrics-open-editor") { LyricsEditorDesk.open(track) }, MenuItem("-")) +
+                    perTitleItems(track) { LyricsRepo.load(track, force = true) } + sources.map { key ->
                     MenuItem(MusicApi.sourceName(key), if (key == current) KetIcons.Check else null, "lyrics-source:$key") {
                         AppSettings.lyricsSource.value = key; feed.load(track, refresh = true)
                     }
@@ -381,7 +383,7 @@ private fun LyricLineView(line: MusicApi.LyricLine, index: Int, active: Int, cur
  * one after another with a blurred glow behind them. Words that do not cover the line keep the flat fill.
  */
 @Composable
-private fun WordLine(line: MusicApi.LyricLine, now: Long, style: TextStyle, ink: LineInk) {
+internal fun WordLine(line: MusicApi.LyricLine, now: Long, style: TextStyle, ink: LineInk) {
     var layout by remember(line.text, style) { mutableStateOf<TextLayoutResult?>(null) }
     val words = remember(line) { LyricsPresentation.aligned(line) }
     val lifting = remember(line, words) { !Motion.reduced && LyricsWords.covers(line.text, words.map { it.text }) }

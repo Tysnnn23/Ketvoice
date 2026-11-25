@@ -20,6 +20,7 @@ import org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info
 import org.bytedeco.ffmpeg.global.avformat.avformat_open_input
 import org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_AUDIO
 import org.bytedeco.ffmpeg.global.avutil.av_dict_get
+import org.bytedeco.ffmpeg.global.avutil.AV_DICT_IGNORE_SUFFIX
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.PointerPointer
 import org.json.JSONArray
@@ -101,7 +102,51 @@ object LocalFolders {
             index = next
             saveIndex(ctx, next)
             _tracks.value = ordered(next.values)
+            noteSidecars(next.keys)
         } finally { _scanning.value = false }
+    }
+
+    /**
+     * « Bibliothèque surveillée » (Windows 2.0, [LibraryWatch]): files and folders that changed under the chosen folders,
+     * read again (added or changed), dropped (removed) or walked (a folder moved in); a `.lrc` that changed is noted for
+     * its audio file. Unchanged files keep their entry.
+     */
+    fun update(changed: Set<String>): Job = scope.launch { mutex.withLock { applyChanges(changed) } }
+
+    internal fun applyChanges(changed: Set<String>) {
+        val ctx = context ?: return
+        val covers = File(ctx.cacheDir, "local-covers").apply { mkdirs() }
+        val next = LinkedHashMap(index)
+        for (path in changed) {
+            val f = File(path)
+            if (_folders.value.none { inside(f.path, it) }) continue
+            when {
+                f.isDirectory -> f.walkTopDown().onEnter { it == f || (!it.isHidden && !it.name.startsWith(".")) }
+                    .filter { it.isFile && it.extension.lowercase() in EXTENSIONS }.take(LIMIT).forEach { reread(it, next, covers) }
+                f.isFile && f.extension.lowercase() in EXTENSIONS -> reread(f, next, covers)
+                // Gone: the file, or every file of a folder that went.
+                !f.exists() -> next.keys.removeAll { it == f.path || inside(it, f.path) }
+            }
+        }
+        index = next
+        saveIndex(ctx, next)
+        _tracks.value = ordered(next.values)
+        noteSidecars(next.keys)
+    }
+
+    private fun reread(file: File, into: MutableMap<String, Entry>, covers: File) {
+        val size = file.length(); val modified = file.lastModified()
+        if (into[file.path]?.let { it.size == size && it.modified == modified } == true) return
+        into[file.path] = read(file, covers).let { (track, order) -> Entry(size, modified, track, order) }
+    }
+
+    /** A `.lrc` beside an audio file, with the same name, is that title's lyrics (before any lookup). */
+    private fun noteSidecars(paths: Collection<String>) {
+        for (path in paths) {
+            val audio = File(path)
+            val lrc = File(audio.parentFile, audio.nameWithoutExtension + ".lrc").takeIf { it.isFile } ?: continue
+            com.ketvoice.app.data.LocalLyrics.noteSidecar(idOf(audio), android.net.Uri.fromFile(lrc))
+        }
     }
 
     private fun ordered(entries: Collection<Entry>): List<Track> = entries.filter { it.track != null }.sortedBy { it.order }.mapNotNull { it.track }
@@ -143,11 +188,25 @@ object LocalFolders {
                 }
             val track = Track(id, title, artist, album, durationMs = duration, streamUrl = file.toURI().toString(),
                 coverUrl = cover?.toURI()?.toString())
+            embeddedLyrics(fmt.metadata(), audio.metadata())?.let { keepLyrics(id, it) }
             val order = "%s\u0000%04d\u0000%04d\u0000%s".format(album.lowercase().ifEmpty { "￿" }, disc, number, title.lowercase())
             return track to order
         } finally {
             avformat_close_input(fmt)
         }
+    }
+
+    /** Lyrics written in the file's tags (ID3 `USLT` as `lyrics-xxx`, Vorbis and MP4 `LYRICS`/`UNSYNCEDLYRICS`). */
+    private fun embeddedLyrics(vararg dicts: AVDictionary?): String? = dicts.firstNotNullOfOrNull { dict ->
+        dict ?: return@firstNotNullOfOrNull null
+        (av_dict_get(dict, "lyrics", null, AV_DICT_IGNORE_SUFFIX) ?: av_dict_get(dict, "unsyncedlyrics", null, 0))
+            ?.value()?.string?.trim()?.takeIf { it.length in 8..200_000 }
+    }
+
+    /** Embedded lyrics go where LyricsRepo looks for a local file's lyrics (a `.lrc` beside the file still comes first). */
+    private fun keepLyrics(id: String, text: String) {
+        val lines = runCatching { com.ketvoice.app.data.CustomLyrics.parse(text).second }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return
+        runCatching { com.ketvoice.app.data.LocalLyrics.keep(id, "Paroles intégrées" to lines) }
     }
 
     /**

@@ -124,6 +124,7 @@ private fun ColumnScope.TextStep(model: LyricsEditorModel) {
         EditorButton("Coller", { clipboard.getText()?.text?.let { model.text = it.take(200_000) } }, tag = "lyrics-editor-paste")
         EditorButton("Paroles actuelles", { existing?.let { model.take(LyricsDraft.fromLines(it)) } }, enabled = existing != null, tag = "lyrics-editor-current")
         EditorButton("Ouvrir un fichier", { model.openFile(LyricsEditorDesk.io) }, tag = "lyrics-editor-open")
+        AiTimingButton(model)
     }
     Box(Modifier.fillMaxWidth().weight(1f).padding(vertical = 12.dp).clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.card).padding(14.dp)) {
         if (model.text.isEmpty()) KText("Texte des paroles", Ket27Desk.Type.body, color = ket.tertiary)
@@ -315,4 +316,18 @@ private fun EditorButton(label: String, onClick: () -> Unit, enabled: Boolean = 
         KText(label, Ket27Desk.Type.subheadline, color = when { !enabled -> ket.tertiary; primary -> com.ketvoice.app.theme.CoverLegibility.onFill(ket.accent); else -> ket.label },
             weight = FontWeight.Medium, translate = translate)
     }
+}
+
+/**
+ * Windows 2.0: lyrics timed word by word by the AI go back to their original timing (or come back) from here; to correct
+ * them, « Paroles actuelles » starts from the AI's timing and « Enregistrer » keeps the corrected lyrics as the title's own.
+ */
+@Composable
+private fun AiTimingButton(model: LyricsEditorModel) {
+    com.ketvoice.desktop.lyrics.AiLyrics.changes.collectAsState().value
+    val entry = com.ketvoice.desktop.lyrics.AiLyrics.entry(model.track.id)?.takeIf { it.file != null } ?: return
+    EditorButton(if (entry.reverted) "Reprendre la synchro IA" else "Revenir à la synchro d'origine", {
+        com.ketvoice.desktop.lyrics.AiLyrics.revert(model.track.id, back = !entry.reverted)
+        com.ketvoice.app.data.LyricsRepo.load(model.track, force = true)
+    }, tag = "lyrics-editor-ai")
 }

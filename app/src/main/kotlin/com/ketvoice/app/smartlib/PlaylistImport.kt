@@ -21,7 +21,9 @@ import java.net.URI
 import java.net.URL
 
 enum class ImportService(val label: String) {
-    Spotify("Spotify"), Deezer("Deezer"), AppleMusic("Apple Music"), Tidal("Tidal"), SoundCloud("SoundCloud")
+    Spotify("Spotify"), Deezer("Deezer"), AppleMusic("Apple Music"), Tidal("Tidal"), SoundCloud("SoundCloud"),
+    /** Windows 2.0 only ([YouTubeImport]); [PlaylistImport.serviceOf] does not take YouTube links, so the phone's import is unchanged. */
+    YouTube("YouTube")
 }
 
 /** A title of an imported playlist; [catalogue] is set when the service's title is already one of Ketvoice's catalogue. */
@@ -140,6 +142,8 @@ object PlaylistImport {
                 val path = SoundCloudImport.setPath(full)
                 SoundCloudImport.parse(get(SoundCloudImport.pageUrl(path)) ?: throw IllegalStateException(PublicPage.NOT_FOUND), path)
             }
+            // Never returned by serviceOf (the phone's import is unchanged); Windows reads YouTube links itself.
+            ImportService.YouTube -> YouTubeImport.preview(link)
         }
     }
 
