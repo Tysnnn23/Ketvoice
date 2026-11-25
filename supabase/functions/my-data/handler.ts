@@ -22,8 +22,6 @@ export const TABLES: Array<[table: string, column: string]> = [
   ["ketvoice_activity", "actor"],
   ["ketvoice_reactions", "user_id"],
   ["ketvoice_profile_modules", "user_id"],
-  ["ketvoice_friendships", "requester,addressee"],
-  ["ketvoice_presence", "user_id"],
   ["ketvoice_link_playlists", "owner_id"],
 ];
 
@@ -33,9 +31,7 @@ export function createMyDataHandler(deps: ConnectDeps) {
   const now = deps.now ?? Date.now;
 
   async function rows(token: string, table: string, column: string, uid: string): Promise<unknown> {
-    // "a,b": rows where the listener is in either column (a friendship has two sides).
-    const filter = column.includes(",") ? `or=(${column.split(",").map((c) => `${c}.eq.${uid}`).join(",")})` : `${column}=eq.${uid}`;
-    const r = await asUser(deps, token, `/rest/v1/${table}?select=*&${filter}&limit=10000`);
+    const r = await asUser(deps, token, `/rest/v1/${table}?select=*&${column}=eq.${uid}&limit=10000`);
     if (!r.ok) return { unavailable: r.status };
     return await r.json();
   }
@@ -53,6 +49,12 @@ export function createMyDataHandler(deps: ConnectDeps) {
     if (!(await take(deps, `my-data:${who.id}`, "my-data-export", 10, 3600))) return json(429, { error: "rate_limited" });
     const tables: Record<string, unknown> = {};
     for (const [table, column] of TABLES) tables[table] = await rows(who.token, table, column, who.id);
+    // Friendships and presence only grant some columns (never the other side's account id): friendships through the
+    // listener's own rights (both sides of each of their pairs), presence by the service role for this account only.
+    const fr = await asUser(deps, who.token, "/rest/v1/ketvoice_friendships?select=id,status,created_at,answered_at&limit=10000");
+    tables.ketvoice_friendships = fr.ok ? await fr.json() : { unavailable: fr.status };
+    const pr = await service(deps, "GET", `/rest/v1/ketvoice_presence?user_id=eq.${who.id}&select=track,playing,room,updated_at`);
+    tables.ketvoice_presence = pr.ok ? await pr.json() : { unavailable: pr.status };
     const fm = await service(deps, "GET", `/rest/v1/ketvoice_lastfm_links?user_id=eq.${who.id}&select=username,created_at`);
     const fmRows = fm.ok ? await fm.json() : [];
     const photos: Record<string, string[]> = {};
