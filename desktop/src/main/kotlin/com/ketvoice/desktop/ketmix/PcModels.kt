@@ -24,7 +24,7 @@ internal object PcModels {
         "43122029abe8ced9749ed260eeb8ffb25f836e2a396c7ff9bd41111b5201f35c", null)), "ketmix/pc/voice")
     /** S-KEY (Deezer, MIT): neural key, 24 probabilities ([NeuralKey]). */
     val key = ModelPack(RELEASE, listOf(ModelPack.Part("ketmix-key-skey.onnx", 321_948L,
-        "da325f4a5866d3b198aa2c6b8a93299d0e0212ef3ec8677958a83c04ce4e4c85", null)), "ketmix/pc/key")
+        "eca8a4e63a3bf0396acb0f5cc85d1316391e76a25ba5ef0149ecfaefa12f4696", null)), "ketmix/pc/key")
     /** LAION CLAP for music, audio side, int8 (Apache-2.0): sound embeddings ([SoundPrint]). */
     val sound = ModelPack(RELEASE, listOf(ModelPack.Part("ketmix-sound-clap-int8.onnx", 77_483_836L,
         "ee7d0a484c6ae1c254c5ed0bcbe0fcefa2701c7fa8fc6b122ebaf0636e00f6c3", null)), "ketmix/pc/sound")
