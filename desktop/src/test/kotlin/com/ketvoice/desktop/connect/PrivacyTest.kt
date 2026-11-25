@@ -24,6 +24,10 @@ class PrivacyTest {
         "api.listenbrainz.org" to "scrobbling, once linked",
         "listenbrainz.readthedocs.io" to "a documentation link in a comment",
         "www.last.fm" to "Last.fm's allow page, once the listener links it",
+        "raw.githubusercontent.com" to "Whisper's vocabulary for word sync by AI, on request (pinned commit)",
+        "api.deezer.com" to "naming a Deezer link the listener dropped on the window",
+        "www.youtube.com" to "naming a YouTube link the listener dropped (oEmbed)",
+        "open.spotify.com" to "naming a Spotify link the listener dropped (oEmbed)",
     )
 
     @Test fun noAnalyticsOrCrashReporting() {
@@ -41,6 +45,6 @@ class PrivacyTest {
 
     @Test fun theDiagnosticStaysOptIn() {
         assertFalse(com.ketvoice.app.data.AppSettings.diagnostics.value)
-        assertEquals(5, com.ketvoice.desktop.ui.WHAT_LEAVES.size)
+        assertEquals(6, com.ketvoice.desktop.ui.WHAT_LEAVES.size)
     }
 }

@@ -45,6 +45,7 @@ internal val WHAT_LEAVES = listOf(
     "Discord : le titre en cours, à l'application Discord de ce PC, si le statut est activé.",
     "Last.fm et ListenBrainz : vos écoutes, seulement si vous les avez liés.",
     "Mises à jour et modèles : téléchargés depuis GitHub, sans rien envoyer d'autre que la version.",
+    "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.",
 )
 
 @Composable

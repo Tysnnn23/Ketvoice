@@ -723,7 +723,8 @@ window. Its switches are in their own `ketvoice_connections` preferences (never 
   (`AccountSession.signInWithLink`). Never for `konnektsupport@gmail.com`.
 - **Zero telemetry and « Mes données »**: the desktop sends no usage statistics or crash reports (logs and crash files stay
   in the data folder; the 8.2 `diagnostics` key stays off and is not used here); `PrivacyTest` keeps an allowlist of the
-  hosts the sources write out and bans analytics libraries. The page lists what leaves the PC, exports the account as
+  hosts the sources write out and bans analytics libraries (wave 3 added the hosts of word sync's vocabulary and of naming a
+  dropped Deezer, Spotify or YouTube link, and « Liens déposés » to the page). The page lists what leaves the PC, exports the account as
   JSON (`my-data/export`, the caller's rows with their own session, plus this PC's connection switches) to
   `Documents\ketvoice-mes-donnees-<date>.json`, and deletes the account after typing SUPPRIMER (`my-data/delete`, service
   role: photos, then the auth user; refused for the publishing account).

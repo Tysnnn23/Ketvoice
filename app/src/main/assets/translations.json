@@ -3183,7 +3183,8 @@
   "Merci, Ketmix s'en souviendra": "Thanks, Ketmix will remember",
   "Elle m'a plu": "I liked it",
   "Elle ne m'a pas plu": "I didn't like it",
-  "Dernière transition": "Last transition"
+  "Dernière transition": "Last transition",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Dropped links: a Deezer, Spotify or YouTube link dragged onto the window is sent to that service to find out the track's name."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -6369,7 +6370,8 @@
   "Merci, Ketmix s'en souviendra": "धन्यवाद, Ketmix इसे याद रखेगा",
   "Elle m'a plu": "मुझे पसंद आया",
   "Elle ne m'a pas plu": "मुझे पसंद नहीं आया",
-  "Dernière transition": "पिछला ट्रांज़िशन"
+  "Dernière transition": "पिछला ट्रांज़िशन",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "छोड़े गए लिंक: विंडो पर खींचा गया Deezer, Spotify या YouTube लिंक ट्रैक का नाम जानने के लिए उसी सेवा को भेजा जाता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -9555,7 +9557,8 @@
   "Merci, Ketmix s'en souviendra": "ありがとうございます。Ketmix が覚えておきます",
   "Elle m'a plu": "気に入った",
   "Elle ne m'a pas plu": "気に入らなかった",
-  "Dernière transition": "直前のトランジション"
+  "Dernière transition": "直前のトランジション",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "ドロップしたリンク: ウィンドウにドラッグした Deezer、Spotify、YouTube のリンクは、曲名を調べるためにそのサービスへ送信されます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -12741,7 +12744,8 @@
   "Merci, Ketmix s'en souviendra": "谢谢，Ketmix 会记住的",
   "Elle m'a plu": "喜欢",
   "Elle ne m'a pas plu": "不喜欢",
-  "Dernière transition": "上一次过渡"
+  "Dernière transition": "上一次过渡",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "拖入的链接：拖到窗口中的 Deezer、Spotify 或 YouTube 链接会发送给该服务，以获取歌曲名称。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -15927,7 +15931,8 @@
   "Merci, Ketmix s'en souviendra": "Спасибо, Ketmix это запомнит",
   "Elle m'a plu": "Понравилось",
   "Elle ne m'a pas plu": "Не понравилось",
-  "Dernière transition": "Последний переход"
+  "Dernière transition": "Последний переход",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Перетащенные ссылки: ссылка Deezer, Spotify или YouTube, перетащенная в окно, отправляется этому сервису, чтобы узнать название трека."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -19113,7 +19118,8 @@
   "Merci, Ketmix s'en souviendra": "Grazie, Ketmix se ne ricorderà",
   "Elle m'a plu": "Mi è piaciuta",
   "Elle ne m'a pas plu": "Non mi è piaciuta",
-  "Dernière transition": "Ultima transizione"
+  "Dernière transition": "Ultima transizione",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Link trascinati: un link Deezer, Spotify o YouTube trascinato nella finestra viene inviato a quel servizio per conoscere il titolo del brano."
  },
  "es": {
   "Reverb": "Reverb",
@@ -22299,7 +22305,8 @@
   "Merci, Ketmix s'en souviendra": "Gracias, Ketmix lo recordará",
   "Elle m'a plu": "Me ha gustado",
   "Elle ne m'a pas plu": "No me ha gustado",
-  "Dernière transition": "Última transición"
+  "Dernière transition": "Última transición",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Enlaces soltados: un enlace de Deezer, Spotify o YouTube arrastrado a la ventana se envía a ese servicio para conocer el título."
  },
  "de": {
   "Reverb": "Reverb",
@@ -25485,7 +25492,8 @@
   "Merci, Ketmix s'en souviendra": "Danke, Ketmix merkt es sich",
   "Elle m'a plu": "Hat mir gefallen",
   "Elle ne m'a pas plu": "Hat mir nicht gefallen",
-  "Dernière transition": "Letzter Übergang"
+  "Dernière transition": "Letzter Übergang",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Abgelegte Links: Ein in das Fenster gezogener Deezer-, Spotify- oder YouTube-Link wird an diesen Dienst gesendet, um den Titel zu erfahren."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -28671,7 +28679,8 @@
   "Merci, Ketmix s'en souviendra": "Obrigado, o Ketmix vai lembrar",
   "Elle m'a plu": "Gostei",
   "Elle ne m'a pas plu": "Não gostei",
-  "Dernière transition": "Última transição"
+  "Dernière transition": "Última transição",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Links soltos: um link do Deezer, Spotify ou YouTube arrastado para a janela é enviado a esse serviço para saber o nome da faixa."
  },
  "ko": {
   "Reverb": "리버브",
@@ -31857,6 +31866,7 @@
   "Merci, Ketmix s'en souviendra": "고마워요, Ketmix가 기억할게요",
   "Elle m'a plu": "마음에 들어요",
   "Elle ne m'a pas plu": "마음에 들지 않아요",
-  "Dernière transition": "마지막 전환"
+  "Dernière transition": "마지막 전환",
+  "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "끌어다 놓은 링크: 창에 끌어다 놓은 Deezer, Spotify, YouTube 링크는 곡 이름을 알아내기 위해 해당 서비스로 전송됩니다."
  }
 }
