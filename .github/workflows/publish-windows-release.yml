@@ -59,7 +59,7 @@ jobs:
           if ((Get-Content $notes -Raw).Trim().Length -lt 40) { throw "$notes is too short to be release notes" }
           python tools/verify_msi.py validation $meta $env:VERSION
           # The validated source must be what is built here: same desktop, shared app sources, native code and licences.
-          $source = python -c "import json,sys;print(json.load(open(sys.argv[1]))['source_commit'])" $meta
+          $source = python -c "import json,sys;print(json.load(open(sys.argv[1],encoding='utf-8'))['source_commit'])" $meta
           git merge-base --is-ancestor $source HEAD
           git diff --quiet $source HEAD -- desktop app/src/main native docs/licenses
           "Validated source $source; nothing built from it changed since." | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
@@ -89,10 +89,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
           if (-not (Test-Path native/smtc/build/Release/ketvoice_smtc.dll)) { throw "ketvoice_smtc.dll was not built" }
 
+      # Exclusive-mode WASAPI output (Windows 2.0): built and packaged as in windows.yml.
+      - name: WASAPI DLL (native/wasapi)
+        run: |
+          cmake -S native/wasapi -B native/wasapi/build -A x64
+          if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
+          cmake --build native/wasapi/build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
+          if (-not (Test-Path native/wasapi/build/Release/ketvoice_wasapi.dll)) { throw "ketvoice_wasapi.dll was not built" }
+
       # checkNoGpl runs before the tests and the packaging: a -gpl artifact fails the build.
       - name: Desktop tests
         run: |
-          ./gradlew -p desktop --no-daemon test -PrequireSmtc=true "-PappVersion=$env:VERSION"
+          ./gradlew -p desktop --no-daemon test -PrequireSmtc=true -PrequireWasapi=true "-PappVersion=$env:VERSION"
           if ($LASTEXITCODE -ne 0) { throw "desktop tests failed" }
           $t = 0; $f = 0
           foreach ($x in Get-ChildItem desktop/build/test-results/test -Filter *.xml) { $s = ([xml](Get-Content $x.FullName)).testsuite; $t += [int]$s.tests; $f += [int]$s.failures + [int]$s.errors }
@@ -100,7 +109,7 @@ jobs:
 
       - name: Package MSI
         run: |
-          ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true "-PappVersion=$env:VERSION"
+          ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true -PrequireWasapi=true "-PappVersion=$env:VERSION"
           if ($LASTEXITCODE -ne 0) { throw "packageMsi failed" }
           $msi = @(Get-ChildItem desktop/build/compose/binaries/main/msi -Filter *.msi)
           if ($msi.Count -ne 1) { throw "expected one MSI, found $($msi.Count)" }
@@ -165,6 +174,7 @@ jobs:
           if (Test-Path $log) { Get-Content $log | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
           if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
           if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
+          if (-not (Select-String -Path $log -Pattern "^wasapi ok" -Quiet)) { throw "--smoke printed no WASAPI line (ketvoice_wasapi.dll did not load)" }
           if (-not (Select-String -Path $log -Pattern "^license LGPL" -Quiet)) { throw "--smoke: FFmpeg is not the LGPL build" }
           if (-not (Select-String -Path $log -SimpleMatch "app version $env:VERSION" -Quiet)) { throw "--smoke: the installed app is not $env:VERSION" }
 
