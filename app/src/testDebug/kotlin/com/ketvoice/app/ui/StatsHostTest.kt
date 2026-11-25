@@ -134,11 +134,15 @@ class StatsHostTest {
     private fun show(dark: Boolean) = compose.setContent { KetvoiceTheme(useDark = dark) { StatsScreen() } }
 
     @Test fun weekThenMonthWithTheirSections() {
-        fixture()
+        val tracks = fixture()
         show(dark = true)
         compose.onNodeWithTag("stats-minutes").assertExists()
         compose.onNodeWithTag("stats-delta").assertExists()
-        compose.onAllNodesWithTag("stats-artist").assertCountEquals(5)
+        // The week runs from Monday, so early in the week fewer artists have been played.
+        val weekArtists = (0 until today.dayOfWeek.value).flatMap { back ->
+            listOf(tracks[back % tracks.size], tracks[(back + 2) % tracks.size]).map { it.artist }
+        }.toSet().size
+        compose.onAllNodesWithTag("stats-artist").assertCountEquals(minOf(5, weekArtists))
         image("stats-week-dark")
         compose.onNodeWithTag("stats-list").performScrollToIndex(5)
         image("stats-week-dark-lists")
