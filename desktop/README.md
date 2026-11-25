@@ -661,8 +661,19 @@ Android in-app updater skips those tags, as it skips the model tags).
   `suggest` for the interface).
 - **For the interface**: `KetmixFeedback.transition` (StateFlow of the current/last transition) and
   `KetmixFeedback.rate(up)` (counted only with « Ketmix apprend de vos avis », off by default; weights local);
-  `LiveMix.frame` (both decks' waveform windows, beat and bar lines, beat phase, levels, voice levels, crossing) and a
-  simple `ui/LiveMixView.kt`.
+  `LiveMix.frame` (both decks' waveform windows, beat and bar lines, beat phase, levels, voice levels, each deck's volume
+  curve sampled from the engine's own `DeckAutomation` gain, crossing, the plan and the time left before it).
+- **Live mix view** (`ui/LiveMixView.kt`, placed by `ui/KetmixLive.kt` through the registries only): « MIX EN DIRECT », the
+  kind of transition, what Ketmix is doing in words (`LiveMixWords`: « Les deux titres jouent en rythme » until the bass
+  changes hands, « Les basses passent au titre suivant » after it, « Transition dans 12 s » before it…), the measures
+  (BPM, keys), both decks' waveforms under a fixed playhead with their beat and bar lines and volume curves, the crossing.
+  It is the top of the « Ketmix » panel tab (the tab of `KetmixLive` replaces the built-in one, `PanelTabs.registerDefault`)
+  and a `FullPlayerSlots` block in the full player while a transition plays (white over the cover colours on clear glass,
+  shorter beside the lyrics). With « Ketmix apprend de vos avis » on, 👍/👎 sit in the view, the tab keeps the last
+  transition's (« Dernière transition ») and a glass capsule above the island asks after each transition (9 s, not over the
+  full player). The planner leaves a kind the listener keeps turning down out of its automatic choices: blends in time,
+  echoes and builds as before, and since 2.0 filter crossings and dissolves become a plain fade (`MixContext.avoid`, only
+  in « Automatique »; empty on the phone).
 
 ## Connexions and account (Windows 2.0)
 
@@ -773,7 +784,8 @@ the headphone EQ page, Ketmix Studio, F11, the thumbnail buttons, the tray) work
   Canvas edge to edge (cropped, never letterboxed) or its cover blurred to fill with the sharp cover on the right, the words
   on a clear glass card; the shelves of Settings › Disposition below, scrolling edge to edge.
 - **Panel tabs**: Paroles (Cascade and the voice level), File d'attente, Artiste (photo, a few words, top titles, its page),
-  Ketmix (switch, what it is doing, the next transition, style, intensity, « Ouvrir le Studio »).
+  Ketmix (the live mix view while a transition plays, switch, what it is doing, the next transition, style — « Pont en
+  boucle » included — intensity, « Ouvrir le Studio »). The open tab takes the room its name needs (`TabStrip.openWeight`).
 - **Compact player** (`ui/MiniPlayer.kt`, `MiniPlayer.open` as before): a frameless transparent window above the others
   (444 × 172, the card inside a shadow margin), dragged anywhere and reopened there (`CompactPlayer.place`, keys
   `compactX`/`compactY` in the `desktop` preferences, back to the bottom right when that place left the screens): the cover
@@ -800,12 +812,21 @@ All three live in `ui/Registry.kt`; register from the feature's own file at star
   small mark beside the island's title (« Ensemble · 3 »); `ShellHooks.register(Hook(id) { … })` keeps an invisible piece
   composed with the shell's locals for the window's life (a `ketvoice://` link opened from the browser acts there).
   `TrackMenuSlots.share/shareAlbum/sharePlaylist` and `TrackMenuSlots.extra` add items to the title, album and playlist menus.
+- **Full player blocks** (`FullPlayerSlots.register(Slot(id, order) { backdrop, compact -> … })`, Windows 2.0 wave 3): drawn under
+  the full player's transport; each draws nothing when it has nothing to say (the live mix view).
+- **Keyboard** (wave 3 polish): `KetIconButton`, `CapsuleButton`, `PlayPause`, the sidebar entries and the panel's tabs are
+  reached with Tab and pressed with Enter (`Modifier.keyboardControl`), with an accent ring only while the keyboard has
+  them (`focusRing`); Space stays the window's play/pause.
+- **Shadow under glass** (`glassShadow`): a blurred copy of the outline drawn only outside it (Compose's elevation shadow
+  left a bright band under the rounded bottom of the sidebar and the panel on light pages).
 
-Tests: `Win2LogicTest` (glass policy and shader, layout and panel limits, insets, island sizes, unfold, hero pick, glide
+Tests: `KetmixLiveTest` (the live view in the tab and the full player, 👍/👎 in the view, the tab and the island's toast only
+with learning on, its words and curves, buttons under the keyboard), `PcPlanningTest` (what was learnt reaches the desktop's
+plans only while learning is on; avoided filters and dissolves become fades), `Win2LogicTest` (glass policy and shader, layout and panel limits, insets, island sizes, unfold, hero pick, glide
 at 60/144/240 Hz, rubber band, magnet, elastic slider, menu origin, lens, page transitions under reduced motion, frame
 rate, compact player place and lyric line), `Win2ShellTest` (the island opening and unfolding, the panel's tabs, the narrow
 sidebar, registered pages/tabs/settings sections, every glass mode, the compact player), renders `Win2Screenshots`
-(`build/desktop-ui-preview/win2-*.png`).
+(`build/desktop-ui-preview/win2-*.png`, `win2-ketmix-live-*`, `win2-nowplaying-live-*` and `win2-ketmix-toast-*` included).
 
 ## Lyrics and library (Windows 2.0)
 
