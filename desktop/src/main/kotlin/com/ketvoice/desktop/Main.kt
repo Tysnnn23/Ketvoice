@@ -73,35 +73,23 @@ fun main(args: Array<String>) {
     // Every setting as the listener left it (the language included, before the texts load).
     com.ketvoice.app.data.SettingsStore.load(context)
     AppText.init(context)
-    runCatching { MusicApi.init(context) }.onFailure { AppLog.w("start", "catalogue: $it") }
+    // Windows 2.0: the Ketvoice Lossless manifest is offered by the source catalogue, never added by itself.
+    com.ketvoice.app.data.CustomSources.seedLossless = false
+    com.ketvoice.desktop.audio.PlaybackPrefs.init()
     DesktopLibrary.init(context)
-    com.ketvoice.app.data.ArtistPrefs.init(context)
-    // The real engine plays what the Player resolves (downloads first, then the app's sources).
+    // The real engine plays what the Player resolves (downloads first, then the app's sources); on Windows its output
+    // can go exclusive (« Mode exclusif »).
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val engine = FfmpegAudioEngine()
+    val sink = com.ketvoice.desktop.audio.ExclusiveOutput.sink()
+    val engine = FfmpegAudioEngine(sink)
     // Each resolved source is remembered with its title, for the voice level's separations.
     Player.attach(engine, { t -> DesktopStreams.source(t)?.also { com.ketvoice.desktop.stems.DesktopVoice.remember(it, t.id) } }, scope)
-    com.ketvoice.desktop.audio.DesktopEqualizer.attach(engine)
-    // « Sortie audio » (the device remembered by name) and « Égaliseur par casque » (the correction linked to it).
-    com.ketvoice.desktop.audio.DesktopOutput.attach(engine, scope)
-    com.ketvoice.desktop.audio.DesktopHeadphoneEq.attach(engine, scope)
-    com.ketvoice.app.stems.StemModel.init(context)
-    com.ketvoice.desktop.stems.DesktopVoice.attach(engine, scope)
+    // Near-instant start (Windows 2.0): the last page, the queue where it stood and its cover, before anything else;
+    // everything else starts behind the window, which opens at once on that state.
+    restoreSession(context)
     com.ketvoice.app.data.SettingsStore.watch(scope)
-    // « Playlists téléchargées à jour »: new titles of downloaded playlists are offered in the window.
-    com.ketvoice.desktop.library.PlaylistWatch.start(context, scope)
-    com.ketvoice.desktop.library.LocalFolders.init(context, scope)
-    com.ketvoice.desktop.library.DesktopAccount.start(context)
-    // Phone control: this PC joins the account's private room while signed in.
-    com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
-    // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
-    com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
-    // Ketmix Studio: the listener's mix points and presets (`ketmix-presets-v1`, as on the phone) and the waves it draws.
-    com.ketvoice.app.automix.MixPointStore.init(context)
-    com.ketvoice.app.automix.MixPresetStore.init(context)
-    com.ketvoice.app.automix.WaveStore.init(context)
-    // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
-    com.ketvoice.app.stems.StemLibrary.start()
+    Startup.mark("state")
+    Thread({ startBehind(context, engine, sink, scope) }, "ketvoice-start").apply { isDaemon = true; start() }
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
@@ -111,12 +99,7 @@ fun main(args: Array<String>) {
         override fun previous() = Player.previous()
         override fun seekTo(ms: Long) = Player.seekTo(ms)
     }
-    // Audio files opened with Ketvoice (file associations), from this launch and later ones.
-    com.ketvoice.desktop.library.OpenFiles.start(scope, java.io.File(context.cacheDir, "local-covers")) { Player.playQueue(it, 0) }
     DesktopPlatform.open(InstanceMessage.openable(argList))
-    // Updates from the windows-v* releases (at most once per 6 h; Settings › À propos checks now).
-    com.ketvoice.desktop.update.Updates.start(scope)
-    DesktopPrefs.autostart.refresh()
     val autostarted = Autostart.FLAG in argList
     val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
     val icon = runCatching {
@@ -141,6 +124,7 @@ fun main(args: Array<String>) {
         }
         fun quit() {
             WindowStore.save(lastSaved[0])
+            runCatching { com.ketvoice.desktop.player.Session.save() }
             runCatching { Player.pause() }
             runCatching { com.ketvoice.app.remote.RemoteControl.stop() }
             runCatching { com.ketvoice.app.data.SettingsStore.save() }
@@ -273,6 +257,53 @@ fun main(args: Array<String>) {
     if (probe) exitProcess(0)
 }
 
+/** The saved queue, paused where it stood, and its cover decoded for the first frame. */
+private fun restoreSession(context: android.content.Context) {
+    val session = com.ketvoice.desktop.player.Session
+    val saved = runCatching { session.load(context) }.getOrNull() ?: return
+    runCatching { session.restore(saved) }.onFailure { AppLog.w("start", "session: $it") }
+    val url = saved.tracks.getOrNull(saved.index)?.coverUrl ?: return
+    runCatching { session.coverBytes()?.let { com.ketvoice.desktop.ui.Covers.decode(it) }?.let { com.ketvoice.desktop.ui.Covers.put(url, it) } }
+}
+
+/** What the window does not need for its first frame: the catalogue, sound settings, the account, Ketmix, updates. */
+private fun startBehind(context: android.content.Context, engine: FfmpegAudioEngine, sink: com.ketvoice.desktop.audio.PcmSink,
+                        scope: CoroutineScope) {
+    runCatching { MusicApi.init(context) }.onFailure { AppLog.w("start", "catalogue: $it") }
+    runCatching { com.ketvoice.app.data.CustomSources.init(context) }
+    com.ketvoice.app.data.ArtistPrefs.init(context)
+    com.ketvoice.desktop.audio.DesktopEqualizer.attach(engine)
+    // « Sortie audio » (the device remembered by name) and « Égaliseur par casque » (the correction linked to it).
+    com.ketvoice.desktop.audio.DesktopOutput.attach(engine, scope)
+    com.ketvoice.desktop.audio.DesktopHeadphoneEq.attach(engine, scope)
+    com.ketvoice.app.stems.StemModel.init(context)
+    com.ketvoice.desktop.stems.DesktopVoice.attach(engine, scope)
+    // « Mode exclusif » and « Lecture sans blanc » follow their settings; the smart cache warms favourites.
+    com.ketvoice.desktop.audio.ExclusiveOutput.attach(engine, scope, sink)
+    com.ketvoice.desktop.player.CacheWarmer.start(scope)
+    com.ketvoice.desktop.player.Session.follow(scope) { t -> com.ketvoice.desktop.ui.LastPage.coverBytes(t.coverUrl) }
+    // « Playlists téléchargées à jour »: new titles of downloaded playlists are offered in the window.
+    com.ketvoice.desktop.library.PlaylistWatch.start(context, scope)
+    com.ketvoice.desktop.library.LocalFolders.init(context, scope)
+    com.ketvoice.desktop.library.DesktopAccount.start(context)
+    // Phone control: this PC joins the account's private room while signed in.
+    com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
+    // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
+    com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
+    // Ketmix Studio: the listener's mix points and presets (`ketmix-presets-v1`, as on the phone) and the waves it draws.
+    com.ketvoice.app.automix.MixPointStore.init(context)
+    com.ketvoice.app.automix.MixPresetStore.init(context)
+    com.ketvoice.app.automix.WaveStore.init(context)
+    // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
+    com.ketvoice.app.stems.StemLibrary.start()
+    // Audio files opened with Ketvoice (file associations), from this launch and later ones.
+    com.ketvoice.desktop.library.OpenFiles.start(scope, java.io.File(context.cacheDir, "local-covers")) { Player.playQueue(it, 0) }
+    // Updates from the windows-v* releases (at most once per 6 h; Settings › À propos checks now).
+    com.ketvoice.desktop.update.Updates.start(scope)
+    DesktopPrefs.autostart.refresh()
+    Startup.mark("behind")
+}
+
 /**
  * `--smoke`: loads the native libraries the app needs and prints their versions, without a window.
  * The installed Ketvoice.exe is a windowed launcher with no console, so the same lines also go to
@@ -299,6 +330,7 @@ internal object Smoke {
             say(com.ketvoice.desktop.audio.AudioSmoke.run())
             say("os ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, java ${System.getProperty("java.version")}")
             if (!com.ketvoice.desktop.platform.PlatformSmoke.check(::say)) error("SMTC check failed")
+            if (!com.ketvoice.desktop.audio.WasapiNative.smoke(::say)) error("WASAPI check failed")
             say("smoke ok")
             0
         } catch (t: Throwable) {

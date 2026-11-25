@@ -390,6 +390,7 @@ fun SettingsPage() {
         }
         lyricsSettings()
         downloadSettings()
+        sourcesSettings() // Windows 2.0: « Sources » and « Lecture » (SourcesPage.kt)
         layoutSettings()
         item("h:Windows") { SectionHeader("Windows") }
         item {

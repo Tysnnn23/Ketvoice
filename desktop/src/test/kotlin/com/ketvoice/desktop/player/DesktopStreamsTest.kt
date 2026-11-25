@@ -4,6 +4,7 @@ import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.StreamResolver
 import com.ketvoice.app.data.Track
 import com.ketvoice.desktop.audio.AudioSource
+import com.ketvoice.desktop.audio.StreamCache
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -18,9 +19,16 @@ class DesktopStreamsTest {
     private val savedDownloaded = DesktopStreams.downloaded
     private val savedFetch = DesktopStreams.fetchText
 
+    private val cache = java.nio.file.Files.createTempDirectory("kv-streams-cache").toFile()
+    init { StreamCache.dir = cache }
+
     @After fun restore() {
         DesktopStreams.candidate = savedCandidate; DesktopStreams.downloaded = savedDownloaded; DesktopStreams.fetchText = savedFetch
+        StreamCache.dir = null; cache.deleteRecursively()
     }
+
+    /** What the engine is given: the address, the headers, and the smart cache's name for the title (Windows 2.0). */
+    private fun url(address: String) = AudioSource.Url(address, ua, cacheKey = StreamCache.key(track.id, DesktopStreams.tier()))
 
     /** A fake API: the sources in order, each offering one stream; excluded sources are skipped. */
     private fun offers(vararg streams: Pair<String, MusicApi.StreamInfo>) {
@@ -32,7 +40,7 @@ class DesktopStreamsTest {
 
     @Test fun progressiveStreamPlaysAsItIsWithHeaders() = runBlocking {
         offers("youtube" to MusicApi.StreamInfo("https://rr1.googlevideo.com/videoplayback?itag=140", "aac", "130 kbps", "yt:abc:140"))
-        assertEquals(AudioSource.Url("https://rr1.googlevideo.com/videoplayback?itag=140", ua), DesktopStreams.source(track))
+        assertEquals(url("https://rr1.googlevideo.com/videoplayback?itag=140"), DesktopStreams.source(track))
     }
 
     @Test fun downloadedFileComesFirst() = runBlocking {
@@ -52,12 +60,12 @@ class DesktopStreamsTest {
               </AdaptationSet></Period></MPD>"""
         offers("cs:x" to MusicApi.StreamInfo("https://src.test/track.mpd", "dash", "FLAC", mimeType = "application/dash+xml"))
         DesktopStreams.fetchText = { if (it == "https://src.test/track.mpd") mpd else null }
-        assertEquals(AudioSource.Url("https://cdn.test/media/lossless.flac", ua), DesktopStreams.source(track))
+        assertEquals(url("https://cdn.test/media/lossless.flac"), DesktopStreams.source(track))
     }
 
     @Test fun dashWithADownloadAddressUsesIt() = runBlocking {
         offers("cs:x" to MusicApi.StreamInfo("https://src.test/a.mpd", "dash", "FLAC", downloadUrl = "https://src.test/a.flac"))
-        assertEquals(AudioSource.Url("https://src.test/a.flac", ua), DesktopStreams.source(track))
+        assertEquals(url("https://src.test/a.flac"), DesktopStreams.source(track))
     }
 
     @Test fun segmentedDashGivesWayToTheNextSource() = runBlocking {
@@ -66,7 +74,7 @@ class DesktopStreamsTest {
         offers("cs:x" to MusicApi.StreamInfo("https://src.test/s.mpd", "dash", "FLAC"),
             "youtube" to MusicApi.StreamInfo("https://rr1.googlevideo.com/v?itag=251", "opus", "136 kbps"))
         DesktopStreams.fetchText = { segmented }
-        assertEquals(AudioSource.Url("https://rr1.googlevideo.com/v?itag=251", ua), DesktopStreams.source(track))
+        assertEquals(url("https://rr1.googlevideo.com/v?itag=251"), DesktopStreams.source(track))
     }
 
     @Test fun nothingPlayableIsNull() = runBlocking {

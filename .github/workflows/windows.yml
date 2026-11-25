@@ -59,8 +59,28 @@ jobs:
           if (-not (Test-Path $dll)) { throw "ketvoice_smtc.dll was not built" }
           "ketvoice_smtc.dll: $((Get-Item $dll).Length) bytes" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
+      # « Mode exclusif » (Windows 2.0): exclusive-mode WASAPI output, a small C++ DLL loaded with JNA.
+      - name: WASAPI DLL (native/wasapi, MSVC)
+        run: |
+          cmake -S native/wasapi -B native/wasapi/build -A x64
+          if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
+          cmake --build native/wasapi/build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
+          $dll = "native/wasapi/build/Release/ketvoice_wasapi.dll"
+          if (-not (Test-Path $dll)) { throw "ketvoice_wasapi.dll was not built" }
+          # Smoke export check: every function the app binds with JNA (WasapiNative.EXPORTS) is exported by name.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe | Where-Object { $_.FullName -match "Hostx64\\x64" } | Select-Object -First 1
+          if (-not $dumpbin) { throw "dumpbin.exe not found" }
+          $exports = & $dumpbin.FullName /exports $dll | Out-String
+          $wanted = "kv_wasapi_version","kv_wasapi_open","kv_wasapi_format","kv_wasapi_write","kv_wasapi_padding","kv_wasapi_reset","kv_wasapi_drain","kv_wasapi_close","kv_wasapi_supports"
+          $missing = $wanted | Where-Object { $exports -notmatch "\b$_\b" }
+          if ($missing) { throw "ketvoice_wasapi.dll does not export: $($missing -join ', ')" }
+          "ketvoice_wasapi.dll: $((Get-Item $dll).Length) bytes, $($wanted.Count) exports" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
       - name: Desktop tests
-        run: ./gradlew -p desktop --no-daemon test -PrequireSmtc=true
+        run: ./gradlew -p desktop --no-daemon test -PrequireSmtc=true -PrequireWasapi=true
 
       - name: Test report
         if: always()
@@ -71,7 +91,7 @@ jobs:
           "Desktop tests: $t run, $f failed" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Package MSI
-        run: ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true
+        run: ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true -PrequireWasapi=true
 
       - name: Install, smoke, uninstall
         run: |
@@ -95,6 +115,7 @@ jobs:
           if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
           if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
           if (-not (Select-String -Path $log -Pattern "^thumbbar ok" -Quiet)) { throw "--smoke printed no thumbnail toolbar line" }
+          if (-not (Select-String -Path $log -Pattern "^wasapi ok" -Quiet)) { throw "--smoke printed no WASAPI line (ketvoice_wasapi.dll did not load)" }
 
           # Cold start to the first frame (--startup-probe writes startup.log, then quits): without class-data
           # sharing (as 1.0.0), then with the app archive the first normal run writes at exit. Reported, not fatal.

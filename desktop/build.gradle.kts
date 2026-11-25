@@ -122,6 +122,9 @@ kotlin {
 // from native/smtc by Windows CI before the tests and packageMsi; -PrequireSmtc=true fails without it).
 val smtcDll = file(providers.gradleProperty("smtcDll").orNull ?: "../native/smtc/build/Release/ketvoice_smtc.dll")
 val requireSmtc = providers.gradleProperty("requireSmtc").orNull == "true"
+// « Mode exclusif » (Windows 2.0): ketvoice_wasapi.dll from native/wasapi, built by Windows CI like the SMTC one.
+val wasapiDll = file(providers.gradleProperty("wasapiDll").orNull ?: "../native/wasapi/build/Release/ketvoice_wasapi.dll")
+val requireWasapi = providers.gradleProperty("requireWasapi").orNull == "true"
 tasks.processResources {
     from("../app/src/main/assets") { include("provider_registry.json", "translations.json", "visual-refresh-translations.json"); into("assets") }
     // Ket 27's typeface (Inter) and the four « Personnalisation » fonts (SIL OFL), read by the desktop theme.
@@ -129,8 +132,11 @@ tasks.processResources {
     from("../docs/licenses") { include("*.txt"); into("licenses") }
     from("icons") { include("ketvoice.png"); into("icons") }
     from(smtcDll) { into("native") }
+    from(wasapiDll) { into("native") }
     inputs.property("requireSmtc", requireSmtc)
+    inputs.property("requireWasapi", requireWasapi)
     doFirst { if (requireSmtc && !smtcDll.isFile) throw GradleException("ketvoice_smtc.dll missing: $smtcDll (build native/smtc first)") }
+    doFirst { if (requireWasapi && !wasapiDll.isFile) throw GradleException("ketvoice_wasapi.dll missing: $wasapiDll (build native/wasapi first)") }
 }
 
 // The shared import parsers' tests read the public pages saved under the app's test resources (Phase 3).

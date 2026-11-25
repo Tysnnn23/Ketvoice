@@ -71,7 +71,9 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         var endedAt = -1; var failed = false
         /** Frames of silence at the block's end because the deck had nothing yet. */
         var starved = 0
-        fun reset() { switchedAt = -1; switchedTo = null; switchedFrame = 0L; switchedRate = 1.0; retimed = false; endedAt = -1; failed = false; starved = 0 }
+        /** A gapless handover to a title at another rate (bit-perfect): only the frames before it belong to this block. */
+        var cutAt = -1
+        fun reset() { switchedAt = -1; switchedTo = null; switchedFrame = 0L; switchedRate = 1.0; retimed = false; endedAt = -1; failed = false; starved = 0; cutAt = -1 }
     }
 
     /** Plays [m] from its start frame; false when it cannot (no current deck, or already past it). */
@@ -138,6 +140,8 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
                 if (n != null && n.error == null) {
                     current = n; block.switchedAt = i; block.switchedTo = n
                     d.close()
+                    // At its own rate (bit-perfect), a title at another rate needs the output reopened first.
+                    if (n.rate != d.rate) { block.cutAt = i; break }
                     continue
                 }
                 n?.close()
@@ -229,11 +233,23 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
     private var stageBytes = java.nio.ByteBuffer.allocate(0)
     /** Frames the voice stage holds back (0 while it is off). */
     @Volatile var voiceDelayFrames = 0; private set
+    /** « Mode exclusif » bit-perfect: the voice stage lets the sound through untouched (only at its neutral level). */
+    @Volatile var bypassVoice = false
+
+    /**
+     * Nothing in the chain changes the sound: no transition or change of speed, the voice stage passed by, the
+     * headphone correction and the equalizer flat. With the volume at 100 %, what the decks give is what is played.
+     */
+    val neutral: Boolean
+        get() = mix == null && (current?.lane?.speed ?: 1f) == 1f && (stage == null || bypassVoice) &&
+            headphone.neutral && equalizer.neutral
 
     /** A cut (seek, new title): what the voice stage still holds of the sound before it is dropped. */
     fun resetVoice() { stage?.reset() }
 
     private fun voice(out: FloatArray, frames: Int, block: Block, m: Mix?, before: Deck?, beforeAt: Long) {
+        if (bypassVoice) { voiceDelayFrames = 0; return }
+        if (stage != null) voiceDelayFrames = com.ketvoice.app.stems.StemDsp.N_FFT
         val d = current
         val mask = if (d != null && m == null && d.lane.speed == 1f && before?.lane?.speed ?: 1f == 1f) voiceMask(d) else null
         if (stage == null) {
@@ -432,6 +448,8 @@ class Gain(private val sampleRate: Int) {
 class Equalizer(private val sampleRate: Int) {
     private val bands = EqualizerProfile.frequencies.size
     @Volatile private var target = FloatArray(bands)
+    /** Every band at 0 dB, and no band still on its way there: the sound passes untouched. */
+    val neutral: Boolean get() = target.all { it == 0f } && db.all { it == 0f }
     private val db = FloatArray(bands)
     private val b0 = FloatArray(bands) { 1f }; private val b1 = FloatArray(bands); private val b2 = FloatArray(bands)
     private val a1 = FloatArray(bands); private val a2 = FloatArray(bands)
@@ -504,6 +522,8 @@ class HeadphoneStage(private val sampleRate: Int) {
     /** The correction to play (null: none); read by the writer thread at each block. */
     @Volatile var profile: com.ketvoice.app.player.HeadphoneProfile? = null
     private val eq = com.ketvoice.app.player.EqCrossfade()
+    /** No correction, and none fading out: the sound passes untouched. */
+    val neutral: Boolean get() = profile == null && eq.idle
 
     fun process(buf: FloatArray, frames: Int) {
         eq.follow(profile, sampleRate, 2)

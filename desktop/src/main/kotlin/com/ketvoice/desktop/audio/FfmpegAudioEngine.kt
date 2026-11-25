@@ -33,6 +33,29 @@ class FfmpegAudioEngine(
     /** The deck being heard (the one [positionMs] and [durationMs] describe). */
     @Volatile private var heard: Deck? = null
 
+    /**
+     * « Lecture sans blanc » (true gapless, Windows 2.0, off by default): titles end on their exact last sample (the
+     * encoder's padding and the resampler's tail handled, see [FfmpegDecoder.exactEnd]) and the next title is decoded
+     * [GAPLESS_AHEAD_MS] ahead instead of 3 s, so a slow network at the handover never leaves a hole. The handover
+     * itself is the mixer's, sample for sample, as before. Takes effect from the next title loaded or preloaded.
+     */
+    @Volatile var trueGapless = false
+
+    /**
+     * « Mode exclusif » bit-perfect (Windows 2.0): titles are decoded at their own rate and the output is opened at that
+     * rate ([PcmSink.openFormat], with the title's bit depth), with nothing in between when every effect is neutral
+     * (the rules are [ExclusiveRules]'). Set through [setNativeRate]; writer thread reads it.
+     */
+    @Volatile var nativeRate = false
+        private set
+    /** Frames per second the output runs at now (48 kHz, or the title's own rate in [nativeRate]); writer thread. */
+    @Volatile var rate = RATE
+        private set
+
+    private fun deckRate() = if (nativeRate) 0 else RATE
+    private fun deck(source: AudioSource, startMs: Long, next: Boolean = false) =
+        Deck(source, startMs, open, bufferMs = if (next && trueGapless) GAPLESS_AHEAD_MS else 3_000, exactEnd = trueGapless, outRate = deckRate())
+
     private enum class Kind { Jump, Run, Frozen, Advanced, Ended }
     /** From written frame [start], [deck] is heard from title frame [frame], [rate] title frames per frame. */
     private class Segment(val start: Long, val deck: Deck?, val frame: Long, val kind: Kind, val rate: Double = 1.0) { var announced = false }
@@ -44,8 +67,8 @@ class FfmpegAudioEngine(
     private var buffering = false
     private var formatSent: Deck? = null
     private var errorSent: Deck? = null
-    private val buf = FloatArray(BLOCK * 2)
-    private val pcm = ByteArray(BLOCK * 4)
+    private val buf = FloatArray(MAX_BLOCK * 2)
+    private val pcm = ByteArray(MAX_BLOCK * 8)
     private val block = DesktopMixer.Block()
 
     private val thread = Thread(::loop, "ketvoice-audio-out").apply { isDaemon = true; priority = Thread.MAX_PRIORITY; start() }
@@ -62,7 +85,7 @@ class FfmpegAudioEngine(
             mixer.cancelMix()
             mixer.resetVoice()
             mixer.current?.close(); mixer.next?.close(); mixer.next = null
-            val d = Deck(source, start, open)
+            val d = deck(source, start)
             mixer.current = d; heard = d; frozen = false
             mark(written, d, d.positionFrames, Kind.Jump)
             pendingMs = -1
@@ -76,7 +99,7 @@ class FfmpegAudioEngine(
     override fun preloadNext(source: AudioSource?) = post {
         if (mixer.mix?.let { !it.started && it.incoming === mixer.next } == true) mixer.cancelMix()
         mixer.next?.close()
-        mixer.next = source?.let { Deck(it, 0, open) }
+        mixer.next = source?.let { deck(it, 0, next = true) }
     }
 
     override fun play() {
@@ -110,11 +133,11 @@ class FfmpegAudioEngine(
             if (d == null) {
                 // Played to the end: the same source again, from there.
                 val last = heard ?: run { pendingMs = -1; return@post }
-                d = Deck(last.source, to, open); mixer.current = d
+                d = deck(last.source, to); mixer.current = d
                 wantPlay = false; playing = false
             } else d.seek(to)
             heard = d; frozen = false
-            mark(written, d, to * RATE / 1000, Kind.Jump)
+            mark(written, d, to * d.rate / 1000, Kind.Jump)
             pendingMs = -1
             mixer.gain.set(0f); if (wantPlay) mixer.gain.fadeTo(1f, Gain.DECLICK_MS)
         }
@@ -134,7 +157,7 @@ class FfmpegAudioEngine(
                 }
             }
         }
-        val ms = frames * 1000 / RATE
+        val ms = frames * 1000 / (heard?.rate ?: rate)
         val duration = durationMs()
         return if (duration > 0) ms.coerceAtMost(duration) else ms
     }
@@ -162,7 +185,8 @@ class FfmpegAudioEngine(
     private fun outputReady(): Boolean {
         if (sinkOpen) return true
         return try {
-            sink.open(RATE, 2); sinkOpen = true; _output.value = sink.device; true
+            if (nativeRate) sink.openFormat(rate, 2, heard?.format?.bitDepth ?: 0) else sink.open(rate, 2)
+            sinkOpen = true; _output.value = sink.device; outputFormat = sink.format; true
         } catch (t: Throwable) {
             emit(AudioEvent.Error("audio output: ${t.message ?: t}")); false
         }
@@ -188,6 +212,63 @@ class FfmpegAudioEngine(
         if (wantPlay) { mixer.gain.set(0f); mixer.gain.fadeTo(1f, Gain.DECLICK_MS) }
     }
 
+    /** What the output was opened with (rate, bits, exclusive or not), for « Mode exclusif »'s status line. */
+    @Volatile var outputFormat: PcmSink.Format? = null
+        private set
+
+    /**
+     * « Mode exclusif »: [on] decodes titles at their own rate and opens the output at it (the sink decides how: the
+     * exclusive WASAPI sink when it can, else the shared one). The output is reopened and the title loaded again where
+     * it is heard, so the change is a short cut, never a jump.
+     */
+    fun setNativeRate(on: Boolean) = post {
+        if (nativeRate == on) return@post
+        val at = positionMs()
+        nativeRate = on
+        mixer.bypassVoice = on
+        val cur = mixer.current
+        if (cur == null) { if (sinkOpen) { runCatching { sink.close() }; sinkOpen = false }; rate = RATE; return@post }
+        declickOut()
+        runCatching { sink.drain() }
+        runCatching { sink.close() }; sinkOpen = false
+        rate = RATE
+        val d = deck(cur.source, at)
+        mixer.cancelMix(); mixer.resetVoice()
+        cur.close(); mixer.next?.let { n -> mixer.next = deck(n.source, 0, next = true); n.close() }
+        mixer.current = d; heard = d; frozen = false
+        rebase(d, at * d.rate / 1000)
+        if (wantPlay) { mixer.gain.set(0f); mixer.gain.fadeTo(1f, Gain.DECLICK_MS) }
+    }
+
+    /** What was written has been heard: the clock starts again at 0 with [d] at [frame]. */
+    private fun rebase(d: Deck, frame: Long) {
+        announce()
+        synchronized(timeline) { timeline.clear() }
+        written = 0
+        mark(0, d, frame, Kind.Jump)
+    }
+
+    /**
+     * In [nativeRate], the deck heard decodes at its own rate: the output follows it (played out, reopened at that rate,
+     * the clock rebased). Returns false when the output could not reopen.
+     */
+    private fun followDeckRate(): Boolean {
+        val d = mixer.current ?: return true
+        if (nativeRate) {
+            // Its rate is known once it opens: nothing of it is played on an output at another rate.
+            if (!d.ready && d.error == null) { d.awaitData(1, 20); if (!d.ready) return false }
+            if (d.ready && d.rate != rate) {
+                if (sinkOpen) { runCatching { sink.drain() }; runCatching { sink.close() }; sinkOpen = false }
+                rate = d.rate
+                rebase(d, d.lane.titleFrame)
+            }
+        }
+        // Closed by a switch between the shared and the exclusive output: opened again at the rate now wanted.
+        if (sinkOpen || outputReady()) return true
+        wantPlay = false; playing = false
+        return false
+    }
+
     /** The device that played went away mid-block: the system's default takes over, or false when there is none either. */
     private fun fallBack(): Boolean {
         runCatching { sink.close() }; sinkOpen = false
@@ -209,7 +290,7 @@ class FfmpegAudioEngine(
                 val command = if (active()) commands.poll() else commands.poll(20, TimeUnit.MILLISECONDS)
                 if (command != null) { command(); continue }
                 announce()
-                if (active()) render(BLOCK)
+                if (active() && followDeckRate()) render(rate / 100)
             }
         } catch (t: Throwable) {
             emit(AudioEvent.Error("audio engine: ${t.message ?: t}"))
@@ -224,7 +305,7 @@ class FfmpegAudioEngine(
     private fun declickOut() {
         if (mixer.current == null || !active() || mixer.gain.fade <= 0f) return
         mixer.gain.fadeTo(0f, Gain.DECLICK_MS)
-        render(RATE * Gain.DECLICK_MS / 1000)
+        render(rate * Gain.DECLICK_MS / 1000)
     }
 
     private fun render(frames: Int) {
@@ -248,12 +329,11 @@ class FfmpegAudioEngine(
             if (!buffering) { buffering = true; emit(AudioEvent.Buffering(true)) }
         } else if (buffering) { buffering = false; emit(AudioEvent.Buffering(false)) }
         if (block.endedAt == 0 && block.switchedAt < 0) { announce(); return } // nothing left to hear in this block
-        for (i in 0 until frames * 2) {
-            val v = (buf[i] * 32767f).roundToInt().coerceIn(-32768, 32767)
-            pcm[i * 2] = v.toByte(); pcm[i * 2 + 1] = (v shr 8).toByte()
-        }
+        // A gapless handover to a title at another rate (bit-perfect): this block ends there, the output follows next.
+        val out = if (block.cutAt in 0 until frames) block.cutAt else frames
+        val bytes = toPcm(out)
         try {
-            sink.write(pcm, frames * 4)
+            sink.write(pcm, bytes)
         } catch (t: Throwable) {
             // A chosen device went away: the system's default plays on (this block is lost).
             if (fallBack()) return
@@ -263,15 +343,31 @@ class FfmpegAudioEngine(
             emit(AudioEvent.Error("audio output: ${t.message ?: t}"))
             return
         }
-        written += frames
+        written += out
         announce()
+    }
+
+    /** [frames] of [buf] into [pcm] in the sink's sample size: 16-bit, or 32-bit (24-bit and 16-bit sound exact in it). */
+    private fun toPcm(frames: Int): Int {
+        if (sink.bytesPerSample == 4) {
+            for (i in 0 until frames * 2) {
+                val v = (buf[i].toDouble() * 2147483648.0).toLong().coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+                pcm[i * 4] = v.toByte(); pcm[i * 4 + 1] = (v shr 8).toByte(); pcm[i * 4 + 2] = (v shr 16).toByte(); pcm[i * 4 + 3] = (v shr 24).toByte()
+            }
+            return frames * 8
+        }
+        for (i in 0 until frames * 2) {
+            val v = (buf[i] * 32767f).roundToInt().coerceIn(-32768, 32767)
+            pcm[i * 2] = v.toByte(); pcm[i * 2 + 1] = (v shr 8).toByte()
+        }
+        return frames * 4
     }
 
     /** No data yet: wait while the device still has sound to play, else fill silence (buffering). */
     private fun waitFor(deck: Deck, frames: Int): Boolean {
         if (!commands.isEmpty()) return false
         if (!sink.realtime) { deck.awaitData(frames, 1_000); return true }
-        val queuedMs = sink.queuedFrames() * 1000L / RATE
+        val queuedMs = sink.queuedFrames() * 1000L / rate
         if (queuedMs <= 40) return false
         deck.awaitData(frames, minOf(10L, queuedMs - 40))
         return true
@@ -292,7 +388,7 @@ class FfmpegAudioEngine(
     @Volatile private var mixPlan: com.ketvoice.app.automix.MixPlan? = null
 
     /** Position the writer has reached in the current title (ahead of what is heard by the device's buffer). */
-    fun renderedMs(): Long = mixer.current?.lane?.titleFrame?.let { it * 1000 / RATE } ?: positionMs()
+    fun renderedMs(): Long = mixer.current?.let { it.lane.titleFrame * 1000 / it.rate } ?: positionMs()
 
     /** Speed the current title plays at (off 1 after a mix in time, until its glide back ends). */
     fun speed(): Float = mixer.current?.lane?.speed ?: 1f
@@ -376,5 +472,9 @@ class FfmpegAudioEngine(
         const val RATE = FfmpegDecoder.OUT_RATE
         /** 10 ms per block. */
         const val BLOCK = RATE / 100
+        /** The largest block: 10 ms at the highest rate a title may play at in [nativeRate]. */
+        const val MAX_BLOCK = Deck.MAX_NATIVE_RATE / 100
+        /** How far ahead the next title is decoded with [trueGapless]. */
+        const val GAPLESS_AHEAD_MS = 15_000
     }
 }

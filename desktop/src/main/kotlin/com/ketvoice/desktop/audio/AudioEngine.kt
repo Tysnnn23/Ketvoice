@@ -24,7 +24,12 @@ interface AudioEngine {
 }
 
 sealed interface AudioSource {
-    data class Url(val url: String, val headers: Map<String, String> = emptyMap()) : AudioSource
+    /**
+     * [cacheKey]: the smart cache's name for these bytes ([StreamCache.key]: title and quality), null to name them by
+     * address. [refresh] gives a fresh address when this one no longer answers (an address kept from an earlier play).
+     */
+    data class Url(val url: String, val headers: Map<String, String> = emptyMap(), val cacheKey: String? = null,
+                   val refresh: (() -> String?)? = null) : AudioSource
     data class LocalFile(val path: String) : AudioSource
 }
 

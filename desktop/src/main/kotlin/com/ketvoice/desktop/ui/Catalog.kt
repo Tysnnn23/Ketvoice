@@ -84,9 +84,11 @@ object LiveCatalog : CatalogSource {
         val yt = async { safe { MusicApi.searchYtMusic(query) } }
         val published = async { safe { com.ketvoice.app.data.PublicationApi.search(query) } }
         val addons = async { safe { MusicApi.searchAddons(query) } }
+        // The listener's sources (Windows 2.0); a slow one never holds the results back more than 6 s.
+        val custom = async { safe { kotlinx.coroutines.withTimeoutOrNull(6_000) { com.ketvoice.app.data.CustomSources.searchAll(query) }.orEmpty() } }
         val albumsAsync = async { safe { CatalogRepo.searchAlbums(query) } }
         val artistsAsync = async { safe { YouTubeCatalog.searchArtists(query) } }
-        val found = yt.await() + published.await() + addons.await()
+        val found = yt.await() + published.await() + addons.await() + custom.await()
         val taste = runCatching { SearchRank.liveTaste() }.getOrDefault(SearchRank.Taste())
         val tracks = SearchGroups.group(SearchRank.rank(query, found, taste).filter(ArtistPrefs::allows)).map { it.primary }
         val albums = albumsAsync.await().map { AlbumRef(it.id, it.title, it.artist, it.cover, it.releaseDate?.take(4)) }

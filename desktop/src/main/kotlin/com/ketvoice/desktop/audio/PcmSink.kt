@@ -7,11 +7,22 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
 
-/** Where the mixed sound goes: 16-bit little-endian interleaved PCM. */
+/** Where the mixed sound goes: little-endian interleaved PCM, 16-bit (or 32-bit when [bytesPerSample] is 4). */
 interface PcmSink : Closeable {
     /** A real device that plays in real time (a slow decoder means silence), or a capture that waits. */
     val realtime: Boolean
     fun open(sampleRate: Int, channels: Int)
+    /**
+     * « Mode exclusif »: opens at the title's own [sampleRate] for a source of [bits] bits (0: lossy). A sink without an
+     * exclusive path opens as [open] does.
+     */
+    fun openFormat(sampleRate: Int, channels: Int, bits: Int) = open(sampleRate, channels)
+    /** Bytes per sample [write] takes: 2 (16-bit) or 4 (32-bit, the sample in its top bits). */
+    val bytesPerSample: Int get() = 2
+    /** What the output was opened with. */
+    data class Format(val sampleRate: Int, val bits: Int, val exclusive: Boolean, val note: String? = null)
+    /** The format opened last (null before or after a [close]). */
+    val format: Format? get() = null
     /** Blocks until the device takes all of it. */
     fun write(pcm: ByteArray, length: Int)
     /** Frames written but not heard yet. */
@@ -39,13 +50,17 @@ class LineSink(private val bufferMs: Int = 170) : PcmSink {
 
     override fun select(name: String?): Boolean { wanted = name; return true }
 
+    @Volatile override var format: PcmSink.Format? = null; private set
+
     override fun open(sampleRate: Int, channels: Int) {
+        format = null
         val format = AudioFormat(sampleRate.toFloat(), 16, channels, true, false)
         frameBytes = 2 * channels
         val name = wanted
         val named = name?.let { runCatching { start(OutputDevices.line(it, format), format, sampleRate) }.getOrNull() }
         line = named ?: start(AudioSystem.getSourceDataLine(format), format, sampleRate)
         device = if (named != null) name else null
+        this.format = PcmSink.Format(sampleRate, 16, exclusive = false)
     }
 
     private fun start(l: SourceDataLine?, format: AudioFormat, sampleRate: Int): SourceDataLine {
@@ -63,7 +78,7 @@ class LineSink(private val bufferMs: Int = 170) : PcmSink {
 
     override fun flush() { line?.flush() }
 
-    override fun close() { line?.let { runCatching { it.stop(); it.close() } }; line = null; device = null }
+    override fun close() { line?.let { runCatching { it.stop(); it.close() } }; line = null; device = null; format = null }
 }
 
 /** Swallows the sound (smoke runs, headless hosts); counts the frames. */

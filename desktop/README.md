@@ -579,3 +579,44 @@ Android in-app updater skips those tags, as it skips the model tags).
 - Tests: `PersonalizeTest` (defaults identical, guarded custom themes, accent, sizes, fonts and licences, settings kept
   and sanitized, sync checks, share code, the page in the shell, sung ink, full-screen sizes), `LyricsEditorDeskTest`
   (model, file seam, keys through the window, preview, close dialog, menus), shared `LivelyLyricsTest`, `LyricsDraftTest`.
+
+## Sources and playback (Windows 2.0)
+
+- **Sources** (`ui/SourcesPage.kt`, one line in Settings): every source the player tries, in `SourcePriority`'s playback
+  order (drag, or the arrows), each with its switch and status; custom manifests are added by address
+  (`CustomSources.add`: fetch, test search) or from the **catalogue** (`SourceCatalogue`, `sources/catalogue.json` on
+  ketvoice-web, schema in that repository's `sources/README.md`), tested by `player/SourceTester.kt` (a real search, the
+  first results opened and decoded for their real codec, rate and bits) and removed. The desktop never adds the
+  Ketvoice Lossless manifest by itself (`CustomSources.seedLossless = false`): the catalogue offers it. Custom sources'
+  search is merged into the search (`Catalog.search`, 6 s at most).
+- **Sources follow the account**: `customSource.<id>` items of the settings document (`CustomSourceSync`; address,
+  on/off and rank only), adopted by the phone too; removals travel as `{"removed": true}` for 90 days.
+- **Extended manifest** (`docs/manifest.md`): lyrics are the lyrics engine's extra provider `MusicApi.SRC_SOURCES`
+  (after the built-in ones), Canvas a fallback in `CanvasRepo.fromSources`, covers a fallback in `ArtworkRepo.enrich`.
+- **Smart cache** (`audio/StreamCache.kt`): `HttpRangeSource` files are named by title and quality tier
+  (`AudioSource.Url.cacheKey`, `StreamCache.key`) so a freshly signed address finds what is on disk; least recently
+  played out first past « Taille du cache » (1–50 GB, default 2, `audioCacheGb` in the `desktop` preferences); a title
+  all on disk plays as a file, one whose start is on disk starts from it with the address kept in its `.idx`
+  (`AudioSource.Url.refresh` asks the sources again when that address is refused or answers other bytes).
+  `player/CacheWarmer.kt` keeps the first 2 MB of favourites and playlist titles (150 per round, a quarter of the cache
+  at most, never while loading; `audioCacheWarm`, on). Statistics and « Vider le cache » in Settings › Lecture.
+- **Lecture sans blanc** (`trueGapless`, off): `FfmpegDecoder(exactEnd)` drains the resampler to its last sample and
+  ends an MP4/M4A on its container's stated length (the AAC encoder's padding stays unheard: two 1000 ms AAC titles
+  measure 1999.85 ms instead of 2004.52 ms); the next title is decoded 15 s ahead. The handover is `DesktopMixer`'s,
+  sample for sample; Ketmix's path is unchanged (`KetmixRenderTest`, `DesktopAutomixTest`).
+- **Mode exclusif (bit-perfect)** (`exclusiveAudio`, off): `native/wasapi` (`ketvoice_wasapi.dll`, MSVC, built and
+  export-checked by `windows.yml`, packaged like the SMTC DLL; `-PrequireWasapi=true` in CI) opens the device in
+  `AUDCLNT_SHAREMODE_EXCLUSIVE` at the title's own rate in a PCM format that holds its bits. `ExclusiveRules` allow it
+  only with Ketmix, the equalizer, the headphone EQ and the voice level neutral and the volume at 100 %; otherwise the
+  shared output plays and Settings says why. In it, `FfmpegAudioEngine.setNativeRate` decodes each title at its own
+  rate (`Deck(outRate = 0)`), passes the voice stage by, writes 32-bit samples (`PcmSink.bytesPerSample`) and reopens
+  the output when the rate changes at a handover (`Block.cutAt`). `SwitchingSink` falls back to Java Sound when the
+  device refuses (in use, not allowed, unsupported format). Off Windows the DLL is never looked for.
+- **Near-instant start** (`player/Session.kt`, `ui/LastPage.kt`): the window opens on the last page, the queue paused
+  where it stood and its cover (`cache/session-cover`), while the catalogue, the account, Ketmix, sound settings and
+  updates start on a background thread (`startBehind` in `Main.kt`). `startup.log` adds the milestones (`state`,
+  `behind`) to the first-frame line.
+- Tests: `CustomSourceExtendedTest`, `CustomSourceSyncTest`, `SourceCatalogueTest` (shared, also run here),
+  `StreamCacheTest`, `GaplessExclusiveTest` (a signal cut in two FLAC files comes back sample for sample; AAC ends on
+  its length; at a title's own rate the output is the file's samples bit for bit, across a rate change),
+  `ExclusiveRulesTest`, `SessionTest`, `DesktopStreamsTest`.

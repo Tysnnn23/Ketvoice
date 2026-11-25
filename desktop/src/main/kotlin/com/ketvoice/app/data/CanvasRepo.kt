@@ -154,6 +154,8 @@ object CanvasRepo {
                 var file = own?.let { File(dir(ctx), "$it.mp4") }?.takeIf { it.isFile && it.length() > MIN_BYTES }
                 if (file == null) {
                     val found = lookup(track.copy(spotifyId = own)) ?: run {
+                        // An enabled source whose manifest declares Canvas (Windows 2.0) stands in when none was found.
+                        if (fromSources(ctx, track, gen)) return@withLock
                         failed[track.id] = System.currentTimeMillis()
                         if (track.id in shared) prefs.edit().putLong(NONE_PREFIX + track.id, System.currentTimeMillis()).apply()
                         return@withLock
@@ -174,6 +176,19 @@ object CanvasRepo {
         } catch (_: Exception) {
             failed[track.id] = System.currentTimeMillis()
         } finally { setLoading(track.id, false) }
+    }
+
+    /** A custom source's Canvas (extended manifest), kept like a linked Canvas; false when no source has one. */
+    internal var sourceCanvas: suspend (Track) -> String? = { runCatching { SourceExtras.canvas(it) }.getOrNull() }
+
+    private suspend fun fromSources(ctx: Context, track: Track, gen: Int): Boolean {
+        val url = sourceCanvas(track)?.takeIf { it.startsWith("https://") } ?: return false
+        val name = "kvlink-" + sha(url)
+        val target = File(dir(ctx), "$name.mp4")
+        if (!(target.isFile && target.length() > MIN_BYTES) && fetchFile(url, target, LINK_MAX_BYTES) == null) return false
+        prefs(ctx).edit().putString(track.id, name).apply()
+        put(track.id, target, gen = gen)
+        return true
     }
 
     /** The still kept for the Canvas file at [path], or null (a link, or not written yet). */

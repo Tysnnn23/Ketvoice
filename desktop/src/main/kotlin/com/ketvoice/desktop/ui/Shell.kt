@@ -94,7 +94,7 @@ fun KetvoiceShell(
     library: LibraryStore = LibraryBridge,
     catalog: CatalogSource = LiveCatalog,
     dark: Boolean? = null,
-    navigator: Navigator = remember { Navigator(DeskLayout.startRoute()) },
+    navigator: Navigator = remember { Navigator(LastPage.startRoute()) },
     initialPanel: Panel = Panel.NONE,
     initialSidebar: Dp = 248.dp,
     initialQuery: String = "",
@@ -108,6 +108,7 @@ fun KetvoiceShell(
         val drag = remember { TrackDrag() }
         val scope = androidx.compose.runtime.rememberCoroutineScope()
         val actions = remember(player, library, navigator) { TrackActions(player, library, navigator, scope) }
+        LastPage.Remember(navigator) // Windows 2.0: the window opens again on this page
         CompositionLocalProvider(
             LocalPlayer provides player, LocalLibrary provides library, LocalCatalog provides catalog,
             LocalNavigator provides navigator, LocalSearch provides search, LocalMenu provides menu,

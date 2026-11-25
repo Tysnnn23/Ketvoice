@@ -14,6 +14,10 @@ class Deck(
     private val open: (AudioSource) -> ByteSource = ::openSource,
     private val listener: Listener? = null,
     bufferMs: Int = 3_000,
+    /** « Lecture sans blanc »: the title ends on its exact last sample (see [FfmpegDecoder.exactEnd]). */
+    private val exactEnd: Boolean = false,
+    /** Output rate: 48 kHz, or 0 for the source's own (« Mode exclusif » bit-perfect), known once [ready]. */
+    private val outRate: Int = FfmpegDecoder.OUT_RATE,
 ) : Closeable {
     interface Listener {
         fun onReady(deck: Deck) {}
@@ -21,7 +25,10 @@ class Deck(
     }
 
     private val lock = Object()
-    private val capacity = FfmpegDecoder.OUT_RATE * bufferMs / 1000
+    private val capacity = (if (outRate > 0) outRate else MAX_NATIVE_RATE) * bufferMs / 1000
+    private val startMs = startMs.coerceAtLeast(0)
+    /** Frames per second of what [read] gives (the source's own rate once ready when asked for it). */
+    @Volatile var rate: Int = if (outRate > 0) outRate else FfmpegDecoder.OUT_RATE; private set
     private val ring = FloatArray(capacity * 2)
     private var head = 0 // next frame to read
     private var count = 0
@@ -35,7 +42,7 @@ class Deck(
     @Volatile var error: String? = null; private set
     @Volatile var ready = false; private set
     /** Frames (48 kHz) from the track's start of the next frame [read] returns. */
-    @Volatile var positionFrames: Long = startMs.coerceAtLeast(0) * FfmpegDecoder.OUT_RATE / 1000; private set
+    @Volatile var positionFrames: Long = startMs.coerceAtLeast(0) * rate / 1000; private set
 
     /** How the mixer reads this deck (Ketmix levels, filters and tempo); writer thread only. */
     val lane = Lane(this)
@@ -80,7 +87,7 @@ class Deck(
         val to = ms.coerceAtLeast(0).let { if (durationMs > 0) it.coerceAtMost(durationMs) else it }
         head = 0; count = 0; eof = false
         seekMs = to; generation++
-        positionFrames = to * FfmpegDecoder.OUT_RATE / 1000
+        positionFrames = to * rate / 1000
         lock.notifyAll()
     }
 
@@ -95,7 +102,11 @@ class Deck(
         try {
             val bytes = open(source)
             synchronized(lock) { byteSource = bytes; if (closed) { bytes.close(); return } }
-            decoder = FfmpegDecoder(bytes)
+            decoder = FfmpegDecoder(bytes, exactEnd, outRate)
+            if (decoder.outRate != rate) synchronized(lock) {
+                rate = decoder.outRate
+                if (count == 0) positionFrames = (if (seekMs >= 0) seekMs else startMs) * rate / 1000
+            }
             format = decoder.format
             durationMs = decoder.durationMs
             ready = true
@@ -140,11 +151,14 @@ class Deck(
     }
 
     companion object {
+        /** The ring of a deck at its source's own rate is sized for this rate. */
+        const val MAX_NATIVE_RATE = 192_000
+
         fun openSource(source: AudioSource): ByteSource = when (source) {
             is AudioSource.LocalFile -> FileByteSource(File(source.path))
             is AudioSource.Url ->
                 if (source.url.startsWith("file:")) FileByteSource(File(URI(source.url)))
-                else HttpRangeSource(source.url, source.headers)
+                else HttpRangeSource(source.url, source.headers, key = source.cacheKey, refresh = source.refresh)
         }
     }
 }

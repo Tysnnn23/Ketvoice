@@ -17,13 +17,20 @@ import java.util.concurrent.TimeUnit
  * the fetch point restarts the request there. The cache survives restarts (`.idx` beside the `.bin`).
  */
 class HttpRangeSource(
-    private val url: String,
+    url: String,
     private val headers: Map<String, String> = emptyMap(),
-    cacheDir: File? = defaultCacheDir(),
+    cacheDir: File? = StreamCache.folder(),
     private val client: OkHttpClient = defaultClient,
     private val retries: Int = 8,
     private val retryDelayMs: Long = 250,
+    /** The smart cache's name for these bytes ([StreamCache.key]); null names them by address ([cacheKey]). */
+    key: String? = null,
+    /** A fresh address when [url] is refused or answers other bytes (an address kept from an earlier play). */
+    private val refresh: (() -> String?)? = null,
 ) : ByteSource {
+    @Volatile private var url: String = url
+    /** Whether [url] may be stale: true until a request with it has answered with the expected bytes. */
+    @Volatile private var mayRefresh = refresh != null
     private val lock = Object()
     private val have = BitSet()
     private var total = -1L
@@ -40,16 +47,13 @@ class HttpRangeSource(
     init {
         val dir = cacheDir ?: File(System.getProperty("java.io.tmpdir"), "ketvoice-audio")
         dir.mkdirs()
-        val key = sha1(cacheKey(url))
-        bin = File(dir, "$key.bin"); idx = File(dir, "$key.idx")
-        trim(dir, keep = key)
-        runCatching {
-            if (bin.exists() && idx.exists()) {
-                val lines = idx.readLines()
-                total = lines[0].toLong(); known = total >= 0
-                BitSet.valueOf(java.util.Base64.getDecoder().decode(lines[1])).let { have.or(it) }
-            }
-        }.onFailure { have.clear(); total = -1; known = false }
+        val name = if (key != null) StreamCache.name(key) else sha1(cacheKey(url))
+        bin = File(dir, "$name.bin"); idx = File(dir, "$name.idx")
+        StreamCache.trim(dir, keep = setOf(name))
+        if (bin.exists()) StreamCache.readIndex(idx)?.let { index ->
+            total = index.total; known = total >= 0; have.or(index.have)
+        }
+        StreamCache.touch(bin)
         file = RandomAccessFile(bin, "rw")
         fetcher = Thread(::fetchLoop, "ketvoice-http-range").apply { isDaemon = true; start() }
     }
@@ -113,6 +117,12 @@ class HttpRangeSource(
                 fetchFrom(start, piece) { failures = 0 }
             } catch (e: IOException) {
                 if (synchronized(lock) { closed }) return
+                // An address kept from an earlier play that no longer answers: a fresh one, once.
+                if (e is Fatal && mayRefresh) {
+                    mayRefresh = false
+                    val fresh = runCatching { refresh?.invoke() }.getOrNull()
+                    if (fresh != null) { url = fresh; continue }
+                }
                 if (e is Fatal || ++failures > retries) {
                     synchronized(lock) { error = e; known = true; lock.notifyAll() }
                     return
@@ -147,8 +157,13 @@ class HttpRangeSource(
                 length = body.contentLength(); skip = from
             }
             synchronized(lock) {
-                if (known && total >= 0 && length >= 0 && length != total) { have.clear() } // the file changed: start over
-                if (length >= 0 || !known) { total = length; known = true }
+                if (known && total >= 0 && length >= 0 && length != total) {
+                    // Other bytes than those on disk: from a kept address, ask for a fresh one; else the file changed.
+                    if (mayRefresh) throw Fatal(IOException("other bytes ($length, not $total)"))
+                    have.clear()
+                }
+                if (length >= 0 || !known) { total = length; known = true; if (length >= 0) runCatching { file.setLength(length) } }
+                mayRefresh = false
                 lock.notifyAll()
             }
             val input = body.byteStream()
@@ -185,17 +200,13 @@ class HttpRangeSource(
     }
 
     private fun saveIndex() {
-        runCatching {
-            idx.writeText("$total\n" + java.util.Base64.getEncoder().encodeToString(have.toByteArray()) + "\n")
-        }
+        runCatching { StreamCache.writeIndex(idx, StreamCache.Index(total, have.clone() as BitSet, url)) }
     }
 
     private class Fatal(cause: IOException) : IOException(cause.message, cause)
 
     companion object {
         const val CHUNK = 64 * 1024
-        /** The cache folder keeps the most recent tracks up to this size. */
-        var cacheLimitBytes = 1L shl 30
 
         val defaultClient: OkHttpClient by lazy {
             OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS)
@@ -214,14 +225,5 @@ class HttpRangeSource(
         }
 
         private fun sha1(s: String) = MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
-
-        private fun trim(dir: File, keep: String) {
-            val files = dir.listFiles { f -> f.name.endsWith(".bin") && !f.name.startsWith(keep) } ?: return
-            var used = files.sumOf { it.length() }
-            for (f in files.sortedBy { it.lastModified() }) {
-                if (used <= cacheLimitBytes) break
-                used -= f.length(); f.delete(); File(dir, f.name.removeSuffix(".bin") + ".idx").delete()
-            }
-        }
     }
 }

@@ -41,6 +41,13 @@ object Startup {
     }
 
     private var archiveAtStart: Long = -1
+    /** Milestones of this start (Windows 2.0): « state » (the last session restored), « behind » (the rest started). */
+    private val marks = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    fun mark(name: String) { marks[name] = msSinceStart(); AppLog.i("start", "$name at ${marks[name]} ms") }
+
+    /** The milestones reached so far, for the probe's line. */
+    fun marks(): String = marks.entries.sortedBy { it.value }.joinToString(", ") { "${it.key} ${it.value} ms" }
 
     /** Called first thing in main: what the archive was before this run could rewrite it. */
     fun begin() { archiveAtStart = prepareArchive()?.takeIf { it.isFile }?.length() ?: -1 }
@@ -58,7 +65,7 @@ object Startup {
             else -> "base only"
         }
         val line = "first frame $ms ms, render $drawnWith, vsync ${System.getProperty("skiko.vsync.enabled")}, " +
-            "heap $heapMb MB of ${rt.maxMemory() shr 20} MB, cds $cds"
+            "heap $heapMb MB of ${rt.maxMemory() shr 20} MB, cds $cds" + marks().takeIf { it.isNotEmpty() }?.let { ", $it" }.orEmpty()
         AppLog.i("start", line)
         if (wanted != null && !drawnWith.equals(wanted, ignoreCase = true)) AppLog.w("render", "$wanted could not start; drawing with $drawnWith")
         if (probe) runCatching { File(dataDir, "startup.log").writeText(line + "\n") }

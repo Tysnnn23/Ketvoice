@@ -30,7 +30,16 @@ import java.util.concurrent.atomic.AtomicLong
  * AVIOContext over a [ByteSource]. Output is interleaved float stereo at [OUT_RATE] Hz. Not thread
  * safe: one decoding thread owns it.
  */
-class FfmpegDecoder(private val source: ByteSource) : Closeable {
+class FfmpegDecoder(
+    private val source: ByteSource,
+    /**
+     * « Lecture sans blanc » (true gapless, Windows 2.0): the resampler is drained to its last sample, and an MP4/M4A
+     * whose container states its exact length (the edit list's, without the encoder's padding) ends on that sample.
+     */
+    private val exactEnd: Boolean = false,
+    /** Output rate; 0 keeps the source's own rate (« Mode exclusif » bit-perfect: no resampling). */
+    requestedRate: Int = OUT_RATE,
+) : Closeable {
     private val id = ids.incrementAndGet().also { load() }
     private val opaque = LongPointer(1).put(id)
     private var position = 0L // byte position of the AVIO reader
@@ -53,6 +62,11 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
     val format: AudioEvent.Format
     /** Duration in ms, 0 when unknown. */
     val durationMs: Long
+    /** The rate of what [read] gives: [OUT_RATE], or the source's own rate when it was asked for (0). */
+    var outRate: Int = if (requestedRate > 0) requestedRate else OUT_RATE; private set
+    private var outTb: AVRational = OUT_TB
+    /** With [exactEnd]: the output frame the title ends on (its container's stated length), else -1. */
+    private var endFrame = -1L
 
     private var pending = FloatArray(0)
     private var pendingStart = 0
@@ -100,6 +114,9 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
                 st.duration() > 0 -> av_rescale_q(st.duration(), timeBase, MS)
                 else -> 0
             }
+            if (requestedRate <= 0 && par.sample_rate() > 0) { outRate = par.sample_rate(); outTb = AVRational().num(1).den(outRate) }
+            if (exactEnd && lossy && st.duration() > 0 && fmt.iformat()?.name()?.string.orEmpty().contains("mp4"))
+                endFrame = av_rescale_q(st.duration(), timeBase, outTb)
             decodeMore() // learns [startPts]; the first frame stays pending
         } catch (t: Throwable) {
             freeNative(); throw t
@@ -113,8 +130,11 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
     fun read(out: FloatArray, offset: Int, frames: Int): Int {
         var written = 0
         while (written < frames) {
+            // True gapless: the container's stated end is the last sample (the encoder's padding stays unheard).
+            if (endFrame in 0..outPosition) { pendingStart = pendingEnd; swrFlushed = true; break }
             if (pendingStart < pendingEnd) {
-                val n = minOf(frames - written, (pendingEnd - pendingStart) / 2)
+                var n = minOf(frames - written, (pendingEnd - pendingStart) / 2)
+                if (endFrame >= 0) n = minOf(n.toLong(), endFrame - outPosition).toInt()
                 System.arraycopy(pending, pendingStart, out, offset + written * 2, n * 2)
                 pendingStart += n * 2; written += n; outPosition += n
                 continue
@@ -133,7 +153,7 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
         swr?.let { swr_free(it) }; swr = null; swrKey = ""
         pendingStart = 0; pendingEnd = 0
         inputDone = false; drained = false; swrFlushed = false
-        outPosition = target * OUT_RATE / 1000
+        outPosition = target * outRate / 1000
         skipTo = outPosition
         resync = true
     }
@@ -145,7 +165,8 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
             if (r >= 0) { convert(frame); av_frame_unref(frame); return true }
             if (r == AVERROR_EOF()) {
                 if (swrFlushed) return false
-                flushResampler(); swrFlushed = true
+                // True gapless: the resampler is asked again until it gives nothing more (it may hold more than it says).
+                val more = flushResampler(); if (!exactEnd || !more) swrFlushed = true
                 return true
             }
             if (r != AVERROR_EAGAIN()) throw IOException("decode: ${err(r)}")
@@ -173,7 +194,7 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
             if (layout.nb_channels() > 0 && av_channel_layout_check(layout) == 1) av_channel_layout_copy(inLayout, layout)
             else av_channel_layout_default(inLayout, codecCtx.ch_layout().nb_channels().coerceAtLeast(1))
             val ctx = SwrContext(null as Pointer?) // filled in by swr_alloc_set_opts2 (SwrContext**)
-            check(swr_alloc_set_opts2(ctx, outLayout, AV_SAMPLE_FMT_FLT, OUT_RATE, inLayout, f.format(), f.sample_rate(), 0, null), "resampler")
+            check(swr_alloc_set_opts2(ctx, outLayout, AV_SAMPLE_FMT_FLT, outRate, inLayout, f.format(), f.sample_rate(), 0, null), "resampler")
             if (ctx.isNull) throw IOException("resampler: no context")
             check(swr_init(ctx), "resampler init")
             swr = ctx; swrKey = key
@@ -186,7 +207,7 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
         }
         if (resync) {
             // After a seek, the first frame's time says where decoding really restarted.
-            if (ts != AV_NOPTS_VALUE()) outPosition = av_rescale_q(ts - startPts, timeBase, OUT_TB)
+            if (ts != AV_NOPTS_VALUE()) outPosition = av_rescale_q(ts - startPts, timeBase, outTb)
             resync = false
         }
         val cap = swr_get_out_samples(swr, f.nb_samples())
@@ -196,13 +217,15 @@ class FfmpegDecoder(private val source: ByteSource) : Closeable {
         take(n)
     }
 
-    private fun flushResampler() {
-        val s = swr ?: return
-        val cap = swr_get_out_samples(s, 0).coerceAtLeast(0)
-        if (cap == 0) return
+    /** What the resampler still holds; true when it gave something. */
+    private fun flushResampler(): Boolean {
+        val s = swr ?: return false
+        val cap = swr_get_out_samples(s, 0).coerceAtLeast(0).let { if (exactEnd) maxOf(it, 1024) else it }
+        if (cap == 0) return false
         ensure(cap)
         val n = swr_convert(s, outPP, cap, null as PointerPointer<*>?, 0)
         if (n > 0) take(n)
+        return n > 0
     }
 
     private fun ensure(frames: Int) {
