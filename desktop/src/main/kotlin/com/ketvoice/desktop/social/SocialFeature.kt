@@ -65,6 +65,7 @@ object SocialFeature {
 
     /** Behind the window: the room's beat, ketvoice:// for this PC, the profile with the account, « Partager mon écoute ». */
     fun start(scope: CoroutineScope) {
+        // set connect.ShareLinks.provider at merge (= { track -> ShareLinks.trackUrl(track) })
         DesktopTogether.start(scope)
         UrlScheme.register()
         scope.launch {
