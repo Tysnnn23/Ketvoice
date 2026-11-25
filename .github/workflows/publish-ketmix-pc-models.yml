@@ -1,0 +1,160 @@
+name: Publish Ketmix PC models
+
+# Windows 2.0 « Puissance de Ketmix » (« Maximum »): converts the large models desktop PCs download on request and
+# publishes them as the assets of the `ketmix-pc-v1` prerelease (never the latest release; never republished: a new
+# model is a new tag). Each file is checked against its reference implementation on real-sized inputs and a synthetic
+# clip (tools/models/synth_clip.py), then against the digest pinned in tools/models/expected-pc.sha256 and
+# desktop/.../ketmix/PcModels.kt (a desktop test keeps them equal): the exports are reproducible with the pinned
+# packages (tools/models/requirements-pc.txt), so a different digest stops the publication.
+#   - ketmix-beat-final0.onnx      Beat This! final0 (CPJKU, MIT code and checkpoint)      tools/beat/export_final.py
+#   - ketmix-key-skey.onnx         S-KEY (Deezer, MIT code and weights)                    tools/key/export_skey.py
+#   - ketmix-sound-clap-int8.onnx  CLAP music, audio side (LAION, Apache-2.0 weights)      tools/similarity/export_clap.py
+#   - ketmix-voice-melroformer.onnx Mel-Band RoFormer vocals (K. Jensen, MIT weights;      tools/stems/export_roformer.py
+#                                  ZFTurbo's MIT code)
+# Licences: docs/licenses/ketmix-pc-models.md. With `publish` false it only converts and checks (workflow artifacts).
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the prerelease (false: convert and check only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  TAG: ketmix-pc-v1
+  BEAT_THIS_COMMIT: b95c8ab0c58c2d9fcfd40508ae8dffbc05ac4f5c
+  SKEY_COMMIT: 80d9590e150b836a341dfc6dbf05aa20bc81d10b
+  MSST_COMMIT: 1523206d12a521bdb20673726562524cf0f9635b
+  CLAP_REVISION: a0b4534a14f58e20944452dff00a22a06ce629d1
+  KIM_REVISION: ac9b0614ab3cd7f77219e18ba494dfd93956c348
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [beat, key, sound, voice]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned packages
+        run: |
+          python -m pip install --quiet --extra-index-url https://download.pytorch.org/whl/cpu -r tools/models/requirements-pc.txt
+
+      - name: Test clip
+        run: |
+          mkdir -p work/out
+          python -I tools/models/synth_clip.py work/clip.wav 30
+
+      - name: Beat This! final0
+        if: matrix.model == 'beat'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/CPJKU/beat_this work/beat_this && git -C work/beat_this checkout -q "$BEAT_THIS_COMMIT"
+          curl -fsSL -o work/final0.ckpt https://cloud.cp.jku.at/public.php/dav/files/7ik4RrBKTS273gp/final0.ckpt
+          echo "8c328b45f59d8dd3dff219253ff6a8d6482be57d0133a29140e2febbf8eb8331  work/final0.ckpt" | sha256sum -c
+          cp work/beat_this/LICENSE work/out/LICENSE-BEAT-THIS.txt
+          python -I tools/beat/export_final.py work/beat_this work/final0.ckpt work/out/ketmix-beat-final0.onnx work/clip.wav
+
+      - name: S-KEY
+        if: matrix.model == 'key'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/deezer/skey work/skey && git -C work/skey checkout -q "$SKEY_COMMIT"
+          echo "$(sha256sum work/skey/skey/models/skey.pt)"
+          cp work/skey/LICENSE work/out/LICENSE-SKEY.txt
+          python -I tools/key/export_skey.py work/skey work/out/ketmix-key-skey.onnx work/clip.wav
+
+      - name: CLAP music (audio side, int8)
+        if: matrix.model == 'sound'
+        run: |
+          set -euo pipefail
+          mkdir -p work/clap
+          for f in config.json preprocessor_config.json pytorch_model.bin README.md; do
+            curl -fsSL -o "work/clap/$f" "https://huggingface.co/laion/larger_clap_music/resolve/$CLAP_REVISION/$f"
+          done
+          echo "5c289311f4a030d768af7ffbfdecd01b008aa64824211899a4e59f4f9d154fd1  work/clap/pytorch_model.bin" | sha256sum -c
+          cp work/clap/README.md work/out/README-CLAP-MUSIC.md
+          python -I tools/similarity/export_clap.py work/clap work/clap-fp32.onnx work/out/ketmix-sound-clap-int8.onnx work/clip.wav
+
+      - name: Mel-Band RoFormer vocals
+        if: matrix.model == 'voice'
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/ZFTurbo/Music-Source-Separation-Training work/msst && git -C work/msst checkout -q "$MSST_COMMIT"
+          curl -fsSL -o work/MelBandRoformer.ckpt "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/$KIM_REVISION/MelBandRoformer.ckpt"
+          echo "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e  work/MelBandRoformer.ckpt" | sha256sum -c
+          curl -fsSL -o work/out/README-MELBANDROFORMER.md "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/$KIM_REVISION/README.md"
+          cp work/msst/LICENSE work/out/LICENSE-MSST.txt
+          # Two runs, each within the runner's memory: the export, then the checks (one chunk, and the whole chunked
+          # separation against the reference demix) on the synthetic clip.
+          python -I tools/stems/export_roformer.py export work/msst work/MelBandRoformer.ckpt work/out/ketmix-voice-melroformer.onnx
+          python -I tools/stems/export_roformer.py check work/msst work/MelBandRoformer.ckpt work/out/ketmix-voice-melroformer.onnx work/clip.wav
+
+      - name: Compare with the pinned digest
+        run: |
+          set -euo pipefail
+          cd work/out
+          for f in *.onnx; do
+            want=$(grep "  $f\$" ../../tools/models/expected-pc.sha256 | cut -d' ' -f1)
+            got=$(sha256sum "$f" | cut -d' ' -f1)
+            echo "$f $got (pinned $want), $(stat -c %s "$f") bytes"
+            if [ "$want" != "$got" ]; then
+              echo "::error::$f differs from its pin; update tools/models/expected-pc.sha256 and PcModels.kt only after checking why."
+              exit 1
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ketmix-pc-${{ matrix.model }}
+          path: work/out/
+
+  publish:
+    needs: convert
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Publish the prerelease (never over an existing one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cp docs/licenses/ketmix-pc-models.md out/LICENSES.md
+          (cd out && sha256sum *.onnx | tee SHA256SUMS.txt)
+          cat > notes.md <<'NOTES'
+          Optional large models of Ketmix for desktop PCs (Windows 2.0, « Puissance de Ketmix » → Maximum). Downloaded by
+          the app on request and checked against their SHA-256; not an app version. Converted and checked by
+          .github/workflows/publish-ketmix-pc-models.yml; licences in LICENSES.md (all permissive: MIT and Apache-2.0).
+
+          - ketmix-beat-final0.onnx: Beat This! final0 (Foscarin, Schlüter, Widmer, ISMIR 2024; MIT). [1, 1500, 128] log-mel → beat, downbeat logits.
+          - ketmix-voice-melroformer.onnx: Mel-Band RoFormer vocal model by Kimberley Jensen (MIT), architecture from ZFTurbo's Music-Source-Separation-Training (MIT). STFT outside the graph.
+          - ketmix-key-skey.onnx: S-KEY (Kong et al., Deezer, ICASSP 2025; MIT). Mono 22.05 kHz → 24 key probabilities.
+          - ketmix-sound-clap-int8.onnx: LAION CLAP for music, audio encoder (Apache-2.0), int8. 10 s mono 48 kHz → 512-d embedding.
+          NOTES
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketmix PC models v1" --notes-file notes.md out/*.onnx out/*.txt out/*.md
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern '*.onnx'
+          for f in *.onnx; do cmp "$f" "../out/$f"; done
+          echo "published and verified $TAG"
