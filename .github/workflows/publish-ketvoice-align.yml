@@ -1,0 +1,113 @@
+name: Publish Ketvoice word sync model
+
+# Windows 2.0 « Synchronisation des mots par IA »: converts OpenAI Whisper small (MIT code and weights) for aligning known
+# lyrics on the separated voice, and publishes it as the assets of the `ketvoice-align-v1` prerelease (never the latest
+# release; never republished: a new model is a new tag; `ketmix-pc-v1` is not reused). The export is checked against
+# Whisper's own code (log-mel, encoder, decoder, and `whisper.timing.find_alignment` on the repository's public-domain
+# test clip) by tools/align/export_whisper.py, then against the digests pinned in tools/models/expected-align.sha256 and
+# desktop/.../lyrics/AlignModels.kt (a desktop test keeps them equal): the export is reproducible with the pinned
+# packages (tools/align/requirements.txt), so a different digest stops the publication.
+#   - ketvoice-align-encoder.onnx    30 s of 16 kHz mono -> encoder features (Whisper's log-mel inside the graph)
+#   - ketvoice-align-decoder.onnx    tokens + features -> alignment heads' cross-attention, next-token probabilities, language
+#   - ketvoice-align-vocab.tiktoken  Whisper's multilingual.tiktoken, byte for byte
+# Licences: docs/licenses/ketvoice-align.md. With `publish` false it only converts and checks (workflow artifacts).
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the prerelease (false: convert and check only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  TAG: ketvoice-align-v1
+  WHISPER_COMMIT: 86098128c0b4f24f0e2aa2994de830614b474227
+  SMALL_SHA256: 9ecf779972d90ba49c06d968637d720dd632c55bbf19d441fb42bf17a411e794
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned packages and ffmpeg
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+          python -m pip install --quiet --extra-index-url https://download.pytorch.org/whl/cpu -r tools/align/requirements.txt
+
+      - name: Whisper small
+        run: |
+          set -euo pipefail
+          mkdir -p work/out
+          git clone -q https://github.com/openai/whisper work/whisper && git -C work/whisper checkout -q "$WHISPER_COMMIT"
+          curl -fsSL -o work/small.pt "https://openaipublic.azureedge.net/main/whisper/models/$SMALL_SHA256/small.pt"
+          echo "$SMALL_SHA256  work/small.pt" | sha256sum -c
+          cp work/whisper/LICENSE work/out/LICENSE-WHISPER.txt
+          python -I tools/align/export_whisper.py work/whisper work/small.pt work/out --fixtures work/fixtures.json
+
+      - name: Compare with the pinned digests
+        run: |
+          set -euo pipefail
+          cd work/out
+          for f in *.onnx *.tiktoken; do
+            want=$(grep "  $f\$" ../../tools/models/expected-align.sha256 | cut -d' ' -f1)
+            got=$(sha256sum "$f" | cut -d' ' -f1)
+            echo "$f $got (pinned $want), $(stat -c %s "$f") bytes"
+            if [ "$want" != "$got" ]; then
+              echo "::error::$f differs from its pin; update tools/models/expected-align.sha256 and AlignModels.kt only after checking why."
+              exit 1
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ketvoice-align
+          path: work/out/
+
+  publish:
+    needs: convert
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ketvoice-align
+          path: out
+
+      - name: Publish the prerelease (never over an existing one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cp docs/licenses/ketvoice-align.md out/LICENSES.md
+          (cd out && sha256sum *.onnx *.tiktoken | tee SHA256SUMS.txt)
+          cat > notes.md <<'NOTES'
+          Word sync by AI for desktop PCs (Windows 2.0, Ketmix power set to Maximum): OpenAI Whisper small (MIT code
+          and weights), converted to ONNX for aligning known lyrics on the separated voice. Downloaded by the app on request
+          and checked against its SHA-256; not an app version. Converted and checked by
+          .github/workflows/publish-ketvoice-align.yml; licences in LICENSES.md.
+
+          - ketvoice-align-encoder.onnx: 30 s of 16 kHz mono → encoder features (log-mel in the graph).
+          - ketvoice-align-decoder.onnx: tokens + features → alignment heads' cross-attention, next-token probabilities, language logits.
+          - ketvoice-align-vocab.tiktoken: Whisper's multilingual byte-pair ranks.
+          NOTES
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketvoice word sync model v1" --notes-file notes.md out/*.onnx out/*.tiktoken out/*.txt out/*.md
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern '*.onnx' --pattern '*.tiktoken'
+          for f in *.onnx *.tiktoken; do cmp "$f" "../out/$f"; done
+          echo "published and verified $TAG"

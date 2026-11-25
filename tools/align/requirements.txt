@@ -1,0 +1,15 @@
+# The exact Python packages the word sync model (ketvoice-align-v1) was converted and checked with
+# (publish-ketvoice-align.yml). torch comes from https://download.pytorch.org/whl/cpu. ffmpeg (the system's) reads the
+# reference clip, as Whisper's own loader does.
+torch==2.9.1+cpu
+numpy==2.5.5
+onnx==1.23.2
+onnxruntime==1.32.0
+onnxscript==0.7.2
+onnx-ir==1.1.0
+tiktoken==0.14.0
+regex==2026.11.24
+numba==0.68.1
+llvmlite==0.50.0
+more-itertools==11.2.1
+tqdm==4.70.1
