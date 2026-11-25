@@ -33,9 +33,11 @@ internal interface BeatRunner : AutoCloseable {
 }
 
 /** The ONNX export, input `[1, frames, 128]`, outputs beat and downbeat logits `[1, frames]`. */
-internal class OnnxBeatNet(file: File) : BeatRunner {
+internal class OnnxBeatNet(file: File, full: Boolean = false) : BeatRunner {
     private val env = OrtEnvironment.getEnvironment()
-    private val session = env.createSession(file.path, OrtSession.SessionOptions().apply { setIntraOpNumThreads(2) })
+    /** Windows 2.0: the full model runs on the graphics card when it can, with half the cores otherwise. */
+    private val session = if (full) com.ketvoice.app.stems.OrtAccel.session(file, com.ketvoice.app.stems.OrtAccel.threads(background = true))
+        else env.createSession(file.path, OrtSession.SessionOptions().apply { setIntraOpNumThreads(2) })
     private val input = session.inputNames.first()
     private val outputs = session.outputNames.toList()
     private val order = BeatModel.pick(outputs)
@@ -112,8 +114,8 @@ internal object BeatModel {
     /** On disk and checked (the check runs when it is downloaded; the size is enough afterwards). */
     val ready: Boolean get() = runCatching { file().length() == BEAT_ONNX_BYTES }.getOrDefault(false)
 
-    /** The model may run now: downloaded and switched on in the settings. */
-    fun usable(): Boolean = AppSettings.ketmixBeatModel.value && ready
+    /** The model may run now: switched on in the settings, and downloaded (the small one, or the full one of « Maximum »). */
+    fun usable(): Boolean = AppSettings.ketmixBeatModel.value && (ready || fullFile() != null)
 
     /** Indices of the beat and the downbeat among the network's outputs: by their names, otherwise in that order. */
     internal fun pick(names: List<String>): Pair<Int, Int> {
@@ -168,8 +170,13 @@ internal object BeatModel {
         return response.body?.byteStream()
     }
 
-    /** Test seam: where the network comes from. */
-    @Volatile internal var openNet: () -> BeatRunner? = { file().takeIf { ready }?.let { OnnxBeatNet(it) } }
+    /** Windows 2.0 « Maximum »: Beat This! final0 when the tier has it (set by the app from `PcModels`), else null. */
+    @Volatile internal var fullFile: () -> File? = { null }
+
+    /** Test seam: where the network comes from (the full model first when the tier has it). */
+    @Volatile internal var openNet: () -> BeatRunner? = {
+        fullFile()?.let { runCatching { OnnxBeatNet(it, full = true) }.getOrNull() } ?: file().takeIf { ready }?.let { OnnxBeatNet(it) }
+    }
 
     /** [dsp] with the model's beats and bars where it is sure of them; [dsp] as it was (marked as tried) otherwise. Never throws. */
     fun refine(dsp: SegmentAnalysis, pcm: BeatPcm, tail: Boolean): SegmentAnalysis {

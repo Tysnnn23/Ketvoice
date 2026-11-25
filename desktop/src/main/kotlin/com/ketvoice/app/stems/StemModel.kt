@@ -21,7 +21,8 @@ import java.security.MessageDigest
  * (`tools/stems/expected-onnx.sha256`).
  */
 internal class ModelPack(private val release: String, val parts: List<Part>, private val folder: String) {
-    class Part(val name: String, val bytes: Long, val sha256: String, val source: String)
+    /** [source]: where the same bytes are published upstream, null when only the release has them (converted files). */
+    class Part(val name: String, val bytes: Long, val sha256: String, val source: String?)
 
     sealed interface State {
         data object Missing : State
@@ -96,7 +97,7 @@ internal class ModelPack(private val release: String, val parts: List<Part>, pri
         val free = tmp.parentFile?.usableSpace ?: 0L
         if (free in 1 until part.bytes + 50L * 1024 * 1024) throw IOException("storage")
         var last: Exception? = null
-        for (url in listOf(release + part.name, part.source)) {
+        for (url in listOfNotNull(release + part.name, part.source)) {
             try {
                 val input = open(url) ?: throw IOException("HTTP error")
                 val digest = MessageDigest.getInstance("SHA-256")
@@ -167,6 +168,18 @@ internal object StemModel {
      * Whether the computer runs on mains power (the phone's « en charge »): a laptop on battery separates with
      * the quick model in the automatic setting. Desktops, and systems that do not say, count as plugged in.
      */
+    /**
+     * Whether the computer has a system battery (Windows 2.0, « Puissance de Ketmix »: a battery is what makes a laptop).
+     * `BatteryFlag` 128 means « no system battery »; 255 (unknown) and other systems count as a desktop.
+     */
+    fun hasBattery(): Boolean = runCatching {
+        if (!System.getProperty("os.name").orEmpty().startsWith("Windows")) return@runCatching false
+        val status = PowerStatus()
+        if (!Kernel.api.GetSystemPowerStatus(status)) false else batteryPresent(status.BatteryFlag.toInt() and 0xff)
+    }.getOrDefault(false)
+
+    internal fun batteryPresent(flag: Int): Boolean = flag != 128 && flag != 255
+
     fun charging(): Boolean = runCatching {
         if (!System.getProperty("os.name").orEmpty().startsWith("Windows")) return@runCatching true
         val status = PowerStatus()

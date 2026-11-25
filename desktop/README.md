@@ -579,3 +579,44 @@ Android in-app updater skips those tags, as it skips the model tags).
 - Tests: `PersonalizeTest` (defaults identical, guarded custom themes, accent, sizes, fonts and licences, settings kept
   and sanitized, sync checks, share code, the page in the shell, sung ink, full-screen sizes), `LyricsEditorDeskTest`
   (model, file seam, keys through the window, preview, close dialog, menus), shared `LivelyLyricsTest`, `LyricsDraftTest`.
+
+## Puissance de Ketmix (Windows 2.0, AI side)
+
+- **Tiers** (`ketmix/KetmixPower.kt`, settings in their own `ketvoice_ketmix_pc` preferences, never synced): Auto
+  (default), Équilibré (today's models), Maximum (large models, also on a laptop). Auto gives « Maximum » to a PC
+  without a system battery (`GetSystemPowerStatus`, `BatteryFlag` 128) with ≥ 12 GB of memory and ≥ 4 cores; the
+  studio voice model also needs ≥ 8 GB. The graphics adapters come from `Win32_VideoController` (basic, remote and
+  virtual adapters ignored). Settings: `ui/KetmixPowerSection.kt`.
+- **Large models** (`ketmix/PcModels.kt`, prerelease `ketmix-pc-v1`, `publish-ketmix-pc-models.yml`, pins in
+  `tools/models/expected-pc.sha256`): Beat This! final0, Kim's Mel-Band RoFormer (studio voice, `StemMask.STUDIO`),
+  S-KEY (neural key), CLAP music int8 (sound embeddings). Downloaded, smallest first, only when the tier is
+  « Maximum » and Ketmix, the voices or the library preparation are in use; licences and conversion checks in
+  `docs/licenses/ketmix-pc-models.md`.
+- **GPU** (`app/stems/OrtAccel.kt`). What works from Java with ONNX Runtime 1.32: CUDA needs the `onnxruntime_gpu`
+  JNI plus CUDA 12 and cuDNN 9 installed by the listener (not used); DirectML is compiled out of the Maven JNI
+  (`addDirectML` throws « not compiled with DirectML support ») and its last ONNX Runtime build is 1.24.4, older than
+  the C API the 1.32 JNI asks for (not used). Used: the **WebGPU plugin execution provider** (NuGet
+  `Microsoft.ML.OnnxRuntime.EP.WebGpu` 0.6.0, MIT; Direct3D 12 through Dawn, any DX12 card), registered at run time
+  on the stock runtime (`OrtEnvironment.registerExecutionProviderLibrary`, `getEpDevices`,
+  `SessionOptions.addExecutionProvider`). Its package (55.6 MB, two DLLs kept) is fetched from nuget.org with a
+  pinned digest only for « Maximum » with a real card: the MSI does not grow. A tiny probe network
+  (`resources/ketmix/gpu-probe.onnx`, `tools/models/gpu_probe_onnx.py`) runs on the card and on the processor and
+  must agree before the card is used; a check that never finished (a crash) is remembered as failed. Not run on a
+  real Windows GPU here (this machine has none, and loading the downloaded plugin locally was not allowed): the probe
+  and the fallback are what protect listeners. The processor path uses every core while a mix waits and half of them
+  in the background.
+- **Library prepared at idle** (`ketmix/KetmixPc.kt` `LibraryPrep`, `ketmix/IdleWatch.kt`): on mains power, no
+  full-screen app (`SHQueryUserNotificationState`), other programs under 25 % of the processor and no input for
+  3 minutes (`GetLastInputInfo`), downloads get their whole-title facts (`TrackFacts`: Beat This! bars, sections,
+  S-KEY key, energy, CLAP embedding; `ketmix/facts/*.kvf`) and their studio separation. Any input, a full-screen
+  app or leaving mains power stops the title at once (ONNX Runtime's terminate flag) and it is taken up later.
+  `StemLibrary` keeps its mains-power passes (quick, then UVR when the studio model is absent).
+- **Planner inputs** (pure, shared, null/empty on the phone): `SegmentAnalysis.sectionStartsMs` (exits and entries
+  land on section starts through `phraseStarts`), S-KEY's key over the chroma estimate when its probability ≥ 0.3,
+  `MixContext.energyStep` (a clearly more intense next title drops in; a clear drop in energy skips the drop) and
+  `MixContext.avoid` (« Ketmix apprend »). `ketmix/PcPlanning.kt`: `PcInputs`, `SoundQueue` (shuffle order by sound,
+  `suggest` for the interface).
+- **For the interface**: `KetmixFeedback.transition` (StateFlow of the current/last transition) and
+  `KetmixFeedback.rate(up)` (counted only with « Ketmix apprend de vos avis », off by default; weights local);
+  `LiveMix.frame` (both decks' waveform windows, beat and bar lines, beat phase, levels, voice levels, crossing) and a
+  simple `ui/LiveMixView.kt`.

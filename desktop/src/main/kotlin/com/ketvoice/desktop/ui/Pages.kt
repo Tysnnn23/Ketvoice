@@ -378,6 +378,9 @@ fun SettingsPage() {
         item { KetmixSettings() }
         item("h:Séparation des voix") { SectionHeader("Séparation des voix") }
         item { StemSettings() }
+        // Windows 2.0: « Puissance de Ketmix » (KetmixPowerSection.kt, kept by Ketmix's side).
+        item("h:Puissance de Ketmix") { SectionHeader("Puissance de Ketmix") }
+        item { KetmixPowerSection() }
         item("h:Lecteur") { SectionHeader("Lecteur") }
         item {
             SettingsCard {

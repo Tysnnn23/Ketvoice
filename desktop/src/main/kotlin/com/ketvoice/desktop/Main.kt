@@ -102,6 +102,8 @@ fun main(args: Array<String>) {
     com.ketvoice.app.automix.WaveStore.init(context)
     // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
     com.ketvoice.app.stems.StemLibrary.start()
+    // Windows 2.0 « Puissance de Ketmix »: large models, GPU, idle preparation, live mix view, « Ketmix apprend ».
+    com.ketvoice.desktop.ketmix.KetmixPc.start(context, engine, scope)
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
