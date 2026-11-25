@@ -74,6 +74,27 @@ object SourcePriority {
         prefs?.edit()?.putString(if (mode == Mode.DOWNLOAD) "download_order" else "order", JSONArray(list).toString())?.apply()
     }
 
+    /** The playback order with the custom sources' slots given to [customIds], in that order (built-in sources keep theirs). */
+    fun placeCustom(customIds: List<String>) {
+        val next = placeCustom(entries(Mode.PLAYBACK).map { it.id }, customIds)
+        if (next == playbackOrder.value) return
+        playbackOrder.value = next
+        prefs?.edit()?.putString("order", JSONArray(next).toString())?.apply()
+    }
+
+    internal fun placeCustom(order: List<String>, customIds: List<String>): List<String> {
+        val queue = ArrayDeque(customIds.filter { it in order } + order.filter { it.startsWith("cs:") && it !in customIds })
+        val placed = order.map { if (it.startsWith("cs:")) queue.removeFirst() else it }
+        return placed + customIds.filter { it !in placed }
+    }
+
+    /** The whole order as the listener dragged it (Windows' « Sources »); ids it does not name keep their place after. */
+    fun setOrder(ids: List<String>, mode: Mode = Mode.PLAYBACK) {
+        val next = reconcile(ids, entries(mode).map { it.id })
+        if (mode == Mode.DOWNLOAD) downloadOrder.value = next else playbackOrder.value = next
+        prefs?.edit()?.putString(if (mode == Mode.DOWNLOAD) "download_order" else "order", JSONArray(next).toString())?.apply()
+    }
+
     fun setEnabled(id: String, enabled: Boolean, mode: Mode = Mode.PLAYBACK) {
         if (id.startsWith("cs:") && mode == Mode.PLAYBACK) {
             CustomSources.setEnabled(id.removePrefix("cs:"), enabled)

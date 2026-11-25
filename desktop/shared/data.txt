@@ -22,6 +22,10 @@ data/StreamResolver.kt
 data/StreamQuality.kt
 data/SourcePriority.kt
 data/CustomSources.kt
+# Windows 2.0: extended manifests (lyrics, Canvas, covers), sources synced with the account, the source catalogue.
+data/CustomSourceExtras.kt
+data/CustomSourceSync.kt
+data/SourceCatalogue.kt
 data/YouTubeCatalog.kt
 data/YouTubeMusicSession.kt
 data/OfficialMusicParser.kt

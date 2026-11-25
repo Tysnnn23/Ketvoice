@@ -84,13 +84,14 @@ object LyricsRepo {
         _state.value = State(loading = true, sourceKey = source, trackId = track.id)
         val order = AppSettings.lyricsOrder.value
         if (source == MusicApi.SRC_AUTO && LyricsOrder.custom(order)) {
-            job = scope.launch { inOrder(track, LyricsOrder.parse(order), mode == 1, refresh, gen, source) }
+            job = scope.launch { inOrder(track, LyricsOrder.parse(order) + SourceExtras.lyricsSources(), mode == 1, refresh, gen, source) }
             return
         }
         job = scope.launch {
             var bestRank = -1
             var bestPriority = Int.MAX_VALUE
-            val sources = if (source == MusicApi.SRC_AUTO) MusicApi.lyricSources else listOf(source)
+            // Custom sources whose manifest declares lyrics come last (an extra provider, Windows 2.0).
+            val sources = if (source == MusicApi.SRC_AUTO) MusicApi.lyricSources + SourceExtras.lyricsSources() else listOf(source)
             coroutineScope {
                 sources.forEachIndexed { priority, src -> launch {
                     val result = runCatching { MusicApi.lyrics(track, mode == 1, src, refresh) }.getOrNull() ?: return@launch

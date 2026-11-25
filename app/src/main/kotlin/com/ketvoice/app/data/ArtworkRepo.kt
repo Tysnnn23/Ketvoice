@@ -108,6 +108,7 @@ object ArtworkRepo {
                             async(Dispatchers.IO) {
                                 val url = runCatching {
                                     directCover(track) ?: searchTrackCover(track.title, track.artist)
+                                        ?: SourceExtras.cover(track) // a custom source that declares covers (extended manifest)
                                 }.getOrNull() ?: ""
                                 if (url.isNotEmpty()) {
                                     prefs.edit().putString("t:${track.id}", url).apply()

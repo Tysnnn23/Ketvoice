@@ -6,6 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,9 +37,24 @@ data class SourceManifest(
     val qualities: List<String>,
 
     val downloadsAllowed: Boolean = true,
-    val explicitDownloadPermission: Boolean = false
+    val explicitDownloadPermission: Boolean = false,
+    /** Extended manifest (docs/manifest.md): optional lyrics, Canvas and cover endpoints. */
+    val lyricsUrl: String? = null,
+    val canvasUrl: String? = null,
+    val coverUrl: String? = null,
+    /** What the manifest says it serves (`resources`), lower case; an extra named here without an endpoint uses its default path. */
+    val resources: Set<String> = emptySet(),
+    /** `manifestVersion`: 1 for the original fields only, 2 when the manifest declares extended ones. */
+    val version: Int = 1
 ) {
     val resolvedSearch: String get() = absolute(searchUrl)
+
+    val resolvedLyrics: String? get() = lyricsUrl?.let(::absolute) ?: defaultExtra("lyrics", SourceExtras.LYRICS_PATH)
+    val resolvedCanvas: String? get() = canvasUrl?.let(::absolute) ?: defaultExtra("canvas", SourceExtras.CANVAS_PATH)
+    val resolvedCover: String? get() = coverUrl?.let(::absolute) ?: defaultExtra("cover", SourceExtras.COVER_PATH)
+
+    private fun defaultExtra(resource: String, path: String): String? =
+        if (resource in resources && baseUrl.startsWith("https://")) absolute(path) else null
 
     val resolvedStream: String? get() = streamUrl?.let(::absolute)
         ?: baseUrl.takeIf { it.isNotBlank() }?.let { absolute("$it/stream/{id}?quality={quality}") }
@@ -63,21 +79,31 @@ object CustomSources {
     internal var openStreamConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }
     @Volatile private var fastSearchSupported = true
 
+    /**
+     * Whether a first start adds the Ketvoice Lossless manifest by itself (the phone, as since 2.3). Windows 2.0 sets it
+     * to false before anything opens the sources: there the catalogue (`SourceCatalogue`) offers it in one click.
+     */
+    @Volatile var seedLossless = true
+
     private val _sources = MutableStateFlow<List<CustomSource>>(emptyList())
     val sources: StateFlow<List<CustomSource>> = _sources
     private var prefs: android.content.SharedPreferences? = null
     private val losslessMatches = ArrayDeque<Pair<Long, Track>>()
+    /** Sources removed here, by id: address and when (kept [CustomSourceSync.REMOVED_KEEP_MS], so other devices learn it). */
+    private val removed = LinkedHashMap<String, Pair<String, Long>>()
+    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
 
     fun init(context: Context) {
         SourcePriority.init(context)
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs = p
+        synchronized(this) { removed.putAll(CustomSourceSync.readRemoved(p.getString("removed", null))) }
         val arr = runCatching { JSONArray(p.getString("items", "[]")) }.getOrNull() ?: return
         _sources.value = (0 until arr.length()).mapNotNull { i ->
             runCatching { fromJson(arr.getJSONObject(i)) }.getOrNull()
         }
-        if (!p.getBoolean("lossless_added_v1", false)) {
+        if (seedLossless && !p.getBoolean("lossless_added_v1", false)) {
             val existing = _sources.value.firstOrNull { it.manifestUrl == LOSSLESS_MANIFEST }
             val id = existing?.id ?: MessageDigest.getInstance("SHA-1").digest(LOSSLESS_MANIFEST.toByteArray())
                 .joinToString("") { "%02x".format(it) }.take(12)
@@ -93,6 +119,49 @@ object CustomSources {
 
     fun enabledSources(): List<CustomSource> = _sources.value.filter { it.enabled }
 
+    /** The id a manifest address always gets (the same on every device). */
+    fun idOf(manifestUrl: String): String = MessageDigest.getInstance("SHA-1").digest(manifestUrl.toByteArray())
+        .joinToString("") { "%02x".format(it) }.take(12)
+
+    /** This device's sources as settings-document items (`customSource.<id>`): addresses, on/off and order only. */
+    @Synchronized fun syncEntries(now: Long = System.currentTimeMillis()): Map<String, JSONObject> =
+        CustomSourceSync.entries(orderedForSync(), removed, now)
+
+    /** The custom sources in their playback priority (the order [SourcePriority] tries them). */
+    private fun orderedForSync(): List<CustomSource> {
+        val rank = SourcePriority.orderFlow(SourcePriority.Mode.PLAYBACK).value.withIndex().associate { it.value to it.index }
+        return _sources.value.withIndex().sortedBy { (i, s) -> rank["cs:${s.id}"] ?: (10_000 + i) }.map { it.value }
+    }
+
+    /**
+     * The account's sources land here ([values]: the live `customSource.*` items). A source missing here is added (its
+     * manifest is fetched in the background), one marked removed is removed, on/off and order follow. Nothing is removed
+     * because the account lacks it: a device on a version without source sync sends a document without them.
+     */
+    @Synchronized fun adoptSynced(values: Map<String, String>) {
+        val plan = CustomSourceSync.plan(_sources.value, values)
+        if (plan.isEmpty) return
+        val now = System.currentTimeMillis()
+        plan.remove.forEach { id -> _sources.value.firstOrNull { it.id == id }?.let { removed[id] = it.manifestUrl to now } }
+        val kept = _sources.value.filterNot { it.id in plan.remove }.map { s -> plan.enabled[s.id]?.let { s.copy(enabled = it) } ?: s }
+        val added = plan.add.map { (id, entry) ->
+            removed.remove(id)
+            CustomSource(id, entry.url, runCatching { URL(entry.url).host }.getOrDefault("Source"),
+                entry.url.substringBeforeLast('/'), enabled = entry.enabled)
+        }
+        _sources.value = CustomSourceSync.ordered(kept + added, plan.order)
+        SourcePriority.placeCustom(_sources.value.map { "cs:${it.id}" })
+        persist()
+        added.forEach { source -> background.launch { runCatching { refresh(source.id) } } }
+    }
+
+    /** Puts the custom sources in [ids]' order (the PC's drag and drop), in the list and in the playback priority. */
+    fun reorder(ids: List<String>) {
+        _sources.value = CustomSourceSync.ordered(_sources.value, ids)
+        SourcePriority.placeCustom(_sources.value.map { "cs:${it.id}" })
+        persist()
+    }
+
     private fun requestedQuality(source: CustomSource): String =
         if (source.manifestUrl == LOSSLESS_MANIFEST && source.quality == "high") "lossless" else source.quality
 
@@ -107,8 +176,7 @@ object CustomSources {
         val manifest = parseManifest(url, fetched) ?: return@withContext Result.failure(
             IllegalArgumentException("Manifeste JSON invalide : aucun endpoint de recherche reconnu")
         )
-        val id = MessageDigest.getInstance("SHA-1").digest(url.toByteArray())
-            .joinToString("") { "%02x".format(it) }.take(12)
+        val id = idOf(url)
         val existing = _sources.value.firstOrNull { it.id == id }
 
         val probe = fill(manifest.resolvedSearch, query = "test", id = "",
@@ -125,6 +193,7 @@ object CustomSources {
             manifestJson = fetched, checkedAt = System.currentTimeMillis()
         )
         _sources.value = (_sources.value.filterNot { it.id == id } + source)
+        synchronized(this@CustomSources) { removed.remove(id) }
         persist()
         Result.success(source)
     }
@@ -142,6 +211,7 @@ object CustomSources {
     }
 
     fun remove(id: String) {
+        synchronized(this) { _sources.value.firstOrNull { it.id == id }?.let { removed[id] = it.manifestUrl to System.currentTimeMillis() } }
         _sources.value = _sources.value.filterNot { it.id == id }
         persist()
     }
@@ -449,8 +519,8 @@ object CustomSources {
             cacheTag = "cs:$format:${url.hashCode()}", downloadUrl = download)
     }
 
-    private fun fill(template: String, query: String, id: String, quality: String,
-                     title: String = "", artist: String = ""): String {
+    internal fun fill(template: String, query: String, id: String, quality: String,
+                     title: String = "", artist: String = "", album: String = "", durationSec: Long = 0, isrc: String = ""): String {
         var out = template
             .replace("{query}", enc(query))
             .replace("{q}", enc(query))
@@ -460,6 +530,9 @@ object CustomSources {
             .replace("{quality}", enc(quality.ifBlank { "high" }))
             .replace("{title}", enc(title))
             .replace("{artist}", enc(artist))
+            .replace("{album}", enc(album))
+            .replace("{duration}", if (durationSec > 0) durationSec.toString() else "")
+            .replace("{isrc}", enc(isrc))
         if (query.isNotBlank() && !template.contains("{query}") && !template.contains("{q}") && !template.contains(":query")) {
             out += (if ('?' in out) "&" else "?") + "q=" + enc(query)
         }
@@ -545,7 +618,8 @@ object CustomSources {
         val p = prefs ?: return
         val arr = JSONArray()
         _sources.value.forEach { arr.put(toJson(it)) }
-        p.edit().putString("items", arr.toString()).apply()
+        val gone = synchronized(this) { CustomSourceSync.writeRemoved(removed) }
+        p.edit().putString("items", arr.toString()).putString("removed", gone).apply()
     }
 
     private fun toJson(s: CustomSource): JSONObject = JSONObject()
@@ -663,6 +737,7 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
         is String -> allow.lowercase() in setOf("1", "true", "yes", "on")
         else -> false
     }
+    val extras = ManifestExtras.read(root, endpoints)
     return SourceManifest(
         name = name,
         baseUrl = base,
@@ -671,7 +746,12 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
         downloadUrl = endpoint("download", "downloadUrl", "download_url", "file"),
         qualities = qualities,
         downloadsAllowed = downloadsAllowed,
-        explicitDownloadPermission = explicitDownloadPermission
+        explicitDownloadPermission = explicitDownloadPermission,
+        lyricsUrl = extras.lyrics,
+        canvasUrl = extras.canvas,
+        coverUrl = extras.cover,
+        resources = extras.resources,
+        version = extras.version
     )
 }
 

@@ -86,6 +86,8 @@ object MusicApi {
     const val SRC_LYRICA = "lyrica"
     const val SRC_LRCRED = "lrcred"
     const val SRC_KETVOICE = "ketvoice"
+    /** Custom sources whose extended manifest declares lyrics (SourceExtras); never in [lyricSources] or a stored order. */
+    const val SRC_SOURCES = "sources"
     val lyricSources = listOf(SRC_KETVOICE, SRC_LIRIQO, SRC_BETTER, SRC_LRCRED, SRC_LYRICA, SRC_NETEASE, SRC_LRCLIB, SRC_OVH)
 
     fun sourceName(source: String): String = when (source) {
@@ -99,6 +101,7 @@ object MusicApi {
         SRC_LRCLIB -> "LRCLIB"
         SRC_OVH -> "Lyrics.ovh"
         SRC_OFF -> "Désactivées"
+        SRC_SOURCES -> "Sources personnalisées"
         else -> source
     }
 
@@ -482,6 +485,7 @@ object MusicApi {
             return ExtraLyricsProviders.fetch(source, track, forcePlain)
         }
         if (source == SRC_LRCLIB) return fetchLyrics(track, title, artist, forcePlain)
+        if (source == SRC_SOURCES) return SourceExtras.lyrics(track, forcePlain)
         if (source == SRC_NETEASE) {
             return try {
                 neteaseLyrics(track, title, artist, forcePlain)

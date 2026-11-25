@@ -166,8 +166,11 @@ internal object SettingsKind : SyncKind {
         // Ketmix Studio's presets (`ketmix-presets-v1`) ride along, one item each; the store is opened first, so an
         // unopened store never reads as « every preset removed ».
         com.ketvoice.app.automix.MixPresetStore.init(context)
+        // Custom sources (Windows 2.0): manifest addresses, on/off and order only (`customSource.<id>`), opened first too.
+        com.ketvoice.app.data.CustomSources.init(context)
         val values = keys.mapNotNull { key -> com.ketvoice.app.data.PersonalBackup.setting(key, prefs[key])?.let { key to Canonical.text(it) } }.toMap() +
-            com.ketvoice.app.automix.MixPresetStore.syncEntries().mapValues { Canonical.text(it.value) }
+            com.ketvoice.app.automix.MixPresetStore.syncEntries().mapValues { Canonical.text(it.value) } +
+            com.ketvoice.app.data.CustomSources.syncEntries().mapValues { Canonical.text(it.value) }
         // Phone control's secret rides in this owner-only document (see RemoteKeyStore); no setting holds it.
         val uid = com.ketvoice.app.account.AccountSession.userId() ?: return values
         val remote = com.ketvoice.app.remote.RemoteKeyStore
@@ -200,6 +203,8 @@ internal object SettingsKind : SyncKind {
         com.ketvoice.app.automix.MixPresetStore.init(context)
         com.ketvoice.app.automix.MixPresetStore.adoptSynced(values.filterKeys { it.startsWith(com.ketvoice.app.automix.MixPresetStore.SYNC_PREFIX) }
             .mapNotNull { (k, text) -> runCatching { JSONArray("[$text]").getString(0) }.getOrNull()?.let { k to it } }.toMap())
+        com.ketvoice.app.data.CustomSources.init(context)
+        com.ketvoice.app.data.CustomSources.adoptSynced(values.filterKeys { it.startsWith(com.ketvoice.app.data.CustomSourceSync.PREFIX) })
         com.ketvoice.app.glass.GlassClarity.legacyKeys(values.filter { (key, text) -> key in keys && parse(key, text) != null }.keys)?.let { editor.remove("glassIntensity") }
         editor.commit()
         com.ketvoice.app.data.SettingsStore.load(context)

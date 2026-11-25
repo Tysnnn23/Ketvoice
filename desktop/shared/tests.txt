@@ -17,6 +17,9 @@ data/ArtistPrefsTest.kt
 data/ArtistSignaturesTest.kt
 data/CatalogChartParseTest.kt
 data/CustomSourcesTest.kt
+data/CustomSourceExtendedTest.kt
+data/CustomSourceSyncTest.kt
+data/SourceCatalogueTest.kt
 data/CustomStreamResponseTest.kt
 data/DiskBudgetTest.kt
 data/DownloadValidationTest.kt
