@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "version": "2.0.0",
+  "platform": "windows",
+  "tag": "windows-v2.0.0",
+  "source_commit": "a58724e77a22e4a51533ce79564ba31361e820cb",
+  "created_at": "2026-11-25T22:18:47.252473+00:00",
+  "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from the dispatched main head; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since source_commit",
+  "tests": {
+    "desktop_suite_local_linux": {
+      "run": 347,
+      "failed": 0,
+      "skipped": 3,
+      "commit": "3dfca0a",
+      "note": "package by package (ui 128, ketmix 40, account 6, audio 34, canvas 4, connect 13, library 19, lyrics 25, platform 12, player 22, remote 3, social 20, stems 3, update 11, CompatTest 7); the 3 skipped need a real model or network; later commits add release notes, merge main's model workflow and licence note, fix a mobile test and replace one API 33 call in the shared source reader (desktop *Source* tests rerun: 54/0/0)",
+      "earlier_waves": "wave 1 and wave 2 parts tested on their own branches before merging (UI package 121/0 on the merged wave 2 tree)"
+    },
+    "windows_ci": {
+      "workflow": "windows.yml",
+      "run_id": 45705292563,
+      "conclusion": "success",
+      "commit": "a58724e77a22e4a51533ce79564ba31361e820cb",
+      "steps": "desktop tests with SMTC and WASAPI required, MSI packaging, silent install, Ketvoice.exe --smoke, cold-start probe, uninstall"
+    },
+    "android_ci_shared_code": {
+      "workflow": "android.yml",
+      "run_id": 45705292511,
+      "conclusion": "success",
+      "commit": "a58724e77a22e4a51533ce79564ba31361e820cb",
+      "earlier_runs": "45694806149 on 16fb2af: 1 failure in 2274 tests, StatsHostTest expected five artists in the calendar week on any day while its fixture plays four from Monday to Wednesday (test fixed in 1ebb632). 45698937325 on 1ebb632: tests passed, release lint found InputStream.readNBytes (API 33) in the shared CustomSourceExtras with minSdk 31, which would crash phones on Android 12; a58724e reads the body with a bounded loop instead (mobile lint clean, desktop *Source* tests 54/0/0)",
+      "note": "shared code touched: TransitionPlanner (learned dislikes on filter and dissolve styles, automatic style only; avoid is always empty on the phone), lyrics ranking, import report, playback sync, scrobbling, device codes, social; all mobile unit tests and release lint"
+    },
+    "mobile_targeted_local": "TransitionPlannerTest 31, KetmixLoopBridgeTest 16, KetmixExclusivesTest 10, KetmixFitTest 9, KetmixBudgetTest 8, KetmixFiveElevenTest 5: 79 tests, 0 failures",
+    "supabase_functions_smoke": "ketvoice-profile/health 200; device-link/info, lastfm/status, devices/revoke, my-data/export 401 signed_out without a user; device-link/start returns an 8-character code",
+    "website": "ketvoice-web /link, /u/<name> and /listen?playlist return 200 with no JS errors and no horizontal scroll at 390 px"
+  },
+  "ui_text_audit": "tools/audit_ui_texts.py --check: 0 unaccounted; every new French string has 10 translations (20 in wave 3)",
+  "license_check": "checkNoGpl: no -gpl artifact in the runtime; FFmpeg is the JavaCPP LGPL v3 build; notices installed under app/resources/licenses; the four added fonts (Manrope, Atkinson Hyperlegible Next, Nunito, Lora) are SIL OFL 1.1, their licences shown in About; ketmix-pc-v1 models and ketvoice-align-v1 (Whisper small, MIT) reviewed in docs/licenses/ketmix-pc-models.md and docs/licenses/ketvoice-align.md, permissive code and weights",
+  "credential_scan": {
+    "findings": 0,
+    "scope": "desktop distributable built from the source tree with -PappVersion=2.0.0 (createDistributable, 211 files/archive entries, incl. the bundled Java runtime and its class-data archives); the Last.fm API key and shared secret were confirmed absent from the build and from git (they live only as Supabase edge-function secrets)",
+    "kind": "credential_patterns (tools/scan_release.py)",
+    "reviewed_false_positives": [
+      {
+        "file": "Ketvoice/lib/runtime/lib/modules",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes_nocoops.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      }
+    ],
+    "findings_raw": 3
+  },
+  "models": {
+    "ketmix-stems-onnx-v1": "published 2026-11-21 as a prerelease, not latest; assets match tools/stems/expected-onnx.sha256",
+    "beat_model": "downloaded on request from ketmix-beat-v1's pinned source with SHA-256 c462b064…aea",
+    "ketmix-pc-v1": "published 2026-11-25 as a prerelease, not latest; assets (ketmix-beat-final0, ketmix-voice-melroformer, ketmix-key-skey, ketmix-sound-clap-int8) match tools/models/expected-pc.sha256; downloaded on request, checked before use",
+    "ketvoice-align-v1": "published 2026-11-25 as a prerelease, not latest; encoder 4e0c362d…45a6, decoder 5882e594…ce5a, vocab b34b360d…a126 match tools/models/expected-align.sha256"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the Android in-app updater and the website read the latest release (v9.0.0)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "owner_request": "Ketvoice for Windows 2.0.0 (2026-11-25): liquid glass redesign, stronger AI models on desktop PCs only, account connections and sync, manifest.json sources, a real AI automix; « J'autorise TOUT devient maintenant une règle. »",
+    "recorded_in": "AGENTS.md",
+    "reason": "The owner made publishing validated versions without device testing a standing rule.",
+    "scope": "installation and use on the owner's own Windows computer"
+  },
+  "not_validated": [
+    "No person has installed or used 2.0.0 on a real Windows PC; only the GitHub windows-latest runner installed it silently, ran --smoke and the start-up probe, and uninstalled it.",
+    "Liquid glass, Mica, the cursor lens, the new shadow and the keyboard focus ring were seen only in host renders and tests, not on a real Windows GPU; frame rate on 120/144 Hz screens was not measured.",
+    "The ketmix-pc-v1 models on a real graphics card (DirectML/GPU path) and the desktop-versus-laptop detection were not tried on real hardware.",
+    "WASAPI exclusive mode and true gapless were not heard on a real audio device.",
+    "The Discord IPC pipe, DPAPI-protected tokens, relaunch into another local profile and click-through floating lyrics were not tried on Windows.",
+    "Last.fm sign-in through Supabase was not completed with a real user; the key pair was checked with Last.fm directly.",
+    "Live sync, device move and rooms between a real phone and Windows were not tried.",
+    "Upgrading a real 1.2.0 installation to 2.0.0 was not tried.",
+    "The MSI is not code-signed; Windows SmartScreen will warn about an unknown publisher.",
+    "Independent code review."
+  ],
+  "known_limitations": [
+    "No light/dark/system theme choice on Windows: the window follows Windows.",
+    "The phone is only reachable for phone control while its app is open or playing."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966",
+  "features_2_0": {
+    "window": "liquid glass shell (sidebar, island player, side panel), cursor lens, island unfolding into the full player, full-frame Home, spring transitions, high refresh rates, reduced motion, compact always-on-top player",
+    "ketmix_pc": "power Auto/Balanced/Maximum (desktop PCs get the ketmix-pc-v1 models, laptops keep the base ones), GPU with CPU fallback, idle library preparation, live mix view in the Ketmix panel tab and the full player, Ketmix learns from 👍/👎 (optional)",
+    "account": "Connections page (Discord, Last.fm, ListenBrainz), Discord presence, offline-queued scrobbling, live sync with the phone, connected devices, QR/code sign-in, several local profiles, Mes données (export, delete, list of what leaves the PC), no telemetry",
+    "together": "listening rooms shared with phones, profiles with visibility per module, optional friends activity, smart share links opening the app",
+    "sources_playback": "manifest.json sources with test, order and account sync, catalogue, smart cache, optional exclusive mode and true gapless",
+    "lyrics_library": "AI word sync on desktop PCs (ketvoice-align-v1), multi-source lyrics ranking, translation and romanisation, floating lyrics, outside playlist import with report and follow, drop anywhere, watched folders",
+    "keyboard_and_polish": "symbol, capsule and play buttons reachable by Tab with a focus ring; glass shadow outside the surface only; settings search indexes the 2.0 rows"
+  }
+}
