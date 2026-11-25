@@ -160,6 +160,10 @@ fun main(args: Array<String>) {
                 Item(AppText.t("Suivant"), onClick = { DesktopPlatform.bridge.next() })
                 Item(AppText.t("Précédent"), onClick = { DesktopPlatform.bridge.previous() })
                 Separator()
+                // The compact player, always on top (Windows 2.0).
+                CheckboxItem(AppText.t("Mini-lecteur"), checked = com.ketvoice.desktop.ui.MiniPlayer.open.value,
+                    onCheckedChange = { com.ketvoice.desktop.ui.MiniPlayer.open.value = it })
+                Separator()
                 Item(AppText.t("Ouvrir"), onClick = ::show)
                 Item(AppText.t("Quitter"), onClick = ::quit)
             },
@@ -205,7 +209,17 @@ fun main(args: Array<String>) {
             LaunchedEffect(Unit) {
                 withFrameNanos { }; withFrameNanos { } // the first frame has been drawn once the second one is asked for
                 Startup.firstFrame(window.renderApi.name, renderWanted, probe, context.dataDir)
+                // The glass needs the GPU: a software renderer gets the flat tint (GlassPolicy).
+                com.ketvoice.desktop.ui.glass.GlassPolicy.renderApi.value = window.renderApi.name
+                if (!com.ketvoice.desktop.ui.glass.GlassShader.ok) AppLog.w("glass", "liquid glass shader: ${com.ketvoice.desktop.ui.glass.GlassShader.failure}")
                 if (probe) EventQueue.invokeLater { quit() }
+                else {
+                    // Animations follow the monitor (vsync): measured once, logged beside the display's own rate.
+                    delay(3_000)
+                    val rate = com.ketvoice.desktop.platform.FrameRate.probe()
+                    AppLog.i("render", com.ketvoice.desktop.platform.FrameRate.verdict(rate, com.ketvoice.desktop.platform.FrameRate.displayHz(window)) +
+                        " (" + com.ketvoice.desktop.platform.FrameRate.settings() + ")")
+                }
             }
             // In the tray or minimised for a while: decoded covers go, and the heap gives memory back to Windows.
             LaunchedEffect(visible, state.isMinimized) {
@@ -265,7 +279,11 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-            KetvoiceShell(dark = dark, glass = WindowGlass.active.value)
+            // How the glass surfaces draw: refractive over Mica, else blurred, else a flat tint (GlassPolicy).
+            val glassMode = remember(WindowGlass.enabled.value, WindowGlass.active.value, com.ketvoice.desktop.ui.glass.GlassPolicy.renderApi.value) {
+                com.ketvoice.desktop.ui.glass.GlassPolicy.current().also { AppLog.i("glass", "glass: ${it.name.lowercase()}") }
+            }
+            KetvoiceShell(dark = dark, glass = WindowGlass.active.value, glassMode = glassMode)
         }
         com.ketvoice.desktop.ui.MiniPlayerWindow(icon, when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }, ::show)
     }

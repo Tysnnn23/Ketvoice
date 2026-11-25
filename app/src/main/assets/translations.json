@@ -2858,7 +2858,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "The menu of a song, from a right click or the “…” button.",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "The buttons on the right of the playback bar: 2 to 5, and the queue always stays.",
   "Fermer l'éditeur ?": "Close the editor?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: time · ← →: ±50 ms · ↑ ↓: line · Ctrl+Z: undo"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: time · ← →: ±50 ms · ↑ ↓: line · Ctrl+Z: undo",
+  "Page indisponible": "Page unavailable",
+  "Cette page n'est plus disponible.": "This page is no longer available."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5719,7 +5721,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "किसी गाने का मेन्यू, राइट-क्लिक या “…” बटन से।",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "प्लेबैक बार के दाईं ओर के बटन: 2 से 5, कतार हमेशा रहती है।",
   "Fermer l'éditeur ?": "संपादक बंद करें?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: समय दें · ← →: ±50 ms · ↑ ↓: पंक्ति · Ctrl+Z: पूर्ववत करें"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: समय दें · ← →: ±50 ms · ↑ ↓: पंक्ति · Ctrl+Z: पूर्ववत करें",
+  "Page indisponible": "पेज उपलब्ध नहीं",
+  "Cette page n'est plus disponible.": "यह पेज अब उपलब्ध नहीं है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -8580,7 +8584,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "右クリックまたは「…」ボタンで開く曲のメニュー。",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "再生バー右側のボタン：2〜5 個。再生キューは常に残ります。",
   "Fermer l'éditeur ?": "エディタを閉じますか？",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "スペース：タイミングを打つ · ← →：±50 ms · ↑ ↓：行 · Ctrl+Z：元に戻す"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "スペース：タイミングを打つ · ← →：±50 ms · ↑ ↓：行 · Ctrl+Z：元に戻す",
+  "Page indisponible": "ページを利用できません",
+  "Cette page n'est plus disponible.": "このページはもう利用できません。"
  },
  "zh": {
   "Reverb": "混响",
@@ -11441,7 +11447,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "歌曲的菜单，通过右键或“…”按钮打开。",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "播放栏右侧的按钮：2 到 5 个，播放队列始终保留。",
   "Fermer l'éditeur ?": "关闭编辑器？",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "空格：对时 · ← →：±50 毫秒 · ↑ ↓：行 · Ctrl+Z：撤销"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "空格：对时 · ← →：±50 毫秒 · ↑ ↓：行 · Ctrl+Z：撤销",
+  "Page indisponible": "页面不可用",
+  "Cette page n'est plus disponible.": "此页面已不再可用。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -14302,7 +14310,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Меню трека — по правому щелчку или кнопке «…».",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Кнопки справа на панели воспроизведения: от 2 до 5, очередь остаётся всегда.",
   "Fermer l'éditeur ?": "Закрыть редактор?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Пробел: отметить · ← →: ±50 мс · ↑ ↓: строка · Ctrl+Z: отменить"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Пробел: отметить · ← →: ±50 мс · ↑ ↓: строка · Ctrl+Z: отменить",
+  "Page indisponible": "Страница недоступна",
+  "Cette page n'est plus disponible.": "Эта страница больше недоступна."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -17163,7 +17173,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Il menu di un brano, dal clic destro o dal pulsante «…».",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "I pulsanti a destra della barra di riproduzione: da 2 a 5, la coda resta sempre.",
   "Fermer l'éditeur ?": "Chiudere l'editor?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Spazio: sincronizza · ← →: ±50 ms · ↑ ↓: riga · Ctrl+Z: annulla"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Spazio: sincronizza · ← →: ±50 ms · ↑ ↓: riga · Ctrl+Z: annulla",
+  "Page indisponible": "Pagina non disponibile",
+  "Cette page n'est plus disponible.": "Questa pagina non è più disponibile."
  },
  "es": {
   "Reverb": "Reverb",
@@ -20024,7 +20036,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "El menú de una canción, con clic derecho o con el botón «…».",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Los botones a la derecha de la barra de reproducción: de 2 a 5, la cola siempre permanece.",
   "Fermer l'éditeur ?": "¿Cerrar el editor?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espacio: marcar · ← →: ±50 ms · ↑ ↓: línea · Ctrl+Z: deshacer"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espacio: marcar · ← →: ±50 ms · ↑ ↓: línea · Ctrl+Z: deshacer",
+  "Page indisponible": "Página no disponible",
+  "Cette page n'est plus disponible.": "Esta página ya no está disponible."
  },
  "de": {
   "Reverb": "Reverb",
@@ -22885,7 +22899,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "Das Menü eines Titels, per Rechtsklick oder über die Taste „…“.",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Die Tasten rechts in der Wiedergabeleiste: 2 bis 5, die Warteschlange bleibt immer.",
   "Fermer l'éditeur ?": "Editor schließen?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Leertaste: timen · ← →: ±50 ms · ↑ ↓: Zeile · Strg+Z: rückgängig"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Leertaste: timen · ← →: ±50 ms · ↑ ↓: Zeile · Strg+Z: rückgängig",
+  "Page indisponible": "Seite nicht verfügbar",
+  "Cette page n'est plus disponible.": "Diese Seite ist nicht mehr verfügbar."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -25746,7 +25762,9 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "O menu de uma música, pelo clique direito ou pelo botão “…”.",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "Os botões à direita da barra de reprodução: de 2 a 5, a fila fica sempre.",
   "Fermer l'éditeur ?": "Fechar o editor?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espaço: marcar · ← →: ±50 ms · ↑ ↓: linha · Ctrl+Z: desfazer"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espaço: marcar · ← →: ±50 ms · ↑ ↓: linha · Ctrl+Z: desfazer",
+  "Page indisponible": "Página indisponível",
+  "Cette page n'est plus disponible.": "Esta página já não está disponível."
  },
  "ko": {
   "Reverb": "리버브",
@@ -28607,6 +28625,8 @@
   "Le menu d'un titre, d'un clic droit ou du bouton « … ».": "마우스 오른쪽 클릭 또는 “…” 버튼으로 여는 곡 메뉴.",
   "Les boutons à droite de la barre de lecture : de 2 à 5, la file d'attente reste toujours là.": "재생 바 오른쪽 버튼: 2~5개, 대기열은 항상 남습니다.",
   "Fermer l'éditeur ?": "편집기를 닫을까요?",
-  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "스페이스: 타이밍 찍기 · ← →: ±50 ms · ↑ ↓: 줄 · Ctrl+Z: 실행 취소"
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "스페이스: 타이밍 찍기 · ← →: ±50 ms · ↑ ↓: 줄 · Ctrl+Z: 실행 취소",
+  "Page indisponible": "페이지를 사용할 수 없음",
+  "Cette page n'est plus disponible.": "이 페이지는 더 이상 사용할 수 없습니다."
  }
 }

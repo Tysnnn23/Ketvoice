@@ -43,9 +43,16 @@ object Ket27Desk {
     val font: FontFamily get() = AppFonts.family(AppSettings.appFont.value)
 
     object Type {
-        val largeTitle = TextStyle(fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 41.sp, letterSpacing = (-.5).sp)
+        /** Windows 2.0: Home's hero title. */
+        val hero = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 60.sp, lineHeight = 64.sp, letterSpacing = (-1.8).sp)
+        /** Windows 2.0: the full player's title and the collection headers. */
+        val display = TextStyle(fontWeight = FontWeight.Bold, fontSize = 46.sp, lineHeight = 52.sp, letterSpacing = (-1.2).sp)
+        /** A page's title (Windows 2.0: larger and tighter than the phone's 34). */
+        val largeTitle = TextStyle(fontWeight = FontWeight.Bold, fontSize = 40.sp, lineHeight = 46.sp, letterSpacing = (-.9).sp)
+        /** The small capitals above a title (« REPRENDRE L'ÉCOUTE »). */
+        val eyebrow = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 1.1.sp)
         val title1 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 33.sp, letterSpacing = (-.45).sp)
-        val title2 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-.35).sp)
+        val title2 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-.5).sp)
         val title3 = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 25.sp, letterSpacing = (-.4).sp)
         val body = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = (-.39).sp)
         val headline = body.copy(fontWeight = FontWeight.SemiBold)
@@ -58,9 +65,9 @@ object Ket27Desk {
 
     object Space {
         val xxs = 4.dp; val xs = 8.dp; val s = 12.dp; val m = 16.dp; val l = 20.dp; val xl = 24.dp
-        val sectionTop = 30.dp; val sectionBottom = 10.dp
-        /** The page margin of the content area on a computer (Music for macOS: 30–40 pt). */
-        val page = 32.dp
+        val sectionTop = 40.dp; val sectionBottom = 14.dp
+        /** The page margin of the content area on a computer (Windows 2.0: more air than 1.x's 32). */
+        val page = 36.dp
     }
 
     /** The radii of the Ket 27 ladder, scaled by « Arrondis » (0 % square, 200 % twice as round). */
@@ -105,6 +112,13 @@ data class KetColors(
     /** The sidebar and top bar are Acrylic (tint and grain over the Mica) rather than a flat material. */
     val acrylic: Boolean = false,
 ) {
+    /** Windows 2.0's glass surfaces (sidebar, island, panel): the tint laid over what they refract or blur. */
+    val glassTint: Color get() = if (dark) raised.copy(alpha = .46f) else card.copy(alpha = .66f)
+    /** The light caught by a glass surface's rim. */
+    val glassRim: Color get() = Color.White.copy(alpha = if (dark) .16f else .75f)
+    /** The clear drop of the lens under the pointer. */
+    val lensTint: Color get() = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .62f)
+
     companion object {
         /**
          * « Verre Windows 11 »: the window is Mica, the pages lie on WinUI's layer fill and the sidebar and the bar

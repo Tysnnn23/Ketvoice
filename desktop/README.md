@@ -19,7 +19,8 @@ desktop/
     player/DesktopStreams.kt              a Track to what the engine reads (download, then the app's sources)
     library/                              DesktopLibrary (favourites, playlists, history), DesktopDownloader
     platform/                             tray/SMTC/media keys, single instance, WindowStore, autostart, logs, About
-    ui/                                   the Ket 27 shell: sidebar, bar, pages, queue/lyrics panels, full player
+    ui/                                   the Ket 27 shell (2.0): floating glass sidebar, player island, pages, right panel, full player
+    ui/glass/                             liquid glass: GlassShader (SkSL), GlassPolicy (fallbacks), glassSource/glass modifiers
   src/main/kotlin/com/ketvoice/app/...    desktop counterparts of Android-bound app objects (Player facade…)
   src/test/kotlin/                        desktop tests (engine, player, library, platform, shell, renders)
   icons/ketvoice.ico, ketvoice.png        made from app/src/main/res/drawable-nodpi/vicecity_logo.webp
@@ -425,8 +426,8 @@ Android in-app updater skips those tags, as it skips the model tags).
   album cards (right click), album/playlist/artist headers, and the title menu on the bar's LCD and the full player's ⋯.
 - **Shortcuts** (`ui/Shortcuts.kt`, listed in Settings): Space, ←/→ ±10 s, Ctrl+←/→, ↑/↓ volume, Ctrl+F, Ctrl+L,
   Ctrl+P, Ctrl+M, Ctrl+,, Alt+←, Escape. Text fields marked with `Modifier.textEntry()` keep their keys.
-- **Mini-player** (`ui/MiniPlayer.kt`): an optional always-on-top 380×132 window (Ctrl+M, Settings › Windows, the
-  full player's top bar).
+- **Mini-player** (`ui/MiniPlayer.kt`): an optional always-on-top window (Ctrl+M, Settings › Windows, the full player's top
+  bar); since 2.0 the frameless glass compact player described in « Windows 2.0 interface ».
 - **Dates**: `LocalDates` takes short day and month names from ICU4J in the app language (the packaged runtime has
   no `jdk.localedata`, so the JDK gave « Mon Tue » everywhere).
 - **Full player**: `CoverFlowBackground`, the phone's `ArtworkFlow` restated (three blurred cover fields turning and
@@ -474,8 +475,9 @@ Android in-app updater skips those tags, as it skips the model tags).
   build 22621 and later, the older `DWMWA_MICA_EFFECT` on 22000–22620, through JNA; `DwmExtendFrameIntoClientArea(-1)` and
   a transparent skiko `SkiaLayer` let it through (the window keeps its system frame, so `ComposeWindow.isTransparent`,
   which needs an undecorated window, is not used). The shell then reads `KetColors.glass`: the window transparent, the
-  pages on WinUI's layer fill, the sidebar, bar and side panel as in-app Acrylic (its luminosity tint plus a 2 % grain,
-  `ui/Acrylic.kt`); cards, menus and the players stay solid. Solid colours as before on Windows 10, with « Effets de
+  pages on WinUI's layer fill; cards, menus and the players stay solid. Since 2.0 the sidebar, island and panel are the
+  liquid glass of « Windows 2.0 interface », drawn above the Mica (1.1's Acrylic material, `ui/Acrylic.kt`, is kept for
+  the flat fallback's grain). Solid colours as before on Windows 10, with « Effets de
   transparence » off, in high contrast, when Settings › Windows › « Verre Windows 11 » is off, or when a DWM call fails.
   Checked again when the theme or the setting changes and when the window comes to the front.
 - **« Lecteur plein écran »** (`ui/FullScreenPlayer.kt`): F11 or the full player's button; the window goes
@@ -579,3 +581,79 @@ Android in-app updater skips those tags, as it skips the model tags).
 - Tests: `PersonalizeTest` (defaults identical, guarded custom themes, accent, sizes, fonts and licences, settings kept
   and sanitized, sync checks, share code, the page in the shell, sung ink, full-screen sizes), `LyricsEditorDeskTest`
   (model, file seam, keys through the window, preview, close dialog, menus), shared `LivelyLyricsTest`, `LyricsDraftTest`.
+
+## Windows 2.0 interface (`win2ui`)
+
+The window was redrawn for 2.0; everything of 1.2 (Personnalisation, Disposition, settings search, the lyrics editor,
+the headphone EQ page, Ketmix Studio, F11, the thumbnail buttons, the tray) works in it unchanged.
+
+- **Layout** (`ui/Shell.kt`, state in `ui/ShellState.kt`). The pages run edge to edge under floating glass: the sidebar
+  (`ui/Sidebar.kt`) 12 dp from the edges, keeping only its icons below 1100 dp (`ShellMetrics.COLLAPSE_BELOW`); the player
+  as an island at the bottom centre of the room between the sidebar and the panel (`ui/Island.kt`), growing under the
+  pointer (seek bar, shuffle, repeat, volume, Ketmix) and unfolding into the full player; the contextual panel on the right
+  (`ui/SidePanel.kt`, 300–560 dp, resized from its left edge, slid in and out on a spring). Pages keep clear of the glass
+  through `LocalShellInsets` (`PageEdges` in `ui/Pages.kt`; `Page()` applies it). `ShellState` holds the open tab, the panel
+  and sidebar widths, the island's state and place, and whether the full player is open; `KetvoiceShell(shell = …)` takes
+  one (tests drive it). `Panel` is kept for 1.2 callers (`Panel.LYRICS.tab == "lyrics"`).
+- **Liquid glass** (`ui/glass/`). `glassSource(backdrop)` records the pages into a `GraphicsLayer` each frame;
+  `Modifier.glass(backdrop, radius, tint, style)` draws that layer again under a surface, moved to its place, through
+  `GlassShader` (SkSL run by `ImageFilter.makeRuntimeShader` as the layer's `RenderEffect`): a rounded rim on a circular
+  profile bends the light inward, the three colours bend by slightly different amounts, a thin specular line follows the
+  rim where it faces the light, and a blur fed as the shader's input frosts the middle. `GlassLens` magnifies a disc of a
+  surface. `GlassStyle` holds Panel / Island / Drop / Clear. Glass never samples a source it is inside (no recursion): the
+  sidebar, island, panel and back button sit outside the pages' source; Home's hero card and the full player's controls
+  refract a local source (the hero picture, the cover colours). It sits above Windows 11's Mica: where Mica shows through the
+  pages, the glass is clear over it.
+- **Fallbacks** (`GlassPolicy.choose`, logged at start as `glass: …`): `LIQUID` on Windows 11 with « Verre Windows 11 » on and
+  a GPU renderer; `FROSTED` (the backdrop blurred under the tint) when the shader does not compile, the setting is off,
+  on Windows 10 or with transparency effects off; `TINTED` (a flat tint, 1.2's material) in high contrast or with a software
+  renderer. The window's render API comes from the first frame (`GlassPolicy.renderApi`).
+- **Lens and pills.** The sidebar's selection is a clear glass drop (`LensPill`) sprung from the selected entry to the
+  entry under the pointer, leaning towards it and stretching with speed (`SideLens`, `LensMath`); the hovered entry grows
+  4.5 %. Symbol buttons swell under the pointer (`KetIconButton`), the panel's tabs slide a drop under the open one.
+- **Motion** (`ui/Fluid.kt`, `ui/Transitions.kt`). `SharedTransitionLayout` wraps the shell: the island and the full
+  player are the two sides of one `AnimatedContent` whose cover, title, artist and transport are shared elements
+  (`Modifier.shared`), while the full player's outline unfolds from the island's place (`Unfold`); album covers are shared
+  between grids and the album header (`sharedCover`, key `SharedMotion.albumKey`). Pages change on springs
+  (`SharedMotion.pages`). Micro-interactions: a press sinks and the release bounces (`Motion.pressSpring`), toggles pop
+  (`rememberPop`), a like bursts (`likeBurst`), buttons and capsules lean to the pointer (`magnetic`), sliders stretch past
+  their ends (`ElasticSlider`), menus grow out of the button that opened them (`MenuState.open(…, from)`, `MenuGrow`).
+  Wheel scrolling glides (`fluidScroll`: an exponential glide per notch, notches adding up, rubber-band edges that settle
+  back), the same at any refresh rate since every step is time-based. Reduced motion turns all of it off.
+- **Refresh rate** (`platform/FrameRate.kt`). Compose draws on skiko's frame dispatcher; with `skiko.vsync.enabled`
+  Direct3D presents on the display's vertical blank (144 frames on a 144 Hz screen) and skiko's fallback limiter follows the
+  display's own rate, never 60. No animation in the window paces itself on a timer. Three seconds after start the window
+  asks for 90 frames and logs their rate beside the display's (`render: frames 143.9/s on a 144 Hz display: …`).
+- **Home** (`ui/HomeHero.kt`): the last title heard (« Reprendre l'écoute ») or the first one picked for the listener, its
+  Canvas edge to edge (cropped, never letterboxed) or its cover blurred to fill with the sharp cover on the right, the words
+  on a clear glass card; the shelves of Settings › Disposition below, scrolling edge to edge.
+- **Panel tabs**: Paroles (Cascade and the voice level), File d'attente, Artiste (photo, a few words, top titles, its page),
+  Ketmix (switch, what it is doing, the next transition, style, intensity, « Ouvrir le Studio »).
+- **Compact player** (`ui/MiniPlayer.kt`, `MiniPlayer.open` as before): a frameless transparent window above the others
+  (444 × 172, the card inside a shadow margin), dragged anywhere and reopened there (`CompactPlayer.place`, keys
+  `compactX`/`compactY` in the `desktop` preferences, back to the bottom right when that place left the screens): the cover
+  blurred behind glass, cover, title, artist, the line being sung, the transport on a glass capsule, the progress. Toggled
+  from the island, the full player, the tray (« Mini-lecteur », checked), Ctrl + M and Settings › Windows.
+- **Typography** (`Ket27Desk.Type`): `hero` 60, `display` 46, `largeTitle` 40, `title2` 24 for section headers, `eyebrow`
+  small capitals; more air (`Space.page` 36, sections 40 above), all on the listener's font and text size.
+
+### Extension points (for the pages and panels to come)
+
+All three live in `ui/Registry.kt`; register from the feature's own file at start (Main, or the feature's `start`).
+
+- **Pages** — `PageRegistry.register(PageRegistry.Page(id, title, icon, sidebar = true, order = 100) { arg -> … })`.
+  Reach it with `nav.root(Route.Extra(id))` or `nav.push(Route.Extra(id, arg))`; with `sidebar` it gets an entry after the
+  library (ordered by `order`, the lens and the narrow icons included). Draw it with `Page(title, tag) { … }` so it keeps the
+  shell's edges and the gliding wheel. A route that is no longer registered shows « Page indisponible ».
+- **Right panel tabs** — `PanelTabs.register(PanelTabs.Tab(id, label, icon, order) { … })` (built-ins: lyrics 10, queue 20,
+  artist 30, ketmix 40). Open one with `LocalShell.current.open(id)` (or `toggle`).
+- **Settings sections** — `SettingsSections.register(SettingsSections.Section(key, title, after = "Windows", rows) { … })`:
+  drawn after the built-in section named `after` (header item `h:<key>`), its `rows` indexed by the settings search.
+- Glass for a new surface: put it outside the pages' source and use `Modifier.glass(backdrop, …)` with the shell's backdrop
+  (passed to the sidebar, island and panel), or give it a local `glassSource` to refract.
+
+Tests: `Win2LogicTest` (glass policy and shader, layout and panel limits, insets, island sizes, unfold, hero pick, glide
+at 60/144/240 Hz, rubber band, magnet, elastic slider, menu origin, lens, page transitions under reduced motion, frame
+rate, compact player place and lyric line), `Win2ShellTest` (the island opening and unfolding, the panel's tabs, the narrow
+sidebar, registered pages/tabs/settings sections, every glass mode, the compact player), renders `Win2Screenshots`
+(`build/desktop-ui-preview/win2-*.png`).

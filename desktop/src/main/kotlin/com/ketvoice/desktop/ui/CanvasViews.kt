@@ -233,13 +233,16 @@ internal fun FittedCanvas(path: String, playing: Boolean, ambient: Color, modifi
  */
 @Composable
 internal fun MotionHeader(path: String, wash: Color) {
-    val side = com.ketvoice.desktop.ui.theme.Ket27Desk.Space.page
-    val top = 22.dp
+    // Out of the page's margins: the shell's insets and the page's own (PageEdges), up to the window's top.
+    val edges = PageEdges.padding()
+    val left = edges.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+    val right = edges.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+    val top = edges.calculateTopPadding()
     BoxWithConstraints(Modifier.fillMaxWidth().layout { measurable, constraints ->
-        val h = side.roundToPx(); val t = top.roundToPx()
-        val wide = constraints.maxWidth + 2 * h
+        val l = left.roundToPx(); val r = right.roundToPx(); val t = top.roundToPx()
+        val wide = constraints.maxWidth + l + r
         val p = measurable.measure(constraints.copy(minWidth = wide, maxWidth = wide))
-        layout(constraints.maxWidth, (p.height - t).coerceAtLeast(0)) { p.place(-h, -t) }
+        layout(constraints.maxWidth, (p.height - t).coerceAtLeast(0)) { p.place(-l, -t) }
     }.testTag("motion-header")) {
         val height = (maxWidth.value * .42f).coerceIn(300f, 520f).dp
         Box(Modifier.fillMaxWidth().height(height)) {

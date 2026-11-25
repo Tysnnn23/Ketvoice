@@ -64,8 +64,10 @@ fun SongsPage() {
     var selected by remember { mutableStateOf<String?>(null) }
     val sorted = remember(songs, key, ascending, added) { key?.let { LibraryViews.sort(songs, it, ascending) } ?: LibraryViews.byAdded(songs, added) }
     fun sortBy(k: SortKey) { if (key == k) ascending = !ascending else { key = k; ascending = true } }
-    Column(Modifier.fillMaxSize().padding(horizontal = Ket27Desk.Space.page).testTag("page:songs")) {
-        Spacer(Modifier.height(22.dp))
+    val edges = PageEdges.padding(bottom = 0.dp)
+    Column(Modifier.fillMaxSize().padding(start = edges.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+        end = edges.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)).testTag("page:songs")) {
+        Spacer(Modifier.height(PageEdges.TOP))
         KText("Titres", Ket27Desk.Type.largeTitle)
         Spacer(Modifier.height(16.dp))
         if (songs.isEmpty()) { EmptyMessage("Aucun titre", "Les titres que vous aimez, téléchargez ou ajoutez à une playlist apparaissent ici."); return }
@@ -77,7 +79,8 @@ fun SongsPage() {
             HeaderCell("Durée", SortKey.DURATION, key, ascending, Modifier.width(70.dp)) { sortBy(it) }
         }
         Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline))
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp)) {
+        val list = androidx.compose.foundation.lazy.rememberLazyListState()
+        LazyColumn(Modifier.fillMaxSize().fluidScroll(list), state = list, contentPadding = PaddingValues(bottom = edges.calculateBottomPadding() + 40.dp)) {
             itemsIndexed(sorted, key = { _, t -> t.id }) { i, t ->
                 TableRow(t, sorted, i, striped = i % 2 == 1, selected = selected == t.id) { selected = t.id }
             }
@@ -127,10 +130,11 @@ private fun <T> Grid(title: String, tag: String, items: List<T>, min: androidx.c
         }
         return
     }
-    LazyVerticalGrid(GridCells.Adaptive(min), Modifier.fillMaxSize().testTag("page:$tag"),
-        contentPadding = PaddingValues(start = Ket27Desk.Space.page, end = Ket27Desk.Space.page, top = 22.dp, bottom = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l), verticalArrangement = Arrangement.spacedBy(Ket27Desk.Space.xl)) {
-        item(span = { GridItemSpan(maxLineSpan) }) { KText(title, Ket27Desk.Type.largeTitle, Modifier.padding(bottom = 8.dp)) }
+    val state = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    LazyVerticalGrid(GridCells.Adaptive(min), Modifier.fillMaxSize().fluidScroll(state).testTag("page:$tag"), state = state,
+        contentPadding = PageEdges.padding(),
+        horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.xl), verticalArrangement = Arrangement.spacedBy(Ket27Desk.Space.xl)) {
+        item(span = { GridItemSpan(maxLineSpan) }) { KText(title, Ket27Desk.Type.largeTitle, Modifier.padding(bottom = 10.dp)) }
         if (items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { EmptyMessage(title, empty) }
         items(items) { cell(it) }
     }

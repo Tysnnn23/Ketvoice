@@ -142,7 +142,8 @@ fun BoxScope.PlaybackToast() {
         player.errors.collect { message = it; shown = true }
     }
     LaunchedEffect(shown, message) { if (shown) { delay(4_000); shown = false } }
-    AnimatedVisibility(shown, Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp),
+    // Above the player island (Windows 2.0).
+    AnimatedVisibility(shown, Modifier.align(Alignment.BottomCenter).padding(bottom = ShellMetrics.ISLAND_HEIGHT + ShellMetrics.ISLAND_FOOT * 2 + 8.dp),
         enter = if (Motion.reduced) fadeIn() else fadeIn() + slideInVertically { it / 2 },
         exit = if (Motion.reduced) fadeOut() else fadeOut() + slideOutVertically { it / 2 }) {
         Row(Modifier.shadow(12.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).background(ket.raised)

@@ -73,7 +73,7 @@ class PolishScreenshots {
         })
         for (dark in listOf(true, false)) shoot("p3-mini-${if (dark) "dark" else "light"}", 380, 132) {
             KetDesktopTheme(dark) {
-                androidx.compose.runtime.CompositionLocalProvider(LocalPlayer provides RecordingPlayer().playing()) { MiniPlayerContent {} }
+                androidx.compose.runtime.CompositionLocalProvider(LocalPlayer provides RecordingPlayer().playing()) { MiniPlayerContent(onExpand = {}) }
             }
         }
         for (dark in listOf(true, false)) shoot("p3-shortcuts-${if (dark) "dark" else "light"}", 640, 500) {
