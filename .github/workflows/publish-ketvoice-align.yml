@@ -96,7 +96,7 @@ jobs:
           cp docs/licenses/ketvoice-align.md out/LICENSES.md
           (cd out && sha256sum *.onnx *.tiktoken | tee SHA256SUMS.txt)
           cat > notes.md <<'NOTES'
-          Word sync by AI for desktop PCs (Windows 2.0, « Puissance de Ketmix » → Maximum): OpenAI Whisper small (MIT code
+          Word sync by AI for desktop PCs (Windows 2.0, Ketmix power set to Maximum): OpenAI Whisper small (MIT code
           and weights), converted to ONNX for aligning known lyrics on the separated voice. Downloaded by the app on request
           and checked against its SHA-256; not an app version. Converted and checked by
           .github/workflows/publish-ketvoice-align.yml; licences in LICENSES.md.
