@@ -19,3 +19,6 @@ handoff/HandoffMessage.kt
 remote/RemoteWire.kt
 remote/RemoteSession.kt
 remote/RemoteControl.kt
+# Windows 2.0 social: profile visibility, friends, « Activité des amis », smart share links (pure, shared with the phone).
+social/*.kt
+account/AvatarCrop.kt

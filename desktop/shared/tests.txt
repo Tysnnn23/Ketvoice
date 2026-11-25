@@ -59,3 +59,10 @@ automix/BeatPrecisionTest.kt
 # Windows 9.0 port: lyrics 8.3 values and the lyrics editor's draft.
 ui/player/LivelyLyricsTest.kt
 data/LyricsDraftTest.kt
+# Windows 2.0 social: the shared rules, and Ketogether's protocol and room sync run on this computer too.
+social/SocialRulesTest.kt
+social/ShareUrlsTest.kt
+together/TogetherSim.kt
+together/TogetherSessionTest.kt
+together/TogetherProtocolTest.kt
+together/TogetherHostRulesTest.kt

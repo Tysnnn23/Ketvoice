@@ -19,7 +19,22 @@ object DesktopPlatform {
     val openRequests: Flow<List<String>> = opens.receiveAsFlow()
 
     fun open(paths: List<String>) {
-        if (paths.isNotEmpty()) opens.trySend(paths)
+        val (links, files) = paths.partition { it.startsWith("ketvoice:", ignoreCase = true) }
+        if (links.isNotEmpty()) pendingLinks.value = (pendingLinks.value + links.map { it.take(4096) }).takeLast(16)
+        if (files.isNotEmpty()) opens.trySend(files)
+    }
+
+    /**
+     * `ketvoice://` links Windows handed to Ketvoice (the browser's « Ouvrir dans Ketvoice »), from this launch and later
+     * ones, until a feature [claim]s them: each feature takes the links it knows (social, sign-in…) and leaves the others.
+     */
+    val pendingLinks = kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
+
+    /** Removes and answers the pending links [mine] recognises. */
+    @Synchronized fun claim(mine: (String) -> Boolean): List<String> {
+        val taken = pendingLinks.value.filter(mine)
+        if (taken.isNotEmpty()) pendingLinks.value = pendingLinks.value - taken.toSet()
+        return taken
     }
 }
 

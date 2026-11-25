@@ -14,3 +14,10 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/ketvoice-artists/deno.json"
 entrypoint = "./functions/ketvoice-artists/index.ts"
+
+# Profile photos and banners (Windows 2.0 social): public pictures are fetched without any header by link previews
+# and <img>; the handler treats a request without a listener's token as anonymous (public profiles only).
+[functions.ketvoice-profile]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/ketvoice-profile/index.ts"

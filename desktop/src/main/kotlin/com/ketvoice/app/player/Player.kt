@@ -159,7 +159,10 @@ object Player {
     @Synchronized
     fun jumpTo(index: Int) { if (index in _state.value.queue.indices) startAt(index) }
 
-    @Synchronized fun toggle() { if (_state.value.isPlaying) pause() else play() }
+    @Synchronized fun toggle() {
+        if (transportGate?.invoke(if (_state.value.playWhenReady) "pause" else "play", 0L) == true) return
+        if (_state.value.isPlaying) pause() else play()
+    }
 
     @Synchronized
     fun play() {
@@ -183,6 +186,7 @@ object Player {
 
     @Synchronized
     fun next() {
+        if (transportGate?.invoke("next", 0L) == true) return
         // Ketmix: « Suivant » may mix into the next title instead of cutting to it (ketmixOnSkip).
         if (runCatching { skipHook?.invoke() }.getOrNull() == true) return
         val s = _state.value
@@ -197,6 +201,7 @@ object Player {
     /** Back to the start after the first seconds; otherwise the title the listener came from. */
     @Synchronized
     fun previous() {
+        if (transportGate?.invoke("previous", 0L) == true) return
         val s = _state.value
         if (s.index < 0) return
         val position = engine?.takeIf { loadedEntry != null }?.positionMs() ?: s.positionMs
@@ -207,6 +212,7 @@ object Player {
 
     @Synchronized
     fun seekTo(ms: Long) {
+        if (transportGate?.invoke("seek", ms.coerceAtLeast(0L)) == true) return
         val position = ms.coerceAtLeast(0L)
         if (loadedEntry != null) engine?.seekTo(position)
         _state.value = _state.value.copy(positionMs = position)
@@ -321,6 +327,16 @@ object Player {
     }
 
     /** The listener asked for this entry to play next (see [playNext]). */
+    /**
+     * Ketogether (Windows 2.0): asked first by the transport (toggle, next, previous, seek) while this PC is a guest of a
+     * room; true when the room took the action (a request to the host, or a refusal). Same contract as the phone's.
+     */
+    @Volatile internal var transportGate: ((action: String, positionMs: Long) -> Boolean)? = null
+
+    /** Where the engine is in the title now (between the ticks), for a room's drift correction. */
+    @Synchronized fun positionNow(): Long = engine?.takeIf { loadedEntry != null && _state.value.isPlaying }?.positionMs()?.coerceAtLeast(0L)
+        ?: _state.value.positionMs
+
     /** Ketmix on the desktop: asked first when the listener skips; true when it mixes into the next title instead. */
     @Volatile internal var skipHook: (() -> Boolean)? = null
 
@@ -591,6 +607,7 @@ object Player {
         history.clear(); linearOrder = emptyList(); autoEntries.clear(); autoplayHeard.clear(); failures = 0
         synchronized(pinnedEntries) { pinnedEntries.clear() }
         autoplayCandidates = ::radioOf
+        transportGate = null
         _state.value = PlayerUiState(); _loading.value = false; _volume.value = 1f; _format.value = null
     }
 }

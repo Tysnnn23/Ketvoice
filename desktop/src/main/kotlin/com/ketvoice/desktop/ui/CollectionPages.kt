@@ -96,7 +96,7 @@ private fun durationLabel(tracks: List<Track>): String {
 private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, title: String, subtitle: String, onSubtitle: (() -> Unit)?,
                              meta: String, accent: Color, tracks: List<Track>,
                              titleSlot: (@Composable () -> Unit)? = null, extraButtons: @Composable () -> Unit = {},
-                             onDownload: (() -> Unit)? = null) {
+                             onDownload: (() -> Unit)? = null, more: () -> List<MenuItem> = { emptyList() }) {
     val ket = LocalKet.current
     val actions = LocalTrackActions.current
     Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 34.dp), verticalAlignment = Alignment.Bottom) {
@@ -115,7 +115,7 @@ private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, tit
                 CapsuleButton("Lecture", KetIcons.Play, { if (tracks.isNotEmpty()) actions.play(tracks, 0) }, filled = true, accent = accent, modifier = Modifier.testTag("play-all"))
                 CapsuleButton("Aléatoire", KetIcons.Shuffle, { actions.playShuffled(tracks) }, filled = false, accent = accent, modifier = Modifier.testTag("shuffle-all"))
                 extraButtons()
-                if (tracks.isNotEmpty()) MoreButton(accent) { actions.collectionMenu(onDownload) { tracks } }
+                if (tracks.isNotEmpty()) MoreButton(accent) { actions.collectionMenu(onDownload, more()) { tracks } }
             }
         }
     }
@@ -141,7 +141,8 @@ fun AlbumPage(ref: AlbumRef) {
                 CollectionHeader(if (motion != null) null else ({ Artwork(cover, 300.dp, Modifier.sharedCover(SharedMotion.albumKey(ref)),
                     radius = Ket27Desk.Radius.artwork, shadow = 30.dp) }),
                     r.type, r.title, r.artist, { nav.push(Route.Artist(ArtistRef(null, r.artist))) },
-                    listOfNotNull(r.year, if (tracks.isNotEmpty()) durationLabel(tracks) else null).joinToString(" · "), accent, tracks)
+                    listOfNotNull(r.year, if (tracks.isNotEmpty()) durationLabel(tracks) else null).joinToString(" · "), accent, tracks,
+                    more = { listOfNotNull(TrackMenuSlots.shareAlbum?.invoke(r)) })
             }
             loadStates(loader)
             val d = data ?: return@Page
@@ -279,7 +280,8 @@ fun PlaylistPage(id: String) {
                     CapsuleButton("Supprimer", KetIcons.Trash, { deleting = true }, filled = false, accent = destructiveRed, modifier = Modifier.testTag("delete-playlist"))
                 },
                 // « Playlists téléchargées à jour »: a playlist downloaded from its menu is followed from then on.
-                onDownload = { com.ketvoice.app.data.PlaylistStore.lists.value.firstOrNull { it.id == p.id }?.let(com.ketvoice.desktop.library.PlaylistWatch::follow) })
+                onDownload = { com.ketvoice.app.data.PlaylistStore.lists.value.firstOrNull { it.id == p.id }?.let(com.ketvoice.desktop.library.PlaylistWatch::follow) },
+                more = { listOfNotNull(TrackMenuSlots.sharePlaylist?.invoke(p)) })
             if (deleting) ConfirmDialog(AppText.t("Supprimer la playlist"),
                 AppText.t("« {0} » sera supprimée de votre bibliothèque.").replace("{0}", p.name), "Supprimer",
                 onConfirm = { library.deletePlaylist(p.id); if (!nav.back()) nav.root(Route.Home) }, onDismiss = { deleting = false })

@@ -105,12 +105,15 @@ object DesktopAutomix {
         }
     }
 
+    /** Ketmix waits while this is true: a Ketogether guest follows the host's music, transitions included. */
+    @Volatile var held: () -> Boolean = { false }
+
     private suspend fun watch() {
         while (currentCoroutineContextActive()) {
             delay(250)
             val e = engine ?: continue
             val status = e.mixStatus.value
-            if (!AppSettings.automix.value) {
+            if (!AppSettings.automix.value || held()) {
                 if (status.phase == FfmpegAudioEngine.MixPhase.Scheduled) e.cancelMix()
                 doneKey = null
                 continue
@@ -281,7 +284,7 @@ object DesktopAutomix {
      */
     fun skipMix(): Boolean {
         val e = engine ?: return false
-        if (!AppSettings.automix.value || !AppSettings.ketmixOnSkip.value) return false
+        if (!AppSettings.automix.value || !AppSettings.ketmixOnSkip.value || held()) return false
         if (e.mixStatus.value.phase == FfmpegAudioEngine.MixPhase.Mixing) return false
         val state = Player.state.value
         if (state.repeatOne || !state.isPlaying) return false

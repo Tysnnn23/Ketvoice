@@ -36,7 +36,8 @@ internal object DeskLayout {
     val barLabels = linkedMapOf("lyrics" to "Paroles", "queue" to "À suivre", "account" to "Contrôle du téléphone", "output" to "Sortie audio",
         "like" to "J'aime", "playlist" to "Ajouter à une playlist", "download" to "Télécharger")
     val menuLabels = linkedMapOf("playNext" to "Lire ensuite", "enqueue" to "Ajouter à la file d'attente", "playlist" to "Ajouter à une playlist",
-        "mixPoint" to "Ketmix Studio", "lyricsEditor" to "Éditer les paroles…", "download" to "Télécharger", "favorite" to "J'aime")
+        "mixPoint" to "Ketmix Studio", "lyricsEditor" to "Éditer les paroles…", "download" to "Télécharger", "favorite" to "J'aime",
+        "share" to "Partager")
 
     /** Library pages: their orders, as the phone stores them; the window opens Albums, Artists and Titles A–Z. */
     val sortDefaults = linkedMapOf("playlists" to "Recent", "albums" to "1", "artists" to "1", "titles" to "1")
@@ -88,7 +89,8 @@ internal object DeskLayout {
 
     fun barButtons(text: String? = LayoutSettings.player.value): List<String> = bar.shown(text).filter { it in barLabels }
 
-    fun menuItems(text: String? = LayoutSettings.menu.value): List<String> = menu.shown(text).filter { it in menuLabels }
+    fun menuItems(text: String? = LayoutSettings.menu.value): List<String> =
+        menu.shown(text).filter { it in menuLabels && (it != "share" || TrackMenuSlots.share != null) }
 
     /**
      * A title's menu with its fixed parts: « Aller à l'album » and « Aller à l'artiste » follow Télécharger (or end the

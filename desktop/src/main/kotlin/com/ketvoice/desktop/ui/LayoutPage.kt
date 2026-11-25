@@ -50,7 +50,7 @@ private fun LayoutCard() {
         Hairline()
         LibraryGroup()
         Hairline()
-        val menuLabels = if (TrackMenuSlots.lyricsEditor != null) DeskLayout.menuLabels else DeskLayout.menuLabels - "lyricsEditor"
+        val menuLabels = DeskLayout.menuLabels.filterKeys { (it != "lyricsEditor" || TrackMenuSlots.lyricsEditor != null) && (it != "share" || TrackMenuSlots.share != null) }
         OrderGroup("Menu des titres", "Le menu d'un titre, d'un clic droit ou du bouton « … ».", DeskLayout.menu, LayoutSettings.menu, menuLabels, "menu")
         Hairline()
         ResetRow()

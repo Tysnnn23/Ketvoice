@@ -67,7 +67,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
      * ensuite » in their order, the queue, a playlist, download. [load] fetches them (an album card's titles come
      * from the catalogue only when an action is chosen).
      */
-    fun collectionMenu(onDownload: (() -> Unit)? = null, load: suspend () -> List<Track>): List<MenuItem> {
+    fun collectionMenu(onDownload: (() -> Unit)? = null, more: List<MenuItem> = emptyList(), load: suspend () -> List<Track>): List<MenuItem> {
         fun run(action: (List<Track>) -> Unit): () -> Unit = {
             scope.launch { val tracks = runCatching { load() }.getOrDefault(emptyList()); if (tracks.isNotEmpty()) action(tracks) }
         }
@@ -82,7 +82,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
                         action = run { library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), it) })),
             MenuItem("-"),
             MenuItem("Télécharger", KetIcons.Download, "download", action = run { list -> onDownload?.invoke(); list.forEach(library::download) }),
-        )
+        ) + more
     }
 
     /**
@@ -91,7 +91,8 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
      */
     fun menu(track: Track, onPlay: (() -> Unit)? = null): List<MenuItem> {
         val items = DeskLayout.menuPlan(DeskLayout.menuItems()).mapNotNull { id -> if (id == "-") MenuItem("-") else item(id, track) }
-        return listOfNotNull(onPlay?.let { MenuItem("Lecture", KetIcons.Play, "play", action = it) }) + DeskLayout.tidy(items) { it.label == "-" }
+        val extra = TrackMenuSlots.extra.mapNotNull { it(track) }
+        return listOfNotNull(onPlay?.let { MenuItem("Lecture", KetIcons.Play, "play", action = it) }) + DeskLayout.tidy(items + extra) { it.label == "-" }
     }
 
     /** The playlists a title can go to, and a new one. */
@@ -107,6 +108,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
         "playlist" -> MenuItem("Ajouter à une playlist", KetIcons.Playlist, "add-to-playlist", children = playlistChoices(track))
         "mixPoint" -> studioItem(track)
         "lyricsEditor" -> TrackMenuSlots.lyricsEditor?.invoke(track)
+        "share" -> TrackMenuSlots.share?.invoke(track)
         "download" -> MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) }
         "goAlbum" -> if (track.album.isBlank()) null else MenuItem("Aller à l'album", KetIcons.Album, "go-album") { openAlbum(track) }
         "goArtist" -> MenuItem("Aller à l'artiste", KetIcons.Account, "go-artist") { openArtist(track) }
@@ -127,6 +129,13 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
 object TrackMenuSlots {
     /** « Éditer les paroles… » (id `lyricsEditor`): the lyrics editor (LyricsEditorDesk); null leaves it out of the menu and Settings. */
     @Volatile var lyricsEditor: ((Track) -> MenuItem?)? = { track -> MenuItem("Éditer les paroles…", KetIcons.Lyrics, "lyrics-editor") { LyricsEditorDesk.open(track) } }
+    /** « Partager » (id `share`): a smart link to the title (social/ShareLinks); null leaves it out of the menu and Settings. */
+    @Volatile var share: ((Track) -> MenuItem?)? = null
+    /** « Partager » at the end of an album's menu, and of a playlist's. */
+    @Volatile var shareAlbum: ((AlbumRef) -> MenuItem?)? = null
+    @Volatile var sharePlaylist: ((UserPlaylist) -> MenuItem?)? = null
+    /** Items a feature adds at the end of a title's menu while it applies (« Ajouter à Ensemble » in a listening room). */
+    val extra = java.util.concurrent.CopyOnWriteArrayList<(Track) -> MenuItem?>()
 }
 
 val LocalTrackActions = staticCompositionLocalOf<TrackActions> { error("No TrackActions") }
