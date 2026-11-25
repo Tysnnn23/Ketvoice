@@ -796,6 +796,10 @@ All three live in `ui/Registry.kt`; register from the feature's own file at star
   drawn after the built-in section named `after` (header item `h:<key>`), its `rows` indexed by the settings search.
 - Glass for a new surface: put it outside the pages' source and use `Modifier.glass(backdrop, …)` with the shell's backdrop
   (passed to the sidebar, island and panel), or give it a local `glassSource` to refract.
+- **Island marks and shell hooks** (`ui/Registry.kt`, Windows 2.0 social): `IslandMarks.register(Mark(id) { … })` draws a
+  small mark beside the island's title (« Ensemble · 3 »); `ShellHooks.register(Hook(id) { … })` keeps an invisible piece
+  composed with the shell's locals for the window's life (a `ketvoice://` link opened from the browser acts there).
+  `TrackMenuSlots.share/shareAlbum/sharePlaylist` and `TrackMenuSlots.extra` add items to the title, album and playlist menus.
 
 Tests: `Win2LogicTest` (glass policy and shader, layout and panel limits, insets, island sizes, unfold, hero pick, glide
 at 60/144/240 Hz, rubber band, magnet, elastic slider, menu origin, lens, page transitions under reduced motion, frame
@@ -855,3 +859,42 @@ through the registries (`PageRegistry`, `ShellOverlays`, `SettingsSections`).
   choices, AI swap and revert, failures remembered, pins), `LyricsPcTest` (romanisation cases, the capsules, the band's
   place, click-through), `ImportLibraryPcTest` (report math, drop classification, watcher gathering and a real watch,
   followed playlists, YouTube parsing), `ImportPageTest` (the page end to end with a fake importer).
+
+## Social (Windows 2.0, `social/`)
+
+Small and private by default; nothing reaches the network before the listener signs in and opens a social piece, and
+nothing is shared before they switch it on. Shared rules live in `app/.../social/` (pure, compiled here through `sync.txt`).
+
+- **Listening rooms** (`social/DesktopTogether.kt`, tab « Ensemble », `TogetherPanel.kt`): the phone's Ketogether, same
+  protocol and session (`together/TogetherSession`, `RealtimeTransport`, signed host state, drift correction), bound to
+  the desktop `Player` through `DesktopPort` and `Player.transportGate` (the phone's contract: a guest's transport asks the
+  host, or is refused while only the host drives). Host or join by code or link (`joinTyped`), host controls of 8.4 (who
+  drives, who adds, how many, proposals, take someone out), six quick reactions, members with their sync, the activity
+  lines and endings of the phone (`ui/together/KetogetherLook.kt`, moved out of the phone's sheet unchanged). A guest's
+  shuffle/repeat/radio are set aside and given back; its Ketmix waits (`DesktopAutomix.held`). The island shows
+  « Ensemble · N »; « Ajouter à Ensemble » joins a title's menu while in a room.
+- **Profile** (page `profile`, `ProfilePage.kt`, `ProfileEditor.kt`): name, @handle, bio (160), accent, photo (square
+  512 px) and banner (3:1, 1500 × 500) framed with the phone's `account/AvatarCrop` rules and sent as JPEG under 900 KB to
+  the listener's folder of the private `ketvoice-avatars` bucket; modules « En cours d'écoute », « Artistes du mois » (from
+  this computer's `LiveStats`, a snapshot) and « Playlists épinglées » (link snapshots), each Moi / Amis / Public
+  (`social/ProfileRules.canSee`, the server's `ketvoice_profile_can_see`: friends see friends+public, others see public
+  only while the profile is public). Other profiles open by handle (`profile/<handle>`), with the friendship buttons.
+- **Friends and « Activité des amis »** (tab, `FriendsPanel.kt`): add by @handle or profile link, requests to accept or
+  decline (`social/FriendStates`, the server's statuses), what friends play now and « Rejoindre » their room — only friends,
+  only those who switched « Partager mon écoute » on (`Presence`: a write on change or once a minute while on, never off).
+- **Smart share links** (`ShareLinks.kt`, shared `ShareUrls`): « Partager » in the title (`share` id of `layoutMenu`, the
+  phone's own id), album and playlist menus copies a page of https://ketvoice-web.vercel.app (`/listen?track&title&artist&cover`,
+  `/album/MPRE…`, `/listen?playlist=<link id>` for a playlist snapshot, `/u/<handle>`). `ShareLinks.trackUrl(track)` is
+  null for a local file.
+- **`ketvoice://`** (`DeepLinks.kt`): the installed launcher registers the scheme for the user (HKCU\Software\Classes\ketvoice,
+  « "Ketvoice.exe" "%1" »; the MSI does not remove it at uninstall). Links reach the running window through the single
+  instance (`DesktopPlatform.pendingLinks`, each feature `claim`s the links it knows) and open a title, album, artist,
+  profile, shared playlist or a room's invitation.
+- **Server** (`supabase/migrations/20261125120*_social_*.sql`, nine parts under 6 KB; `supabase/tests/social_rls.sql`;
+  edge function `supabase/functions/ketvoice-profile` for pictures, `verify_jwt = false`): profile columns and modules,
+  friendships (symmetric RLS, ids not readable), presence (RLS: friends + opt-in + fresh), the profile view, the anon public
+  card for the website, playlist links. Listener accounts gain no publishing right; no catalogue table is touched.
+- Tests: shared `SocialRulesTest`, `ShareUrlsTest` and the phone's Ketogether suites (run here too); `DesktopTogetherTest`
+  (this PC's real Player in a room with a phone on one simulated time line: sync, drift correction, host control, PC as host,
+  ending, modes given back), `SocialDesktopTest` (profile, modules, pictures, friends, presence, share menu, links),
+  `SocialShellTest` (the tabs, pages and links in the shell; renders `build/desktop-ui-preview/social-*.png`).

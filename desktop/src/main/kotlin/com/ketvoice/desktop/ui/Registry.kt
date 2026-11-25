@@ -108,3 +108,31 @@ internal fun LazyListScope.extraSettings(anchor: String) {
         item("x:${s.key}") { s.content() }
     }
 }
+
+/**
+ * Small marks beside the title on the island (« Mix en cours » is built in): a feature shows its state there, e.g. a
+ * listening room's « Ensemble ». Each draws nothing when it has nothing to say.
+ */
+object IslandMarks {
+    data class Mark(val id: String, val content: @Composable () -> Unit)
+
+    private val marks = mutableStateListOf<Mark>()
+
+    fun register(mark: Mark) { marks.removeAll { it.id == mark.id }; marks += mark }
+    fun unregister(id: String) { marks.removeAll { it.id == id } }
+    val all: List<Mark> get() = marks
+}
+
+/**
+ * Invisible pieces kept composed for the whole life of the window, with the shell's locals (navigator, panel, menu):
+ * a feature that acts on the window from outside (a `ketvoice://` link opened from the browser) reacts there.
+ */
+object ShellHooks {
+    data class Hook(val id: String, val content: @Composable () -> Unit)
+
+    private val hooks = mutableStateListOf<Hook>()
+
+    fun register(hook: Hook) { hooks.removeAll { it.id == hook.id }; hooks += hook }
+    fun unregister(id: String) { hooks.removeAll { it.id == id } }
+    val all: List<Hook> get() = hooks
+}

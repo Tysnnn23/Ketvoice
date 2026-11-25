@@ -144,7 +144,7 @@ The `anon` key is public by design. Do not put the `service_role` key, the Spoti
 
 ## Connexions (Ketvoice for Windows 2.0)
 
-Migration `20261125120000_connections.sql` (one part under 6 KB, one statement per line) adds:
+Migration `20261125115000_connections.sql` (one part under 6 KB, one statement per line) adds:
 
 - `ketvoice_devices` — one row per device of an account (name, kind, the device's own Auth session id, its playback
   state as the `now_playing` document plus `seen`), owner-only RLS. `revoked_at` is written only by

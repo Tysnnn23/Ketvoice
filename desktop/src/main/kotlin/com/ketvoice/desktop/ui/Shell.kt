@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -155,6 +156,7 @@ private fun ShellLayout() {
         com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->
             UpdateDialog(release, com.ketvoice.desktop.update.Updates.updater) { com.ketvoice.desktop.update.Updates.dialog.value = null }
         }
+        ShellHooks.all.forEach { key(it.id) { it.content() } }
         ContextMenuHost(menu)
     }
     // A new search from the field opens the search page; clearing it keeps the start page.

@@ -23,3 +23,5 @@ ui/player/LyricsWords.kt
 ui/player/KaraokeDraw.kt
 ui/player/LyricsBlur.kt
 ui/player/PlayerArtworkMath.kt
+# Windows 2.0 listening rooms: Ketogether's words and colours (activity lines, endings, sync).
+ui/together/KetogetherLook.kt

@@ -7,32 +7,19 @@ import android.graphics.Rect
 import android.net.Uri
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
-
-/** The square the listener framed, in the picture's own pixels. */
-internal data class CropSquare(val left: Int, val top: Int, val side: Int)
 
 /**
  * The profile photo: the picked picture is decoded at a bounded size (orientation applied by the
  * decoder), framed square by the listener, scaled to [SIDE] pixels and compressed to JPEG under [MAX_BYTES].
  */
 internal object AvatarImage {
-    const val SIDE = 512
-    const val MAX_BYTES = 900 * 1024
+    const val SIDE = AvatarCrop.SIDE
+    const val MAX_BYTES = AvatarCrop.MAX_BYTES
     private const val DECODE_MAX = 2048
 
-    /**
-     * The square a frame shows: [zoom] ≥ 1 enlarges the picture in the frame, [panX] and [panY] in −1..1
-     * move it from one edge to the other. Always inside the picture.
-     */
-    fun square(width: Int, height: Int, zoom: Float, panX: Float, panY: Float): CropSquare {
-        require(width > 0 && height > 0)
-        val side = (min(width, height) / zoom.coerceIn(1f, 8f)).roundToInt().coerceIn(1, min(width, height))
-        val left = ((width - side) * (panX.coerceIn(-1f, 1f) + 1f) / 2f).roundToInt().coerceIn(0, width - side)
-        val top = ((height - side) * (panY.coerceIn(-1f, 1f) + 1f) / 2f).roundToInt().coerceIn(0, height - side)
-        return CropSquare(left, top, side)
-    }
+    /** See [AvatarCrop.square] (pure, shared with the desktop). */
+    fun square(width: Int, height: Int, zoom: Float, panX: Float, panY: Float): CropSquare = AvatarCrop.square(width, height, zoom, panX, panY)
 
     fun decode(context: Context, uri: Uri): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)

@@ -25,3 +25,6 @@ sync/PlaybackSync.kt
 scrobble/Scrobbling.kt
 account/DeviceCode.kt
 together/QrCode.kt
+# Windows 2.0 social: profile visibility, friends, « Activité des amis », smart share links (pure, shared with the phone).
+social/*.kt
+account/AvatarCrop.kt

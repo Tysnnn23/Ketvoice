@@ -64,3 +64,10 @@ sync/PlaybackSyncTest.kt
 scrobble/ScrobblingTest.kt
 account/DeviceCodeTest.kt
 together/QrCodeTest.kt
+# Windows 2.0 social: the shared rules, and Ketogether's protocol and room sync run on this computer too.
+social/SocialRulesTest.kt
+social/ShareUrlsTest.kt
+together/TogetherSim.kt
+together/TogetherSessionTest.kt
+together/TogetherProtocolTest.kt
+together/TogetherHostRulesTest.kt

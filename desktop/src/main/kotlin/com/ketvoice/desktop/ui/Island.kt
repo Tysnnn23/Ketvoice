@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -143,6 +144,7 @@ private fun IslandTop(track: Track?, onOpenPlayer: () -> Unit, width: Dp) {
                     weight = FontWeight.SemiBold, translate = false)
                 if (format?.lossless == true) LosslessMark(format!!.hiRes)
                 MixMark()
+                IslandMarks.all.forEach { key(it.id) { it.content() } }
                 if (loading) Spinner(Modifier.padding(start = 6.dp).size(14.dp))
             }
             KText(track.artist, Ket27Desk.Type.footnote, Modifier.shared("np:artist", scope, text = true), color = ket.secondary, translate = false)

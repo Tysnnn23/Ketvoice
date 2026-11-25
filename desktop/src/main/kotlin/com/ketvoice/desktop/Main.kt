@@ -101,6 +101,8 @@ fun main(args: Array<String>) {
         override fun previous() = Player.previous()
         override fun seekTo(ms: Long) = Player.seekTo(ms)
     }
+    // Windows 2.0 social: « Ensemble », « Activité des amis », the profile page, « Partager », ketvoice:// links.
+    com.ketvoice.desktop.social.SocialFeature.register()
     DesktopPlatform.open(InstanceMessage.openable(argList))
     val autostarted = Autostart.FLAG in argList
     val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
@@ -321,6 +323,8 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
     // « Connexions » (Windows 2.0): Discord's status, scrobbling, live sync between devices, its page and settings.
     com.ketvoice.desktop.connect.Connections.start(context, scope)
+    // Listening rooms, the profile and friends (only what the listener turns on), and ketvoice:// for this PC.
+    com.ketvoice.desktop.social.SocialFeature.start(scope)
     // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
     com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
     // Ketmix Studio: the listener's mix points and presets (`ketmix-presets-v1`, as on the phone) and the waves it draws.

@@ -21,6 +21,10 @@ export const TABLES: Array<[table: string, column: string]> = [
   ["ketvoice_blocks", "blocker"],
   ["ketvoice_activity", "actor"],
   ["ketvoice_reactions", "user_id"],
+  ["ketvoice_profile_modules", "user_id"],
+  ["ketvoice_friendships", "requester,addressee"],
+  ["ketvoice_presence", "user_id"],
+  ["ketvoice_link_playlists", "owner_id"],
 ];
 
 export const BUCKETS = ["ketvoice-avatars", "ketvoice-public-avatars"];
@@ -29,7 +33,9 @@ export function createMyDataHandler(deps: ConnectDeps) {
   const now = deps.now ?? Date.now;
 
   async function rows(token: string, table: string, column: string, uid: string): Promise<unknown> {
-    const r = await asUser(deps, token, `/rest/v1/${table}?select=*&${column}=eq.${uid}&limit=10000`);
+    // "a,b": rows where the listener is in either column (a friendship has two sides).
+    const filter = column.includes(",") ? `or=(${column.split(",").map((c) => `${c}.eq.${uid}`).join(",")})` : `${column}=eq.${uid}`;
+    const r = await asUser(deps, token, `/rest/v1/${table}?select=*&${filter}&limit=10000`);
     if (!r.ok) return { unavailable: r.status };
     return await r.json();
   }
