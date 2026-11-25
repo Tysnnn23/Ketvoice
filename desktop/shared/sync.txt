@@ -19,3 +19,9 @@ handoff/HandoffMessage.kt
 remote/RemoteWire.kt
 remote/RemoteSession.kt
 remote/RemoteControl.kt
+# Windows 2.0 (connections): the now-playing document, live sync between devices, scrobbling, sign-in by QR code.
+sync/NowPlayingDoc.kt
+sync/PlaybackSync.kt
+scrobble/Scrobbling.kt
+account/DeviceCode.kt
+together/QrCode.kt

@@ -664,6 +664,69 @@ Android in-app updater skips those tags, as it skips the model tags).
   `LiveMix.frame` (both decks' waveform windows, beat and bar lines, beat phase, levels, voice levels, crossing) and a
   simple `ui/LiveMixView.kt`.
 
+## Connexions and account (Windows 2.0)
+
+Everything lives in `desktop/connect/` (logic) and `ui/Connect*.kt`, `ui/MyDataPage.kt` (pages), registered through the
+shell's registries only (`ConnectUi.register`: page `connections` in the sidebar, page `my-data`, Settings sections
+« Connexions » after « Compte Ketvoice » and « Profils sur ce PC » after « Windows »). `Connections.start` runs behind the
+window. Its switches are in their own `ketvoice_connections` preferences (never synced, never exported with the settings).
+
+- **Discord's status** (`DiscordIpc.kt`, `DiscordPresence.kt`): pure Kotlin over Discord's local IPC, no native library —
+  the named pipe `\\.\pipe\discord-ipc-0..9` opened as a file on Windows (reads start only once `length()` says the bytes
+  are there, since a blocked read would block writes on the same handle), a Unix socket elsewhere. Frames are
+  `[op int32 LE][length int32 LE][UTF-8 JSON]` (`DiscordFrame`); handshake `{v: 1, client_id}` with the public id of
+  the Ketvoice Discord application (`1566454532890820668`, docs/discord-integration.md). « Listening to »: title,
+  artist, the cover by its https address, start/end for elapsed/remaining, and « Écouter sur Ketvoice » to the title's
+  share page when `ShareLinks.provider` (the share-links feature plugs it in) gives one. On by default, shown only while
+  a title plays, cleared on pause; « Masquer le titre » shows only that Ketvoice plays. Discord started later is found
+  again within 15 s; updates go only when what shows changes (Discord allows 5 per 20 s).
+- **Scrobbling** (shared `scrobble/Scrobbling.kt`, desktop `Scrobbler.kt`): « en cours » at the start, the listen once half
+  the title or 4 minutes was really heard (seeking forward does not count), never under 30 s; queues on disk per service
+  (`files/scrobbles/*.json`, oldest first, 2 000 at most, Last.fm's 14-day limit), flushed every minute and after each
+  listen, backing off after failures. Ketmix Studio's previews play on their own engine and never reach the player; a
+  play heard while the lyrics editor is open on that title is left out (`Scrobbler.exclusions`). ListenBrainz uses the
+  listener's own token, sealed by DPAPI in `SecureSessionStore` (`listenbrainz-token`). Last.fm goes through the
+  `lastfm` edge function: the API key and shared secret are server secrets, the Last.fm session key is kept server-side
+  (`ketvoice_lastfm_links`, service role only); linking is Last.fm's desktop flow (allow in the browser, then « J'ai
+  autorisé »).
+- **Live sync** (shared `sync/PlaybackSync.kt` + `sync/NowPlayingDoc.kt`, moved unchanged out of the phone's
+  `NowPlayingSync.kt`; desktop `LiveSync.kt`): while signed in and « Synchronisation en direct » is on, the PC upserts its
+  row of `ketvoice_devices` (name, kind, its session id, the now-playing document: title, position, the 50 titles around
+  it, playing) on each change of title, play/pause or seek, every 15 s while playing and every 5 min otherwise
+  (`PublishPolicy`), and writes the account's `now_playing` document while playing and when it pauses, so the phone of
+  today offers to resume what the PC played. It reads the devices every 30 s, on focus and when Home shows;
+  `PlaybackMerge` merges rows and the single document (newest per device) and picks « Reprendre là où tu en étais » (Home,
+  `ResumeElsewhereCard`). Live control between open devices stays phone control's private room (`RemoteControl`).
+- **Connected devices**: name, kind, « En ligne » (in the room) or last seen, what it plays; « Transférer la lecture ici »
+  (`takeFrom` through the room, else resume from its row), « Lire sur cet appareil » (`sendTo`, open devices only),
+  « Déconnecter »: the `devices` edge function calls `ketvoice_revoke_device` (service role only), which deletes that
+  device's `auth.sessions` row (its refresh tokens go by cascade) for the caller's own account only and never the
+  caller's own session; the device's access token lives up to an hour, but its row is marked and the PC signs itself out
+  at its next read.
+- **Sign-in by QR code** (shared `account/DeviceCode.kt`, `DeviceLink.kt`, `ConnectQr.kt` with the shared
+  `together/QrCode.kt` encoder): the PC asks `device-link/start` for an 8-letter code (no 0/O/1/I, 5 minutes, used once,
+  10 per address per 10 min; only the SHA-256 of the poll secret is stored), shows the QR code of
+  `https://ketvoice-web.vercel.app/link?code=…` and the code in letters, and polls every 3 s (`LinkPoll`). The website's
+  `/link` page approves it with the web player's session (or the code typed by hand); the function then mints a one-time
+  magic-link token (Auth admin `generate_link`, nothing e-mailed) that the PC exchanges at `/auth/v1/verify`
+  (`AccountSession.signInWithLink`). Never for `konnektsupport@gmail.com`.
+- **Zero telemetry and « Mes données »**: the desktop sends no usage statistics or crash reports (logs and crash files stay
+  in the data folder; the 8.2 `diagnostics` key stays off and is not used here); `PrivacyTest` keeps an allowlist of the
+  hosts the sources write out and bans analytics libraries. The page lists what leaves the PC, exports the account as
+  JSON (`my-data/export`, the caller's rows with their own session, plus this PC's connection switches) to
+  `Documents\ketvoice-mes-donnees-<date>.json`, and deletes the account after typing SUPPRIMER (`my-data/delete`, service
+  role: photos, then the auth user; refused for the publishing account).
+- **Profiles on one PC** (`LocalProfiles.kt`, `ConnectProfiles.kt`): `profiles.json` in the data folder lists them (name,
+  colour); « main » is the data folder of before, the others `profiles/<id>`. `applyAtStart` (first line of `main`) points
+  `ketvoice.dataDir` at the profile in use and keeps one audio cache for all (`StreamCache.dir`). Switching relaunches
+  Ketvoice with `--profile=<id>` (the stores are single objects started once); each profile has its own single-instance
+  lock. There is no avatar menu in the 2.0 shell yet: profiles are switched from « Connexions » and Settings.
+
+Tests: `PlaybackSyncTest`, `ScrobblingTest`, `DeviceCodeTest`, `QrCodeTest` (shared), `ConnectTest` (IPC frames byte for
+byte, the pipe session with a scripted Discord, the activity, profile folders and relaunch), `PrivacyTest`,
+`ConnectPagesTest` (pages in the shell, QR code, devices, the resume card, renders `win2-connections-*.png`). Server:
+`supabase/tests/connections_rls.sql` and the functions' `handler_test.ts`.
+
 ## Windows 2.0 interface (`win2ui`)
 
 The window was redrawn for 2.0; everything of 1.2 (Personnalisation, Disposition, settings search, the lyrics editor,

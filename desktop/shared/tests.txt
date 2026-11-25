@@ -59,3 +59,8 @@ automix/BeatPrecisionTest.kt
 # Windows 9.0 port: lyrics 8.3 values and the lyrics editor's draft.
 ui/player/LivelyLyricsTest.kt
 data/LyricsDraftTest.kt
+# Windows 2.0 (connections): live sync, scrobbling, sign-in by QR code (and the QR encoder's reference vectors).
+sync/PlaybackSyncTest.kt
+scrobble/ScrobblingTest.kt
+account/DeviceCodeTest.kt
+together/QrCodeTest.kt

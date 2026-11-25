@@ -14,3 +14,25 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/ketvoice-artists/deno.json"
 entrypoint = "./functions/ketvoice-artists/index.ts"
+
+# Windows 2.0 Connexions: QR sign-in, remote sign-out, Last.fm, "Mes donnees". All keep gateway JWT verification
+# (device-link's /start and /poll are called with the public anon key).
+[functions.device-link]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/device-link/index.ts"
+
+[functions.devices]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/devices/index.ts"
+
+[functions.lastfm]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/lastfm/index.ts"
+
+[functions.my-data]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/my-data/index.ts"
