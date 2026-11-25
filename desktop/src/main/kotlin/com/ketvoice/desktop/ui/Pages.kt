@@ -144,6 +144,8 @@ fun HomePage() {
         // The hero: the last title heard (or the first one picked for you), its Canvas or its cover edge to edge.
         if (hero != null) item("hero") { HomeHero(hero) }
         else item("title") { KText("Accueil", Ket27Desk.Type.largeTitle, sides.padding(top = PageEdges.TOP, bottom = 6.dp)) }
+        // « Reprendre là où tu en étais »: what another device of the account played last (ConnectDevices.kt).
+        item("resume-elsewhere") { ResumeElsewhereCard() }
         // Offline, what was heard here still shows above the offline state.
         if (loader.state is Load.Failed && history.isNotEmpty()) {
             item("rec-h") { Box(sides) { SectionHeader("Écoutés récemment") } }

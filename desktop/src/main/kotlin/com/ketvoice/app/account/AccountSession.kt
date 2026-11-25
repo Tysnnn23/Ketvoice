@@ -109,6 +109,26 @@ object AccountSession {
         }
     }
 
+    /**
+     * Sign-in by QR code (Windows 2.0): the website approved this PC and the `device-link` function gave a one-time
+     * token hash, exchanged here for this PC's own session (`/auth/v1/verify`).
+     */
+    suspend fun signInWithLink(tokenHash: String) = withContext(Dispatchers.IO) {
+        require(tokenHash.matches(Regex("[A-Za-z0-9_-]{16,200}"))) { "Lien invalide" }
+        val body = JSONObject().put("type", "magiclink").put("token_hash", tokenHash).toString().toByteArray()
+        val response = SupabaseHttp.request("POST", "/auth/v1/verify", body)
+        val json = runCatching { JSONObject(response.text) }.getOrNull()
+        if (!response.ok || json == null) throw SupabaseHttp.HttpError(response.status, json?.optString("error_code").orEmpty(),
+            AuthApi.message(response.status, json))
+        accept(AuthApi.parseSession(json, System.currentTimeMillis()), null)
+    }
+
+    /**
+     * The session already ended on the server (another device signed this one out, or the account was deleted): this
+     * PC forgets it at once, with [message] (French) shown in the account card.
+     */
+    fun endedOnServer(message: String) = signedOutLocally(message)
+
     private fun browse(url: String) {
         val uri = java.net.URI(url)
         if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {

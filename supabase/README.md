@@ -141,3 +141,31 @@ The `anon` key is public by design. Do not put the `service_role` key, the Spoti
 - Ultra MAX (MP3) and Last Babe (FLAC) are the only configured providers. The retired provider's routing and Vault entry were deleted in 2.5.0.
 - Publication uploads are validated server-side (audio/image signatures, sizes, TTML DTD/entity rejection, LRC timing). Failed uploads are cleaned up.
 - Supabase function logs can contain request metadata and IP addresses. Configure retention and access according to your own policy.
+
+## Connexions (Ketvoice for Windows 2.0)
+
+Migration `20261125120000_connections.sql` (one part under 6 KB, one statement per line) adds:
+
+- `ketvoice_devices` — one row per device of an account (name, kind, the device's own Auth session id, its playback
+  state as the `now_playing` document plus `seen`), owner-only RLS. `revoked_at` is written only by
+  `ketvoice_revoke_device` (service role only), which deletes that device's `auth.sessions` row for that very user (its
+  refresh tokens go by cascade) and refuses the caller's own session; a device clears the mark only by signing in again.
+- `ketvoice_device_links` — QR sign-in codes (8 letters without 0/O/1/I, at most 10 minutes, a SHA-256 of the poll
+  secret), service role only.
+- `ketvoice_lastfm_links` — each account's Last.fm name and session key, service role only.
+
+Checks: `supabase/tests/connections_rls.sql` on a throwaway PostgreSQL 16 after `supabase_stubs.sql` and the
+listener-account migration (it stands in for GoTrue's `auth.sessions`).
+
+Edge functions (all `verify_jwt = true`, see `config.toml`; shared code in `_shared/connect.ts`):
+
+| Function | Routes | Notes |
+| --- | --- | --- |
+| `device-link` | `POST /start`, `POST /poll` (anon key); `GET /info`, `POST /approve`, `POST /deny` (listener) | Codes live 5 min and work once; `/start` 10 per address per 10 min, approvals 20 per account per 10 min; the approved account gets a one-time magic-link token (`/auth/v1/admin/generate_link`, nothing e-mailed) exchanged by the PC at `/auth/v1/verify`; never for the publishing account. |
+| `devices` | `POST /revoke {device_id}` | Remote sign-out of one of the caller's own devices. |
+| `lastfm` | `POST /auth/start`, `/auth/complete`, `/status`, `/disconnect`, `/nowplaying`, `/scrobble` | Secrets `LASTFM_API_KEY` and `LASTFM_SHARED_SECRET`; calls signed server-side (MD5 `api_sig`); the session key never leaves the server. |
+| `my-data` | `GET /export`, `POST /delete {confirm: "SUPPRIMER"}` | Export with the caller's own session (RLS); deletion with the service role (photos, then the auth user, rows by cascade); refuses `konnektsupport@gmail.com`. |
+
+They read `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` from the Edge Function environment.
+Tests: `deno test supabase/functions/{device-link,devices,lastfm,my-data}/handler_test.ts` (a fake project in
+`_shared/connect_fake.ts`; no network).

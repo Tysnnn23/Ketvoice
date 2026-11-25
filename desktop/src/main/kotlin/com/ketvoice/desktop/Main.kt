@@ -55,6 +55,8 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     if ("--smoke" in args) exitProcess(Smoke.run())
+    // Windows 2.0: several profiles on one PC; the data folder follows the profile in use (before anything opens it).
+    com.ketvoice.desktop.connect.LocalProfiles.applyAtStart(args.toList())
     // Windows 1.1: Direct3D with vsync (skiko falls back by itself), the class-data archive's folder, the probe.
     Startup.begin()
     val renderWanted = Startup.configureRendering()
@@ -127,6 +129,7 @@ fun main(args: Array<String>) {
             runCatching { com.ketvoice.desktop.player.Session.save() }
             runCatching { Player.pause() }
             runCatching { com.ketvoice.app.remote.RemoteControl.stop() }
+            runCatching { com.ketvoice.desktop.connect.Connections.quit() }
             runCatching { com.ketvoice.app.data.SettingsStore.save() }
             runCatching { com.ketvoice.desktop.library.DesktopAccount.quit() }
             runCatching { android.content.FileSharedPreferences.flush() }
@@ -167,6 +170,7 @@ fun main(args: Array<String>) {
                 window.addWindowFocusListener(object : java.awt.event.WindowAdapter() {
                     override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
                         com.ketvoice.desktop.library.DesktopAccount.foreground()
+                        com.ketvoice.desktop.connect.LiveSync.refreshSoon()
                         // Transparency effects or high contrast may have changed while away.
                         if (window.isDisplayable) WindowGlass.apply(window)
                     }
@@ -306,6 +310,8 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     com.ketvoice.desktop.library.DesktopAccount.start(context)
     // Phone control: this PC joins the account's private room while signed in.
     com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
+    // « Connexions » (Windows 2.0): Discord's status, scrobbling, live sync between devices, its page and settings.
+    com.ketvoice.desktop.connect.Connections.start(context, scope)
     // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
     com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
     // Ketmix Studio: the listener's mix points and presets (`ketmix-presets-v1`, as on the phone) and the waves it draws.
