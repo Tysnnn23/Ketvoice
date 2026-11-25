@@ -24,13 +24,16 @@ import kotlin.test.assertTrue
 class Win2Screenshots {
     private val out = File("build/desktop-ui-preview").apply { mkdirs() }
 
-    private fun shoot(name: String, w: Int = 1440, h: Int = 900, hover: Offset? = null, content: @Composable () -> Unit) {
+    private fun shoot(name: String, w: Int = 1440, h: Int = 900, hover: Offset? = null, steps: List<() -> Unit> = emptyList(),
+                      content: @Composable () -> Unit) {
         Fixtures.installCovers()
         AppSettings.reduceAnimations.value = false
         val scene = ImageComposeScene(w, h, Density(1f), content = content)
         try {
             var t = 0L
             repeat(40) { scene.render(t); t += 50_000_000L }
+            // State changes between frames (a transition starting, then ending).
+            for (step in steps) { step(); repeat(20) { scene.render(t); t += 50_000_000L } }
             if (hover != null) { scene.sendPointerEvent(PointerEventType.Move, hover); repeat(30) { scene.render(t); t += 50_000_000L } }
             val png = scene.render(t).encodeToData(EncodedImageFormat.PNG)!!.bytes
             File(out, "win2-$name.png").writeBytes(png)
@@ -76,5 +79,34 @@ class Win2Screenshots {
             }
         }
         assertTrue(File(out, "win2-home-dark.png").length() > 10_000)
+    }
+
+    /** The live mix view (« Ketmix » tab, full player) and « Ketmix apprend »'s toast above the island. */
+    @Test fun rendersTheLiveMix() {
+        KetmixLive.register()
+        com.ketvoice.desktop.ketmix.KetmixPcSettings.learns.value = true
+        try {
+            com.ketvoice.desktop.ketmix.KetmixFeedback.planned(LiveMixFixtures.plan, LiveMixFixtures.from, LiveMixFixtures.to)
+            com.ketvoice.desktop.ketmix.LiveMix.showForTest(LiveMixFixtures.frame())
+            for (dark in listOf(true, false)) {
+                val look = if (dark) "dark" else "light"
+                shoot("ketmix-live-$look") { Shell(Route.Home, dark, Panel.KETMIX) }
+                shoot("nowplaying-live-$look") { Shell(Route.Home, dark, full = true) }
+            }
+            FullPlayerLyrics.shown.value = true
+            shoot("nowplaying-live-lyrics-dark") { Shell(Route.Home, true, full = true) }
+            FullPlayerLyrics.shown.value = false
+            com.ketvoice.desktop.ketmix.LiveMix.showForTest(null)
+            for (dark in listOf(true, false)) shoot("ketmix-toast-${if (dark) "dark" else "light"}", steps = listOf(
+                { com.ketvoice.desktop.ketmix.KetmixFeedback.playing(true) }, { com.ketvoice.desktop.ketmix.KetmixFeedback.playing(false) })) {
+                Shell(Route.Albums, dark)
+            }
+        } finally {
+            com.ketvoice.desktop.ketmix.LiveMix.showForTest(null)
+            com.ketvoice.desktop.ketmix.KetmixFeedback.resetForTest()
+            com.ketvoice.desktop.ketmix.KetmixPcSettings.learns.value = false
+            FullPlayerLyrics.shown.value = false
+        }
+        assertTrue(File(out, "win2-ketmix-live-dark.png").length() > 10_000)
     }
 }

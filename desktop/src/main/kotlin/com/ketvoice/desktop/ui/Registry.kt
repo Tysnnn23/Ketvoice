@@ -61,6 +61,9 @@ object PanelTabs {
 
     fun unregister(id: String) { tabs.removeAll { it.id == id } }
 
+    /** Adds [tab] unless a feature already registered one with its id (how the built-in tabs give way to a richer one). */
+    internal fun registerDefault(tab: Tab) { if (tabs.none { it.id == tab.id }) register(tab) }
+
     /** Every tab in its order, the built-in ones first registered. */
     val all: List<Tab> get() { BuiltInTabs.ensure(); return tabs }
 
@@ -121,6 +124,22 @@ object IslandMarks {
     fun register(mark: Mark) { marks.removeAll { it.id == mark.id }; marks += mark }
     fun unregister(id: String) { marks.removeAll { it.id == id } }
     val all: List<Mark> get() = marks
+}
+
+/**
+ * Blocks a feature shows in the unfolded full player, under the transport (Windows 2.0): the live mix view while
+ * Ketmix crosses two titles. Each draws nothing when it has nothing to say. [Slot.content] gets the full player's
+ * glass backdrop (its cover colours) and whether the player is compact (the lyrics are open beside it).
+ */
+object FullPlayerSlots {
+    data class Slot(val id: String, val order: Int = 100,
+                    val content: @Composable (backdrop: com.ketvoice.desktop.ui.glass.GlassBackdrop?, compact: Boolean) -> Unit)
+
+    private val slots = mutableStateListOf<Slot>()
+
+    fun register(slot: Slot) { slots.removeAll { it.id == slot.id }; slots += slot; slots.sortBy { it.order } }
+    fun unregister(id: String) { slots.removeAll { it.id == id } }
+    val all: List<Slot> get() = slots
 }
 
 /**

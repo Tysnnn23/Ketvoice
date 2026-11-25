@@ -36,6 +36,8 @@ class SettingsFindTest {
         assertEquals("Ketmix", ketmix.first().title)
         assertTrue(ketmix.any { it.title == "Intensité du mix" })
         assertTrue(SettingsFind.search("disposition", translate = same).any { it.title == "Barre latérale" })
+        assertEquals("Lecture sans blanc", SettingsFind.search("sans blanc", translate = same).first().title)
+        assertTrue(SettingsFind.search("apprend", translate = same).any { it.title == "Ketmix apprend de vos avis" })
         assertTrue(SettingsFind.search("zzz", translate = same).isEmpty())
         assertTrue(SettingsFind.search("  ", translate = same).isEmpty())
         // Read in the listener's language.
@@ -45,7 +47,9 @@ class SettingsFindTest {
 
     @Test fun everySectionKeyIsOnThePage() {
         val page = setOf("account-header", "h:Général", "h:Ketmix", "h:Séparation des voix", "h:Lecteur", "h:lyrics", "h:downloads", "h:layout",
-            "h:Windows", "h:Raccourcis clavier", "local-header", "h:À propos")
+            "h:Windows", "h:Raccourcis clavier", "local-header", "h:À propos",
+            // Windows 2.0: « Puissance de Ketmix » (Pages.kt) and « Sources » / « Lecture » (SourcesPage.kt).
+            "h:Puissance de Ketmix", "h:sources", "h:catalogue", "h:playback")
         assertTrue(SettingsFind.entries.all { it.sectionKey in page }, SettingsFind.entries.filter { it.sectionKey !in page }.toString())
     }
 

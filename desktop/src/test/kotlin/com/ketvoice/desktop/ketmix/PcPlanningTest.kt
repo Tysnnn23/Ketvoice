@@ -74,6 +74,50 @@ class PcPlanningTest {
         assertEquals(MixKind.Beatmatch, asked.kind)
     }
 
+    @Test fun avoidedFiltersAndWashesBecomePlainFades() {
+        // Tempos too far apart: the crossing is a filter crossing, or a dissolve when the title has no beat.
+        val out = MixFacts(duration, outro(124f))
+        val into = MixFacts(duration, intro(90f))
+        val ways = setOf(MixKind.Echo, MixKind.Rise, MixKind.Beatmatch)
+        val usual = TransitionPlanner.plan(out, into, MixContext(avoid = ways), MixSettings())
+        assertTrue(usual.kind == MixKind.Filter || usual.kind == MixKind.Wash, "${usual.kind} ${usual.reason}")
+        val avoided = TransitionPlanner.plan(out, into, MixContext(avoid = ways + usual.kind), MixSettings())
+        assertEquals(MixKind.Crossfade, avoided.kind)
+        assertEquals(usual.overlapMs, avoided.overlapMs)
+        // Asked for by hand, « Filtres » stays.
+        assertEquals(MixKind.Filter, TransitionPlanner.plan(out, into, MixContext(avoid = ways + MixKind.Filter),
+            MixSettings(style = com.ketvoice.app.automix.MixStyle.Filters)).kind)
+    }
+
+    /** « Ketmix apprend »: three 👎 on blends in time and the desktop's next plan is another kind; with learning off, nothing changes. */
+    @Test fun learnedTasteReachesThePlannerOnlyWhenOn() {
+        val out = MixFacts(duration, outro())
+        val into = MixFacts(duration, intro())
+        val a = com.ketvoice.app.data.Track("a", "Titre a", "Artiste a", "", durationMs = duration)
+        val b = com.ketvoice.app.data.Track("b", "Titre b", "Artiste b", "", durationMs = duration)
+        val state = com.ketvoice.app.player.PlayerUiState(queue = listOf(a, b), index = 0, isPlaying = true)
+        fun plan() = DesktopAutomix.planFor(out, into, DesktopAutomix.contextFor(state, a, b, 1f), null, 1f, beats = true)
+        KetmixFeedback.resetForTest()
+        DesktopAutomix.resetForTest()
+        try {
+            KetmixPcSettings.learns.value = true
+            val first = plan()
+            assertEquals(MixKind.Beatmatch, first.kind)
+            repeat(3) { KetmixFeedback.planned(first, a, b); KetmixFeedback.rate(false) }
+            assertEquals(setOf(MixKind.Beatmatch), DesktopAutomix.contextFor(state, a, b, 1f).avoid)
+            val learnt = plan()
+            assertTrue(learnt.mixes)
+            assertNotEquals(MixKind.Beatmatch, learnt.kind)
+            // Off: what was learnt is kept but not used.
+            KetmixPcSettings.learns.value = false
+            assertEquals(emptySet(), DesktopAutomix.contextFor(state, a, b, 1f).avoid)
+            assertEquals(MixKind.Beatmatch, plan().kind)
+            // And a rating given while off counts for nothing.
+            KetmixFeedback.planned(first, a, b); KetmixFeedback.rate(true)
+            assertNull(KetmixFeedback.transition.value?.rating)
+        } finally { KetmixPcSettings.learns.value = false; KetmixFeedback.resetForTest(); DesktopAutomix.resetForTest() }
+    }
+
     @Test fun soundScoresPreferCloseTitles() {
         val near = SoundQueue.score(.95f, .01f, .05f)!!
         val far = SoundQueue.score(.4f, .01f, .05f)!!

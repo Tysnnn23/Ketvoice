@@ -65,9 +65,16 @@ internal object SettingsFind {
             "Calage précis du rythme") +
         section("Séparation des voix", "Séparer les voix", "Modèle de séparation", "Modèle haute qualité", "Qualité de séparation",
             "Voix prêtes à l'avance") +
+        // Windows 2.0 rows drawn on the page itself (not through SettingsSections, which index their own).
+        section("Puissance de Ketmix", "Puissance de Ketmix", "Cet ordinateur", "Grands modèles", "Accélération GPU", "Carte graphique",
+            "Préparation au repos", "Ketmix apprend de vos avis") +
         section("Lecteur", "Activer les Canvas vidéo", "Canvas sur les pages d'album", "Égaliseur") +
         section("Paroles", "Ordre des sources de paroles", key = "h:lyrics") +
         section("Téléchargements", "Playlists téléchargées à jour", key = "h:downloads") +
+        section("Sources", "Sources", "Ajouter une source", key = "h:sources") +
+        section("Catalogue de sources", "Catalogue de sources", key = "h:catalogue") +
+        section("Lecture", "Taille du cache", "Vider le cache", "Préparer les favoris et les playlists", "Lecture sans blanc",
+            "Mode exclusif (bit-perfect)", key = "h:playback") +
         section("Disposition", "Barre latérale", "Accueil modulable", "Boutons du lecteur", "Bibliothèque", "Menu des titres",
             "Rétablir la disposition", key = "h:layout") +
         section("Windows", "Fermer dans la zone de notification", "Démarrer avec Windows", "Mini-lecteur", "Verre Windows 11") +

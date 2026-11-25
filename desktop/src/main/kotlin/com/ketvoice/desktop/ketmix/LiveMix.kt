@@ -1,5 +1,7 @@
 package com.ketvoice.desktop.ketmix
 
+import com.ketvoice.app.automix.Curve
+import com.ketvoice.app.automix.DeckAutomation
 import com.ketvoice.app.automix.MixKeys
 import com.ketvoice.app.automix.MixPlan
 import com.ketvoice.app.automix.SegmentAnalysis
@@ -22,20 +24,24 @@ import kotlin.math.floor
  * The live mix view's data (Windows 2.0): while Ketmix prepares or plays a transition, both decks' waveform around
  * their playheads, their beat grids and bar lines, where each is within its beat, their levels and the voice level
  * of each, about 30 times a second. Positions follow the heard one ([FfmpegAudioEngine.positionMs]) through the plan
- * (the incoming deck runs at `plan.rate` from `plan.inMs`). `desktop/ui/LiveMixView.kt` draws a simple version.
+ * (the incoming deck runs at `plan.rate` from `plan.inMs`). `desktop/ui/LiveMixView.kt` draws it (the Ketmix tab, the full player).
  */
 internal object LiveMix {
     /** One deck. [peaks]: [POINTS] columns of 0..1 from [BEFORE_MS] before the playhead to [AFTER_MS] after it;
-     *  [beats]/[bars]: in that window, as fractions 0..1 of its width; [phase]: 0..1 within the current beat. */
+     *  [beats]/[bars]: in that window, as fractions 0..1 of its width; [phase]: 0..1 within the current beat;
+     *  [gain]: the deck's volume curve over the same window ([CURVE_POINTS] values, 0..1), as the transition plays it. */
     data class Deck(val title: String, val positionMs: Long, val bpm: Float, val peaks: FloatArray, val beats: List<Float>,
-                    val bars: List<Float>, val phase: Float, val level: Float, val voice: Float)
+                    val bars: List<Float>, val phase: Float, val level: Float, val voice: Float,
+                    val gain: FloatArray = FloatArray(0))
 
-    /** [crossfade]: 0 all outgoing .. 1 all incoming. */
-    data class Frame(val outgoing: Deck, val incoming: Deck, val crossfade: Float, val mixing: Boolean, val label: String)
+    /** [crossfade]: 0 all outgoing .. 1 all incoming; [untilMs]: how long before the crossing starts (0 once it has). */
+    data class Frame(val outgoing: Deck, val incoming: Deck, val crossfade: Float, val mixing: Boolean, val label: String,
+                     val plan: MixPlan? = null, val untilMs: Long = 0L)
 
     const val BEFORE_MS = 4_000L
     const val AFTER_MS = 8_000L
     const val POINTS = 240
+    const val CURVE_POINTS = 60
 
     private val _frame = MutableStateFlow<Frame?>(null)
     /** Null when no transition is being prepared or played. */
@@ -44,6 +50,9 @@ internal object LiveMix {
     private class Planned(val plan: MixPlan, val from: Track, val to: Track, val outro: SegmentAnalysis?, val intro: SegmentAnalysis?) {
         @Volatile var outWave: Wave? = null
         @Volatile var inWave: Wave? = null
+        /** The decks' volume curves, exactly what the engine plays (positions in each title's own microseconds). */
+        val outGain: Curve? = runCatching { DeckAutomation.outgoing(plan).gain }.getOrNull()
+        val inGain: Curve? = runCatching { DeckAutomation.incoming(plan).gain }.getOrNull()
     }
 
     @Volatile private var pair: Planned? = null
@@ -92,16 +101,17 @@ internal object LiveMix {
         val outVoice = levels?.let { MixKeys.levelsAt(it, plan.overlapMs, true, rel).voice / 100f } ?: if (plan.mashup && into > .5f) 0f else 1f
         val inVoice = levels?.let { MixKeys.levelsAt(it, plan.overlapMs, false, rel).voice / 100f } ?: 1f
         return Frame(
-            deck(p.from.title, outPos, p.outro, p.outWave, 1f - into, outVoice),
-            deck(p.to.title, inPos, p.intro, p.inWave, if (outPos < plan.outMs) 0f else into, inVoice),
-            into, mixing, com.ketvoice.app.automix.MixWords.label(plan))
+            deck(p.from.title, outPos, p.outro, p.outWave, 1f - into, outVoice, p.outGain?.let { c -> { ms: Long -> c.at(ms * 1000L) } }),
+            deck(p.to.title, inPos, p.intro, p.inWave, if (outPos < plan.outMs) 0f else into, inVoice, p.inGain?.let { c -> { ms: Long -> c.at(ms * 1000L) } }),
+            into, mixing, com.ketvoice.app.automix.MixWords.label(plan), plan, (plan.outMs - outPos).coerceAtLeast(0L))
     }
 
     /** How far the crossing is, 0..1, by the outgoing title's position. */
     internal fun mixProgress(plan: MixPlan, outPos: Long): Float =
         if (plan.overlapMs <= 0) (if (outPos >= plan.outMs) 1f else 0f) else ((outPos - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
 
-    internal fun deck(title: String, pos: Long, a: SegmentAnalysis?, wave: Wave?, level: Float, voice: Float): Deck {
+    internal fun deck(title: String, pos: Long, a: SegmentAnalysis?, wave: Wave?, level: Float, voice: Float,
+                      gainAt: ((Long) -> Float)? = null): Deck {
         val from = pos - BEFORE_MS
         val span = (BEFORE_MS + AFTER_MS).toFloat()
         val peaks = FloatArray(POINTS) { i ->
@@ -123,9 +133,14 @@ internal object LiveMix {
             val q = (pos - a.beatAtMs) / beat
             phase = (q - floor(q)).toFloat()
         }
-        return Deck(title, pos, if (a?.hasBeat == true) a.bpm else 0f, peaks, beats, bars, phase, level, voice)
+        val gain = if (gainAt == null) FloatArray(0)
+            else FloatArray(CURVE_POINTS) { i -> gainAt(from + (i * span / (CURVE_POINTS - 1)).toLong()).coerceIn(0f, 1f) }
+        return Deck(title, pos, if (a?.hasBeat == true) a.bpm else 0f, peaks, beats, bars, phase, level, voice, gain)
     }
 
     /** Test seam. */
     internal fun resetForTest() { job?.cancel(); job = null; pair = null; _frame.value = null }
+
+    /** Test seam: shows [frame] as if a transition were playing (screenshots, interface tests). */
+    internal fun showForTest(frame: Frame?) { _frame.value = frame }
 }
