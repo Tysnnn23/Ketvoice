@@ -147,6 +147,20 @@ object SourceExtras {
     private fun plain(text: String) = text.lines().map { it.trim() }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
         .take(400).map { MusicApi.LyricLine(-1L, it) }
 
+    private const val MAX_BODY = 2_000_000
+
+    /** At most [limit] bytes; InputStream.readNBytes needs API 33 and the phone app starts at 31. */
+    internal fun readAtMost(input: java.io.InputStream, limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8 * 1024)
+        while (out.size() < limit) {
+            val read = input.read(buffer, 0, minOf(buffer.size, limit - out.size()))
+            if (read <= 0) break
+            out.write(buffer, 0, read)
+        }
+        return out.toByteArray()
+    }
+
     private suspend fun httpGet(address: String): Pair<String, String>? {
         if (!address.startsWith("https://")) return null
         return try {
@@ -157,8 +171,8 @@ object SourceExtras {
                 if (c.responseCode !in 200..299) return@use null
                 val type = c.contentType.orEmpty().lowercase()
                 if (type.startsWith("image/") || type.startsWith("video/")) return@use "" to type
-                val body = c.inputStream.use { input -> String(input.readNBytes(2_000_001), Charsets.UTF_8) }
-                if (body.length > 2_000_000) null else body to type
+                val bytes = c.inputStream.use { input -> readAtMost(input, MAX_BODY + 1) }
+                if (bytes.size > MAX_BODY) null else String(bytes, Charsets.UTF_8) to type
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
