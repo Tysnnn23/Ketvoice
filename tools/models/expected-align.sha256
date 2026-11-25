@@ -1,0 +1,3 @@
+4e0c362de8cfa728fd68e29eb695e01acd5ec8396aaeb04225055284845b45a6  ketvoice-align-encoder.onnx
+5882e59487bebbcfe8fd6c1078a1e4f28e02478e2e50c0dbcf45e481bfb3ce5a  ketvoice-align-decoder.onnx
+b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126  ketvoice-align-vocab.tiktoken

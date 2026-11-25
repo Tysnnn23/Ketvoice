@@ -56,8 +56,9 @@ import kotlinx.coroutines.flow.debounce
  * « Paroles flottantes » (Windows 2.0, optional, off by default): a clear band above every window showing the line
  * being sung, lit word by word as in the lyrics view, on the monitor chosen in Settings. Locked (the default), clicks
  * go through it to what is under it; unlocked, it can be dragged and shows its edges and a lock. Toggled from the
- * lyrics' switches, the tray and Settings › Paroles sur PC. Shares the compact player's window code ([CompactPlayer]
- * for « still on a screen », [CompactLyric] for the line) and the lyrics view's karaoke ([WordLine]).
+ * lyrics' switches, the tray and Settings › Paroles sur PC. Shares the compact player's window pattern (a frameless
+ * transparent window placed from the remembered spot, [WindowStore.awtScreens]) and the lyrics view's clock and karaoke
+ * ([rememberLyricsClock], [WordLine]).
  */
 object FloatingLyrics {
     const val WIDTH = 1000f

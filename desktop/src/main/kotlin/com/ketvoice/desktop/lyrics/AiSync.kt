@@ -56,6 +56,7 @@ object AiSync {
     // Seams (tests).
     internal var eligible: () -> Boolean = { LyricsPcSettings.aiSync.value && KetmixPower.current() == KetmixPower.Tier.Maximum }
     internal var openModel: () -> AlignModel? = { AlignModels.open() }
+    internal var modelReady: () -> Boolean = { AlignModels.ready }
     internal var voiceOf: suspend (Track) -> FloatArray? = { voiceFor(it) }
 
     @OptIn(FlowPreview::class)
@@ -73,20 +74,21 @@ object AiSync {
                 if (!wanted(raw.track, raw.state)) return@collectLatest
                 delay(PLAY_DELAY_MS)
                 if (Player.state.value.current?.id != raw.track.id) return@collectLatest
-                launch(worker) { run(raw.track, raw.state.lines) }
+                // Not a child of this collector: a newer state of the same lyrics must not stop the work.
+                scope.launch(worker) { run(raw.track, raw.state.lines) }
             }
         }
         scope.launch(worker) {
             while (isActive) {
                 delay(IDLE_POLL_MS)
-                if (eligible() && AlignModels.ready && IdleWatch.idle(IdleWatch.snapshot())) runCatching { idlePass() }.onFailure { AppLog.w("lyrics", "idle word sync: $it") }
+                if (eligible() && modelReady() && IdleWatch.idle(IdleWatch.snapshot())) runCatching { idlePass() }.onFailure { AppLog.w("lyrics", "idle word sync: $it") }
             }
         }
     }
 
     fun refreshStatus() {
         if (_status.value is Status.Working) return
-        _status.value = when { !eligible() -> Status.Off; !AlignModels.ready -> Status.NeedsModel; else -> Status.Ready }
+        _status.value = when { !eligible() -> Status.Off; !modelReady() -> Status.NeedsModel; else -> Status.Ready }
     }
 
     /** Downloads the model (« Télécharger », about 970 MB). */
@@ -94,7 +96,7 @@ object AiSync {
 
     /** Whether these lyrics of [track] are for the AI: timed by line or not at all, not the listener's own, not tried. */
     internal fun wanted(track: Track, state: LyricsRepo.State): Boolean {
-        if (!eligible() || !AlignModels.ready || state.loading || state.trackId != track.id) return false
+        if (!eligible() || !modelReady() || state.loading || state.trackId != track.id) return false
         if (state.sourceKey == LyricsRepo.SOURCE_CUSTOM || state.lines.size < 2) return false
         if (LyricsRank.level(state.lines) > LyricsRank.LINE) return false
         return !AiLyrics.tried(track.id, AiLyrics.basis(state.lines))

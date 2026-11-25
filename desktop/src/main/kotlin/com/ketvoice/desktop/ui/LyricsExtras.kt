@@ -72,7 +72,7 @@ private fun AiChip(track: Track, lyrics: LyricsRepo.State, full: Boolean) {
         reverted -> LyricChip("Synchro IA", false, full, "lyrics-chip-ai") { AiLyrics.revert(track.id, back = false); LyricsRepo.load(track, force = true) }
         (status as? AiSync.Status.Working)?.trackId == track.id -> LyricChip("Synchronisation des mots…", true, full, "lyrics-chip-ai-working") {}
         status == AiSync.Status.NeedsModel && LyricsRank.level(lyrics.lines) <= LyricsRank.LINE -> when (val m = model) {
-            is ModelPack.State.Downloading -> LyricChip("Téléchargement ${(m.fraction * 100).toInt()} %", true, full, "lyrics-chip-ai-download") {}
+            is ModelPack.State.Downloading -> LyricChip("${com.ketvoice.app.data.AppText.t("Téléchargement")} ${(m.fraction * 100).toInt()} %", true, full, "lyrics-chip-ai-download") {}
             else -> LyricChip("Synchroniser les mots (IA, 970 Mo)", false, full, "lyrics-chip-ai-download") { AiSync.download() }
         }
         else -> {}

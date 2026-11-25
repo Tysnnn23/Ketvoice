@@ -51,7 +51,8 @@ object PcLyricsLibrary {
         AiSync.start(context, scope)
         OutsidePlaylists.start(context, scope)
         LibraryWatch.start(scope)
-        register()
+        // The registries are the window's state: changed on its thread.
+        java.awt.EventQueue.invokeLater { register() }
     }
 
     /** Pages, overlays and settings (also what the tests call without starting anything). */

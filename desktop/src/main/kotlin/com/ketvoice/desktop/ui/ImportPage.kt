@@ -178,7 +178,8 @@ private fun Progress(flow: ImportFlow, preview: ImportPreview) {
         Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(ket.fill)) {
             Box(Modifier.fillMaxWidth(flow.done.toFloat() / total).height(4.dp).clip(RoundedCornerShape(2.dp)).background(ket.accent))
         }
-        KText("${flow.done} / ${preview.songs.size} titres analysés", Ket27Desk.Type.footnote, Modifier.padding(top = 6.dp), color = ket.secondary, translate = false)
+        KText(AppText.t("{0} / {1} titres analysés").replace("{0}", flow.done.toString()).replace("{1}", preview.songs.size.toString()),
+            Ket27Desk.Type.footnote, Modifier.padding(top = 6.dp), color = ket.secondary, translate = false)
     }
 }
 

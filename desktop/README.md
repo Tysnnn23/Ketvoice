@@ -739,3 +739,56 @@ at 60/144/240 Hz, rubber band, magnet, elastic slider, menu origin, lens, page t
 rate, compact player place and lyric line), `Win2ShellTest` (the island opening and unfolding, the panel's tabs, the narrow
 sidebar, registered pages/tabs/settings sections, every glass mode, the compact player), renders `Win2Screenshots`
 (`build/desktop-ui-preview/win2-*.png`).
+
+## Lyrics and library (Windows 2.0)
+
+Started behind the window by `ui/PcLyricsLibrary.start` (one line in `Main.startBehind`); pages, overlays and settings go
+through the registries (`PageRegistry`, `ShellOverlays`, `SettingsSections`).
+
+- **Word sync by AI** (`lyrics/`): on « Puissance de Ketmix » « Maximum » (Auto on a desktop PC), lyrics timed by line
+  only (or not at all) are timed word by word on the song's separated voice (`VoiceAudio`: the title's stored separation
+  applied to its sound, made with the studio model when there is none; the whole mix without a model). The model is
+  OpenAI Whisper small (MIT code and weights) as two ONNX graphs (`tools/align/export_whisper.py`, prerelease
+  `ketvoice-align-v1` from `publish-ketvoice-align.yml`, pins in `tools/models/expected-align.sha256` and
+  `AlignModels.kt`, review in `docs/licenses/ketvoice-align.md`), 970 MB downloaded when the listener asks (the lyrics'
+  « Synchroniser les mots » capsule or Settings › Paroles sur PC). It never transcribes: `WordAligner` reads each window
+  of at most 29 s with its known words (`WhisperTokens`, the BPE of `multilingual.tiktoken`) and `AlignMath` applies
+  `whisper.timing.find_alignment`'s recipe (alignment heads, softmax, normalisation, median 7, DTW). Lines keep their
+  time; a line whose words were not heard keeps line timing; a song whose text is not what is sung is dropped (and not
+  tried again). `AiSync` runs one title at a time on a low-priority thread: 6 s into a title whose lyrics need it, and
+  over downloads and local files at idle (`IdleWatch`). Results are enhanced LRC in `lyrics-v2/ai` (`AiLyrics`, keyed by
+  a digest of the lines they came from) and shown with « · Synchronisé par IA »; the capsule or the lyrics editor
+  (« Revenir à la synchro d'origine ») goes back, « Paroles actuelles » + « Enregistrer » corrects them.
+- **Lyrics engine** (`lyrics/LyricsEngine.kt`, plugged into the shared `LyricsRepo.hooks`, null on the phone): every
+  provider and every custom source with lyrics is asked at once and the richest timing shows (`data/LyricsRank.kt`:
+  word > syllable > word by AI > line > plain; a fragment under 55 % loses; then the earlier source). The source menu's
+  « Pour ce titre » lists what each source answered with its timing; a pick is remembered per title (« Meilleure
+  synchronisation » forgets it). No new third-party provider was added: none of the free lyrics APIs found states terms
+  that allow use in an app (LRCLIB, already asked, does).
+- **Translation and romanisation**: capsules under the lyrics' source (Traduction, « Sous chaque ligne » for every line
+  instead of the sung one, Romanisation when the lyrics are not all Latin script); translations are cached per line by
+  `LyricsTranslation`, romanisations per song (`RomanCache`).
+- **Floating lyrics** (`ui/FloatingLyrics.kt`, off by default): a transparent, always-on-top band on the chosen monitor
+  with the sung line lit word by word (the lyrics view's `WordLine`); locked it lets clicks through
+  (`platform/ClickThrough.kt`: `WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE`), unlocked it can be dragged and its
+  place is kept as a share of the monitor. Toggled from the lyrics capsule, the tray (with « Verrouiller ») and Settings.
+- **Import with a match report** (`ui/ImportPage.kt`, page `import`, argument = a link): one click reads the playlist
+  (the shared importers, plus `smartlib/YouTubeImport.kt` for YouTube and YouTube Music links) and matches every title;
+  the report (`smartlib/ImportReport.kt`) shows the share that will play, found / uncertain (score under 0.9) / missing,
+  each a filter; « Corriger » searches the catalogue to fix one by hand or leaves it out.
+- **Followed outside playlists** (`library/OutsidePlaylists.kt`): « Suivre la playlist d'origine » at import; every 12 h
+  the songs it gained (`PlaylistFollow.outsideFresh`) are matched and added, or offered in a glass card (« Ajouter
+  automatiquement les nouveaux titres », off). Nothing is ever removed.
+- **Drop anywhere** (`ui/DropAnywhere.kt`, `library/DropKinds.kt`): a glass sheet while something is dragged over the
+  window; playlist links open the import page, Ketvoice share links and music-service links play the title (Deezer's
+  public API and YouTube/Spotify oEmbed name it), `manifest.json` is offered to `CustomSources.add`, audio files play or
+  their folders join the library, a lyrics file is attached to the title playing after a question.
+- **Watched library** (`library/LibraryWatch.kt`): the music folders are watched (every subfolder, new ones included);
+  changes are gathered (1.2 s of quiet, 8 s at most) and read by `LocalFolders.update`; embedded lyrics (`lyrics-xxx`,
+  `LYRICS`, `UNSYNCEDLYRICS`) and a `.lrc` beside the file become the title's lyrics.
+- Tests: `AlignMathTest` (Whisper's recipe on a fixture computed by Whisper's code), `WhisperTokensTest` (tiktoken's tokens
+  with the real vocabulary, when present), `WordAlignerTest` (fake model; the real model on jfk.flac when
+  `KETVOICE_ALIGN_DIR`/`KETVOICE_ALIGN_CLIP` are set: the same 22 word starts as Whisper), `LyricsEngineTest` (ranking,
+  choices, AI swap and revert, failures remembered, pins), `LyricsPcTest` (romanisation cases, the capsules, the band's
+  place, click-through), `ImportLibraryPcTest` (report math, drop classification, watcher gathering and a real watch,
+  followed playlists, YouTube parsing), `ImportPageTest` (the page end to end with a fake importer).
