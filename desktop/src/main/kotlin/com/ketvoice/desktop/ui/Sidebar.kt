@@ -5,6 +5,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.skiaPaint
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -256,7 +261,7 @@ private fun SideRow(icon: ImageVector?, label: String, key: String, tag: String,
         .onGloballyPositioned { c -> lens.area?.takeIf { it.isAttached }?.let { a -> lens.rows[key] = a.localBoundingBoxOf(c) } }
         .clip(RoundedCornerShape(12.dp))
         .background(if (dropHover) ket.accent.copy(alpha = .22f) else Color.Transparent)
-        .hoverable(source).clickable(interactionSource = source, indication = null, onClick = onClick).testTag(tag)
+        .hoverable(source).clickable(interactionSource = source, indication = null, onClick = onClick).focusRing(source, RoundedCornerShape(12.dp)).testTag(tag)
     val content: @Composable () -> Unit = {
         if (leading != null) leading() else if (icon != null) Icon(icon, null, Modifier.size(18.dp), tint = if (selected) ket.accent else ket.label.copy(alpha = .82f))
     }
@@ -309,9 +314,32 @@ private fun PlaylistItem(p: UserPlaylist, icons: Boolean, lens: SideLens) {
         leading = { Mosaic(p.tracks, if (icons) 26.dp else 22.dp) }) { nav.root(route) }
 }
 
-/** The soft shadow under floating glass. */
-internal fun Modifier.glassShadow(radius: Dp, elevation: Dp = 18.dp): Modifier =
-    this.then(Modifier.androidxShadow(elevation, RoundedCornerShape(radius)))
+/**
+ * The soft shadow under floating glass: a blurred copy of the outline a little lower, drawn only outside the outline
+ * (a translucent tint never darkens over it). Compose's elevation shadow left a bright band under the rounded bottom
+ * of the sidebar and the panel on a light page.
+ */
+internal fun Modifier.glassShadow(radius: Dp, elevation: Dp = 18.dp): Modifier = this.then(Modifier.drawBehind {
+    val r = radius.toPx().coerceAtMost(size.minDimension / 2f)
+    val e = elevation.toPx()
+    val outline = androidx.compose.ui.graphics.Path().apply {
+        addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(r)))
+    }
+    clipPath(outline, androidx.compose.ui.graphics.ClipOp.Difference) {
+        drawIntoCanvas { canvas ->
+            val paint = androidx.compose.ui.graphics.Paint()
+            paint.skiaPaint.apply {
+                color = Color.Black.copy(alpha = GlassShadow.ALPHA).toArgb()
+                maskFilter = org.jetbrains.skia.MaskFilter.makeBlur(org.jetbrains.skia.FilterBlurMode.NORMAL, e * GlassShadow.SIGMA)
+            }
+            canvas.drawRoundRect(0f, e * GlassShadow.DROP, size.width, size.height + e * GlassShadow.DROP, r, r, paint)
+        }
+    }
+})
 
-private fun Modifier.androidxShadow(elevation: Dp, shape: androidx.compose.ui.graphics.Shape) =
-    shadow(elevation, shape, clip = false, ambientColor = Color.Black.copy(alpha = .22f), spotColor = Color.Black.copy(alpha = .28f))
+internal object GlassShadow {
+    const val ALPHA = .26f
+    /** Blur and drop as shares of the elevation. */
+    const val SIGMA = .42f
+    const val DROP = .28f
+}

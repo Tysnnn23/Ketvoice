@@ -14,6 +14,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -131,6 +138,7 @@ fun KetIconButton(icon: ImageVector, label: String, onClick: () -> Unit, modifie
                 .pointerInput(enabled) {
                     detectTapGestures(onPress = { if (enabled) { pressed = true; tryAwaitRelease(); pressed = false } }, onTap = { if (enabled) click() })
                 }
+                .keyboardControl(source, CircleShape, enabled) { click() }
                 .semantics { contentDescription = AppText.t(label) },
             contentAlignment = Alignment.Center,
         ) {
@@ -160,6 +168,7 @@ fun CapsuleButton(label: String, icon: ImageVector?, onClick: () -> Unit, filled
             .background(if (hovered) bg.copy(alpha = (bg.alpha * .85f)) else bg)
             .hoverable(source)
             .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }, onTap = { click() }) }
+            .keyboardControl(source, RoundedCornerShape(20.dp)) { click() }
             .semantics(mergeDescendants = true) { role = androidx.compose.ui.semantics.Role.Button }
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
@@ -409,6 +418,24 @@ fun rememberHover(): Pair<MutableInteractionSource, Boolean> {
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
     return source to hovered
+}
+
+/**
+ * Keyboard use of a control drawn with pointer gestures (Windows 2.0): Tab reaches it, Enter activates it, and a ring in
+ * the accent shows only while the keyboard has it (a pointer click does not move the focus).
+ */
+internal fun Modifier.keyboardControl(source: MutableInteractionSource, shape: androidx.compose.ui.graphics.Shape, enabled: Boolean = true,
+                                      onActivate: () -> Unit): Modifier = composed {
+    val activate by rememberUpdatedState(onActivate)
+    this.onKeyEvent { e ->
+        if (enabled && e.type == KeyEventType.KeyUp && (e.key == Key.Enter || e.key == Key.NumPadEnter)) { activate(); true } else false
+    }.focusable(enabled, source).focusRing(source, shape)
+}
+
+/** The accent ring of [keyboardControl], for controls already focusable (`clickable` with this [source]). */
+internal fun Modifier.focusRing(source: MutableInteractionSource, shape: androidx.compose.ui.graphics.Shape): Modifier = composed {
+    val focused by source.collectIsFocusedAsState()
+    if (focused) Modifier.border(2.dp, LocalKet.current.accent, shape) else Modifier
 }
 
 internal val secondaryButton = PointerButton.Secondary

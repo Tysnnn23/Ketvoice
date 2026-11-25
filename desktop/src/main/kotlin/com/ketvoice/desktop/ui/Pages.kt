@@ -498,8 +498,7 @@ private fun KetmixSettings() {
     SettingsCard {
         ToggleRow("Ketmix", AppSettings.automix.value, "ketmix") { AppSettings.automix.value = it }
         Hairline()
-        ChoiceRow("Style de transition", AppSettings.ketmixStyle.value, listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu",
-            "Montée", "Coupe", "Sur le drop", "Relais des voix"), "ketmix-style") { AppSettings.ketmixStyle.value = it }
+        ChoiceRow("Style de transition", AppSettings.ketmixStyle.value, KetmixWords.styles, "ketmix-style") { AppSettings.ketmixStyle.value = it }
         Hairline()
         ChoiceRow("Intensité du mix", AppSettings.automixIntensity.value, listOf("Discret", "Équilibré", "DJ"), "ketmix-intensity") {
             AppSettings.automixIntensity.value = it

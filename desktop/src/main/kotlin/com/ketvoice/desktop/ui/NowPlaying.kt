@@ -85,6 +85,7 @@ fun PlayPause(playing: Boolean, onClick: () -> Unit, size: androidx.compose.ui.u
             .background(when { filled -> ink.copy(alpha = if (hovered) .22f else .14f); hovered -> ket.hover; else -> Color.Transparent })
             .hoverable(source)
             .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }, onTap = { click() }) }
+            .keyboardControl(source, androidx.compose.foundation.shape.CircleShape) { click() }
             .testTag("play-pause"), contentAlignment = Alignment.Center) {
             ReplaceSymbol(if (playing) KetIcons.Pause else KetIcons.Play, AppText.t(if (playing) "Pause" else "Lecture"), ink, Modifier.size(glyph))
         }
@@ -223,6 +224,8 @@ fun FullPlayer(onClose: () -> Unit) {
             Column((if (lyrics) Modifier.weight(1f) else Modifier.width(480.dp)).fillMaxHeight().padding(start = 28.dp, end = 64.dp, top = 64.dp, bottom = 48.dp),
                 verticalArrangement = if (lyrics) Arrangement.Top else Arrangement.Center) {
                 PlayerControlsBlock(track, compact = lyrics, backdrop = backdrop)
+                // What other features show here (the live mix view while Ketmix crosses two titles).
+                FullPlayerSlots.all.forEach { androidx.compose.runtime.key(it.id) { it.content(backdrop, lyrics) } }
                 if (lyrics) {
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth().weight(1f)) {

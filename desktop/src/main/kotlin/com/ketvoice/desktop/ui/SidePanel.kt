@@ -103,19 +103,25 @@ private fun PanelTabStrip(backdrop: GlassBackdrop?) {
     Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(17.dp)).background(ket.fill.copy(alpha = ket.fill.alpha * .7f))) {
             val place = places[shell.panel]
-            val x by animateDpAsState(with(density) { (place?.first ?: 0f).toDp() }, spring(dampingRatio = .66f, stiffness = 480f))
-            val w by animateDpAsState(with(density) { (place?.second ?: 0f).toDp() }, spring(dampingRatio = .72f, stiffness = 520f))
+            val reduced = Motion.reduced
+            val x by animateDpAsState(with(density) { (place?.first ?: 0f).toDp() },
+                if (reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .66f, stiffness = 480f))
+            val w by animateDpAsState(with(density) { (place?.second ?: 0f).toDp() },
+                if (reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .72f, stiffness = 520f))
             if (place != null) Box(Modifier.offset { IntOffset(x.roundToPx(), 0) }.width(w).fillMaxHeight().padding(2.dp)
                 .glass(backdrop, 15.dp, ket.raised.copy(alpha = if (ket.dark) .55f else .9f), GlassStyle.Drop, rim = ket.glassRim))
             Row(Modifier.fillMaxSize()) {
                 tabs.forEach { tab ->
                     val on = shell.panel == tab.id
                     // The open tab shows its name; the others keep their symbol (named in a tooltip).
-                    val weight by androidx.compose.animation.core.animateFloatAsState(if (on) 2.6f else 1f,
+                    // Room for the open tab's whole name (« Activité des amis » with six tabs), in the listener's language.
+                    val weight by androidx.compose.animation.core.animateFloatAsState(if (on) TabStrip.openWeight(AppText.t(tab.label)) else 1f,
                         if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .78f, stiffness = 460f))
                     Box(Modifier.weight(weight).fillMaxHeight().onGloballyPositioned { places[tab.id] = it.positionInParent().x to it.size.width.toFloat() }) {
                       Tooltip(tab.label) {
-                        Row(Modifier.fillMaxSize().clip(RoundedCornerShape(15.dp)).clickable { shell.open(tab.id) }.testTag("panel-tab:${tab.id}"),
+                        val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        Row(Modifier.fillMaxSize().clip(RoundedCornerShape(15.dp)).clickable(source, androidx.compose.foundation.LocalIndication.current) { shell.open(tab.id) }
+                            .focusRing(source, RoundedCornerShape(15.dp)).testTag("panel-tab:${tab.id}"),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(tab.icon, null, Modifier.size(15.dp), tint = if (on) ket.accent else ket.secondary)
                             if (on) KText(tab.label, Ket27Desk.Type.footnote, Modifier.padding(start = 6.dp), color = ket.label,
@@ -130,6 +136,11 @@ private fun PanelTabStrip(backdrop: GlassBackdrop?) {
     }
 }
 
+/** The panel's tab strip: the open tab's share of the width, the others' being 1. */
+internal object TabStrip {
+    fun openWeight(label: String): Float = (1.2f + label.length * .14f).coerceIn(2.6f, 4f)
+}
+
 /** The built-in tabs, registered the first time the panel is read. */
 internal object BuiltInTabs {
     @Volatile private var done = false
@@ -137,10 +148,10 @@ internal object BuiltInTabs {
     fun ensure() {
         if (done) return
         done = true
-        PanelTabs.register(PanelTabs.Tab("lyrics", "Paroles", KetIcons.Lyrics, 10) { LyricsPanel() })
-        PanelTabs.register(PanelTabs.Tab("queue", "File d'attente", DeskGlyphs.Queue, 20) { QueuePanel() })
-        PanelTabs.register(PanelTabs.Tab("artist", "Artiste", KetIcons.Account, 30) { ArtistPanel() })
-        PanelTabs.register(PanelTabs.Tab("ketmix", "Ketmix", DeskGlyphs.Ketmix, 40) { KetmixPanel() })
+        PanelTabs.registerDefault(PanelTabs.Tab("lyrics", "Paroles", KetIcons.Lyrics, 10) { LyricsPanel() })
+        PanelTabs.registerDefault(PanelTabs.Tab("queue", "File d'attente", DeskGlyphs.Queue, 20) { QueuePanel() })
+        PanelTabs.registerDefault(PanelTabs.Tab("artist", "Artiste", KetIcons.Account, 30) { ArtistPanel() })
+        PanelTabs.registerDefault(PanelTabs.Tab("ketmix", "Ketmix", DeskGlyphs.Ketmix, 40) { KetmixPanel() })
     }
 }
 
@@ -245,7 +256,8 @@ private fun TransitionLine(from: com.ketvoice.app.data.Track?, to: com.ketvoice.
 
 /** The words of the Ketmix tab (French; translated by KText). */
 internal object KetmixWords {
-    val styles = listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu", "Montée", "Coupe", "Sur le drop", "Relais des voix")
+    /** By [com.ketvoice.app.automix.MixStyle] ordinal (« Pont en boucle » is 9, played on the desktop since 1.2). */
+    val styles = listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu", "Montée", "Coupe", "Sur le drop", "Relais des voix", "Pont en boucle")
 
     fun phase(on: Boolean, phase: com.ketvoice.desktop.ketmix.DesktopAutomix.Phase): String = when {
         !on -> "Ketmix désactivé"

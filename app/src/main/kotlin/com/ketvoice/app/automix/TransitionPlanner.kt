@@ -385,10 +385,12 @@ internal object TransitionPlanner {
             }
         }
         val reason = if (a.hasBeat && b.hasBeat) "tempos too far apart" else "no steady beat"
-        if (!context.effects) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason, onPhrase = onPhrase))
+        val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
+        // Windows 2.0 « Ketmix apprend »: a kind the listener keeps turning down becomes a plain fade (only when left to Ketmix).
+        val avoided = settings.style == MixStyle.Auto && kind in context.avoid
+        if (!context.effects || avoided) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason, onPhrase = onPhrase))
         // While the title dies away by itself its level is left alone; ours only closes the end.
         val hold = if (end - fade >= a.fallMs - 400L) .55f else .2f
-        val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
     }

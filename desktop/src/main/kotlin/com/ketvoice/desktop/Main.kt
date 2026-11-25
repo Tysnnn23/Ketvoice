@@ -103,6 +103,8 @@ fun main(args: Array<String>) {
     }
     // Windows 2.0 social: « Ensemble », « Activité des amis », the profile page, « Partager », ketvoice:// links.
     com.ketvoice.desktop.social.SocialFeature.register()
+    // Windows 2.0: the live mix view (« Ketmix » tab, full player) and « Ketmix apprend »'s 👍/👎 after each transition.
+    com.ketvoice.desktop.ui.KetmixLive.register()
     DesktopPlatform.open(InstanceMessage.openable(argList))
     val autostarted = Autostart.FLAG in argList
     val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
