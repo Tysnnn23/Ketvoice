@@ -229,6 +229,44 @@ jobs:
           echo "### Ketvoice Lite: $((lite_bytes / 1048576)) MB (mobile $((mobile_bytes / 1048576)) MB)" >> "$GITHUB_STEP_SUMMARY"
       # ---- end Ketvoice Lite
 
+      # ---- Ketvoice TV (1.0.0): Android TV / Google TV. Its own package (com.ketvoice.tv), version line and
+      # tv-v<version> releases (publish-tv-release.yml), the same sources and signing key as the phone APKs.
+      # The tv flavor leaves out the Discord bridge (no Discord app on a TV) and the bundled rhythm model.
+      - name: Compile Ketvoice TV (assemble tv release)
+        env:
+          KETVOICE_STORE_PASSWORD: ${{ secrets.KETVOICE_STORE_PASSWORD }}
+          KETVOICE_KEY_PASSWORD: ${{ secrets.KETVOICE_KEY_PASSWORD }}
+          KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
+        run: ./gradlew :app:assembleTvRelease --stacktrace
+
+      - name: Check Ketvoice TV APK (package, leanback, ABIs, no Discord)
+        run: |
+          set -euo pipefail
+          tv=(app/build/outputs/apk/tv/release/*.apk)
+          [ "${#tv[@]}" -eq 1 ] && [ -f "${tv[0]}" ] || { echo "::error::Expected one TV release APK."; exit 1; }
+          aapt_bin=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -Vr | head -1)
+          badging=$("$aapt_bin" dump badging "${tv[0]}")
+          grep -q "^package: name='com.ketvoice.tv' " <<<"$badging" \
+            || { echo "::error::The TV APK is not the com.ketvoice.tv package."; exit 1; }
+          # Leanback launcher activity, android.software.leanback, touchscreen not required: the release gate's own rules.
+          python3 -c 'import sys; sys.path.insert(0, "tools"); from verify_apk import tv_manifest; tv_manifest(sys.stdin.read())' \
+            <<<"$badging" || { echo "::error::The TV APK manifest is not a TV manifest (see above)."; exit 1; }
+          # 32- and 64-bit ARM only: many TVs run a 32-bit system.
+          abis=$(unzip -Z1 "${tv[0]}" | sed -n 's#^lib/\([^/]*\)/.*#\1#p' | sort -u | tr '\n' ' ')
+          echo "TV ABIs: ${abis:-none}"
+          for abi in $abis; do
+            case "$abi" in arm64-v8a|armeabi-v7a) ;; *) echo "::error::TV APK ships $abi native libraries."; exit 1;; esac
+          done
+          # No Discord presence on TV, with or without the Discord SDK on this runner.
+          if unzip -Z1 "${tv[0]}" | grep -q 'libdiscordbridge\.so$'; then
+            echo "::error::The TV APK contains the Discord bridge."
+            exit 1
+          fi
+          tv_bytes=$(stat -c %s "${tv[0]}")
+          echo "### Ketvoice TV: $((tv_bytes / 1048576)) MB ($(grep -o "versionName='[^']*'" <<<"$badging"))" >> "$GITHUB_STEP_SUMMARY"
+      # ---- end Ketvoice TV
+
+      # Every release APK, Lite and TV included (*/release/*.apk).
       - name: Check method sizes against the Android verifier
         # 6.1.0/6.1.1 shipped a method of 287 registers: ART rejected Automix at launch (JVM tests never run ART).
         run: |
@@ -252,6 +290,17 @@ jobs:
           --tests 'com.ketvoice.app.ui.update.*'
           --stacktrace --max-workers=2
 
+      # TV also compiles the shared sources mobile tests cover above; running them all again in the TV build
+      # would double the job for the same code. These read what differs in the TV build itself: its build flags
+      # and edition (LiteTuningTest), its updater (tv-v releases, SHA256SUMS.txt) and its own screens (tv package).
+      - name: Unit tests (Ketvoice TV)
+        run: >-
+          ./gradlew :app:testTvDebugUnitTest
+          --tests 'com.ketvoice.app.LiteTuningTest'
+          --tests 'com.ketvoice.app.ui.update.*'
+          --tests 'com.ketvoice.app.tv.*'
+          --stacktrace --max-workers=2
+
       # Fails when a user-facing string exists only in French. Strings that are
       # not user text belong in tools/ui-text-ignored.json with a reason.
       - name: Audit UI translations
@@ -262,6 +311,9 @@ jobs:
 
       - name: Lint (Ketvoice Lite)
         run: ./gradlew :app:lintLiteRelease --stacktrace --max-workers=2
+
+      - name: Lint (Ketvoice TV)
+        run: ./gradlew :app:lintTvRelease --stacktrace --max-workers=2
 
       # The keystore preflight proves the secret is readable; this proves the
       # APKs on disk really carry the release identity before anything is
@@ -312,10 +364,25 @@ jobs:
           fi
           exit "$status"
 
+      # Ketvoice TV is signed with the same key: the step above covers it (every APK under outputs/apk).
+      # The full release gate (tools/verify_apk.py, edition tv) also runs here, so a TV APK that would be refused
+      # by publish-tv-release.yml fails this run first.
+      - name: Verify the TV APK with the release gate
+        if: steps.keystore.outputs.stable == 'true'
+        run: |
+          set -euo pipefail
+          bt=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -Vr | head -1)
+          tv=(app/build/outputs/apk/tv/release/*.apk)
+          read -r code name < <("$bt/aapt" dump badging "${tv[0]}" \
+            | sed -n "s/^package: name='[^']*' versionCode='\([0-9]*\)' versionName='\([^']*\)'.*/\1 \2/p")
+          echo "TV $name (versionCode $code), build-tools $bt"
+          python3 tools/verify_apk.py "${tv[0]}" --build-tools "$bt" --version "$name" --version-code "$code" --edition tv
+
+      # The phone editions carry the Discord bridge when the SDK is provided; TV never does (checked above).
       - name: Verify Discord bridge is packaged
         if: env.KETVOICE_EXPECT_DISCORD == '1'
         run: |
-          for apk in app/build/outputs/apk/*/release/*.apk; do
+          for apk in app/build/outputs/apk/{mobile,quest,lite}/release/*.apk; do
             if ! unzip -l "$apk" | grep -q "lib/arm64-v8a/libdiscordbridge.so"; then
               echo "::error::$apk does not contain the Discord bridge."
               exit 1
@@ -323,8 +390,9 @@ jobs:
             echo "$apk contains the Discord bridge."
           done
 
-      # 7.0.0: the build fetches the pinned Ketmix rhythm model (app/build.gradle.kts, BeatModelAsset); Lite keeps it as a download.
-      - name: Verify the Ketmix rhythm model is packaged (mobile, Quest) and left out of Lite
+      # 7.0.0: the build fetches the pinned Ketmix rhythm model (app/build.gradle.kts, BeatModelAsset); Lite and TV keep
+      # it as a download.
+      - name: Verify the Ketmix rhythm model is packaged (mobile, Quest) and left out of Lite and TV
         run: |
           set -euo pipefail
           for apk in app/build/outputs/apk/mobile/release/*.apk app/build/outputs/apk/quest/release/*.apk; do
@@ -332,10 +400,12 @@ jobs:
               || { echo "::error::$apk lacks the rhythm model or stores it compressed (it is memory-mapped)."; exit 1; }
             echo "$apk contains the rhythm model."
           done
-          for apk in app/build/outputs/apk/lite/release/*.apk; do
+          for apk in app/build/outputs/apk/lite/release/*.apk app/build/outputs/apk/tv/release/*.apk; do
             if unzip -Z1 "$apk" | grep -q "^assets/beat/"; then echo "::error::$apk ships the rhythm model."; exit 1; fi
           done
 
+      # mobile/, quest/, lite/ and tv/ release/*.apk: publish-release.yml takes the first three by path,
+      # publish-tv-release.yml only tv/release/.
       - name: Upload verified APK artifacts
         uses: actions/upload-artifact@v4
         with:
