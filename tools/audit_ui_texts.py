@@ -71,6 +71,8 @@ def main():
     check='--check' in sys.argv[1:]
     paths=list((SOURCE/'ui').rglob('*.kt'))+[SOURCE/'MainActivity.kt',SOURCE/'YouTubeLoginActivity.kt']
     paths += [SOURCE/'data'/name for name in ['DesignChoices.kt','Playlists.kt','SpotifyPlaylistImport.kt','OfflineCapsule.kt','CapsulePlan.kt','ImportedLyrics.kt']]
+    # Ketvoice TV (1.0.0): its interface lives in the tv flavour's source set.
+    paths += list((ROOT/'app/src/tv/kotlin/com/ketvoice/app/tv').rglob('*.kt'))
     found=set()
     for path in paths:
         if path.exists():found.update(v for v in strings(path.read_text(encoding='utf-8')) if ui_message(v))
