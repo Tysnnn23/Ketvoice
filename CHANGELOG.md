@@ -7,6 +7,18 @@
 
 ---
 
+# Ketvoice 9.1.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 155** — Ketmix echoes become rare (≤ 10 % of automatic transitions, measured 3.8 %), titles that stop at full level are mixed out before their last hit, fixes to fades, bass swap and echo clicks; recently played, statistics and the Discord choice sync with the account. Ketvoice for Windows 2.0.1 ships the same Ketmix and sync, a Canvas that fills the player, sharp cached covers and Studio artwork on Windows, and drops the live mix view.
+
+- Ketmix planner (`automix/TransitionPlanner.kt`, shared): echo only when the outgoing title stops at full level, its voice ends within 4 s of the last note, the next tempo is ≥ 12 % away or unsteady, and no echo in the last 3 (`echoSuits`); builds at most once in four; `earlyExit` mixes out at the start of the last 8/16-bar phrase (16–4 bars before the end) with a beat-matched blend, filter crossing, dissolve or fade that ends by the last hit. `KetmixMixShareTest` over 2,400 pairs: echo 27.8 → 3.8 %, trims 3.5 %, blends 68.4 → 89.3 % (balanced). Hand-picked Echo/Rise play at close tempos; reason labels tell tempo distance, unsteady beat and crossing apart.
+- Render (`automix/DeckDsp.kt`): plain fade into a fading title rises to −6 dB then settles over 8 s (bulge 4.19 → 1.84 LU); bass swap ⅛ beat each side of the downbeat (same-note dip 5.5 → 4.4 dB); echo send and dry close over an eased 60 ms (−43.6 → −57.5 dBFS above 4 kHz).
+- Sync (`sync/ListeningKind.kt`, `sync/ConnectionsKind.kt`, `data/ListeningShare.kt`, `data/ListeningHistory.kt`, `discord/DiscordAccountSync.kt`): kinds `listening` (per-device `dev:<id>:` counters, summed by the apps; recents interleaved by time) and `connections` (Discord share choice, latest wins; per-device link state and name, never a token) in `ketvoice_library` (migration `20261126120000_library_listening_connections`). `ListeningSyncTest`.
+
+---
+
 # Ketvoice 9.1.0
 
 ![Ketvoice](ketvoice-banner.png)
