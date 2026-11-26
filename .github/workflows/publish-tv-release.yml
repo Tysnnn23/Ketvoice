@@ -1,0 +1,199 @@
+name: Publish TV release
+
+# Ketvoice TV (Android TV / Google TV): publishes the exact, already-verified TV APK of a green "Android CI" run
+# as the GitHub release tv-v<version> ("Ketvoice TV <version>", asset Ketvoice-TV-<version>.apk). Text metadata
+# (notes, validation record, checksums) lives in release-metadata/tv-v<version>/; the notes come from
+# docs/releases/tv-v<version>.md. The release is never marked "latest": the phone's in-app updater (v* tags) and
+# the website read the latest release, the TV updater reads only tv-v* tags. An existing tag or release is never
+# touched. Mirrors publish-release.yml: checksums, APK verification, draft first, upload then re-download
+# comparison. publish-release.yml stays the phone line's (it refuses tv-v* tags and never reads tv/release/).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Ketvoice TV version, e.g. 1.0.0 (tag tv-v1.0.0)"
+        required: true
+      run_id:
+        description: "Green Android CI run whose ketvoice-apks artifact holds the TV APK (tv/release/)"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-tv-release
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+  TAG: tv-v${{ inputs.version }}
+  RUN_ID: ${{ inputs.run_id }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse a bad version or an existing tag or release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,5}$ ]] || { echo "::error::Bad version '$VERSION' (MAJOR.MINOR.PATCH)"; exit 1; }
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Bad run id '$RUN_ID'"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists; a published version is never rebuilt or overwritten."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::A release (or draft) $TAG already exists; delete the draft or use a new version."
+            exit 1
+          fi
+          echo "Publishing $TAG from Android CI run $RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the Android CI run and the validated sources
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          meta="release-metadata/$TAG"
+          for f in "docs/releases/$TAG.md" "$meta/RELEASE-NOTES.md" "$meta/validation.json" "$meta/SHA256SUMS.txt"; do
+            [ -f "$f" ] || { echo "::error::$f is missing"; exit 1; }
+          done
+          # One source for the notes: the published RELEASE-NOTES.md is docs/releases/tv-v<version>.md.
+          cmp -s "docs/releases/$TAG.md" "$meta/RELEASE-NOTES.md" \
+            || { echo "::error::$meta/RELEASE-NOTES.md differs from docs/releases/$TAG.md"; exit 1; }
+          if grep -q 'DRAFT' "docs/releases/$TAG.md"; then
+            echo "::error::docs/releases/$TAG.md is still marked DRAFT."
+            exit 1
+          fi
+          IFS=$'\t' read -r workflow conclusion head < <(gh run view "$RUN_ID" --json workflowName,conclusion,headSha \
+            -q '[.workflowName, .conclusion, .headSha] | @tsv')
+          [ "$workflow" = "Android CI" ] && [ "$conclusion" = "success" ] \
+            || { echo "::error::Run $RUN_ID is '$workflow' ($conclusion), not a green Android CI run."; exit 1; }
+          source=$(python3 -c "import json;print(json.load(open('$meta/validation.json'))['source_commit'])")
+          # The run built the validated app sources (it may have run on a later commit that only touched other files).
+          git merge-base --is-ancestor "$source" "$head" \
+            || { echo "::error::Run $RUN_ID ($head) does not contain the validated source $source."; exit 1; }
+          git diff --quiet "$source" "$head" -- app \
+            || { echo "::error::app/ changed between the validated source $source and the run's $head."; exit 1; }
+          echo "Run $RUN_ID: $workflow $conclusion on $head; validated source $source" >> "$GITHUB_STEP_SUMMARY"
+
+      # Recent build-tools need a recent JDK; on the default JDK apksigner prints nothing.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install build-tools 36.0.0
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "build-tools;36.0.0" > /dev/null
+
+      - name: Download the verified CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ketvoice-apks
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+
+      - name: Stage and verify the release payload
+        run: |
+          set -euo pipefail
+          meta="release-metadata/$TAG"
+          stage="stage"
+          mkdir -p "$stage"
+          # Only the TV APK: the phone APKs of the same artifact belong to publish-release.yml.
+          tv=(artifact/tv/release/*.apk)
+          [ -f "${tv[0]}" ] && [ "${#tv[@]}" -eq 1 ] || { echo "::error::The CI artifact must hold exactly one TV APK (tv/release/*.apk)"; exit 1; }
+          cp "${tv[0]}" "$stage/Ketvoice-TV-$VERSION.apk"
+          cp "$meta/RELEASE-NOTES.md" "$meta/validation.json" "$meta/SHA256SUMS.txt" "$stage/"
+          cd "$stage"
+          # The checksum list must cover exactly the payload, and every file must match it.
+          expected=$(printf '%s\n' "Ketvoice-TV-$VERSION.apk" RELEASE-NOTES.md validation.json | sort)
+          listed=$(cut -d' ' -f3- SHA256SUMS.txt | sort)
+          [ "$expected" = "$listed" ] || { echo "::error::SHA256SUMS.txt does not cover exactly the payload"; exit 1; }
+          sha256sum -c SHA256SUMS.txt
+          python3 - "$VERSION" "$RUN_ID" <<'EOF'
+          import json, sys
+          v = json.load(open("validation.json"))
+          assert v["version"] == sys.argv[1], "validation record is for another version"
+          assert str(v["build_origin"]["run_id"]) == sys.argv[2], "validation record names another CI run"
+          o = v.get("publication_override")
+          if o is not None:
+              assert o.get("authorized_by_user") is True and o.get("reason"), "override not authorized"
+          assert v["credential_scan"]["findings"] == 0, "credential scan not clean"
+          names = [a["name"] for a in v["apks"]]
+          assert names == [f"Ketvoice-TV-{sys.argv[1]}.apk"], f"validation record lists {names}, expected the TV APK only"
+          print("validation record ok for TV", v["version"], "versionCode", v["versionCode"], "source", v["source_commit"])
+          EOF
+
+      - name: Verify APK identity
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/apksigner" version
+          code=$(python3 -c "import json;print(json.load(open('stage/validation.json'))['versionCode'])")
+          python3 - "$bt" "$VERSION" "$code" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          sys.path.insert(0, "tools")
+          from verify_apk import verify
+          bt, version, code = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+          name = f"Ketvoice-TV-{version}.apk"
+          record = {a["name"]: a for a in json.load(open("stage/validation.json"))["apks"]}
+          assert name in record, f"{name} is missing from the validation record"
+          # com.ketvoice.tv, this versionName/versionCode, leanback launcher, no touchscreen required,
+          # ARM ABIs only, the release signing certificate.
+          checked = verify(Path("stage") / name, bt, version, code, edition="tv")
+          assert checked == record[name], f"{name} no longer matches its validation record"
+          print("verified", name)
+          EOF
+
+      - name: Create draft, upload, re-download, publish (never latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          # Checked again: another run may have published meanwhile.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG appeared meanwhile; refusing to overwrite."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::A release $TAG appeared meanwhile; refusing to overwrite."
+            exit 1
+          fi
+          latest_before=$(gh api "repos/$repo/releases/latest" --jq .tag_name)
+          echo "Latest release before: $latest_before"
+          source=$(python3 -c "import json;print(json.load(open('stage/validation.json'))['source_commit'])")
+          id=$(gh api "repos/$repo/releases" -X POST -f tag_name="$TAG" -f target_commitish="$source" \
+            -f name="Ketvoice TV $VERSION" -F draft=true -F prerelease=false -f make_latest=false \
+            -F body=@stage/RELEASE-NOTES.md --jq .id)
+          cd stage
+          gh release upload "$TAG" "Ketvoice-TV-$VERSION.apk" RELEASE-NOTES.md validation.json SHA256SUMS.txt
+          mkdir -p ../check
+          gh release download "$TAG" --dir ../check
+          got=$(ls ../check | sort | tr '\n' ' ')
+          want=$(printf '%s\n' "Ketvoice-TV-$VERSION.apk" RELEASE-NOTES.md SHA256SUMS.txt validation.json | sort | tr '\n' ' ')
+          [ "$got" = "$want" ] || { echo "::error::release assets are [$got], expected [$want]"; exit 1; }
+          (cd ../check && sha256sum -c ../stage/SHA256SUMS.txt)
+          gh api "repos/$repo/releases/$id" -X PATCH -F draft=false -f make_latest=false > /dev/null
+          latest_after=$(gh api "repos/$repo/releases/latest" --jq .tag_name)
+          if [ "$latest_after" != "$latest_before" ]; then
+            echo "::error::The latest release moved from $latest_before to $latest_after; mark $latest_before as latest again."
+            exit 1
+          fi
+          flags=$(gh release view "$TAG" --json isDraft,isPrerelease -q '"\(.isDraft) \(.isPrerelease)"')
+          [ "$flags" = "false false" ] || { echo "::error::$TAG is not a public stable release ($flags)"; exit 1; }
+          echo "Published $TAG with verified downloads; latest stays $latest_after." >> "$GITHUB_STEP_SUMMARY"
