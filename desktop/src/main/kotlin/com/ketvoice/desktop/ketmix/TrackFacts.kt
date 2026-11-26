@@ -1,5 +1,6 @@
 package com.ketvoice.desktop.ketmix
 
+import com.ketvoice.app.automix.SongStructure
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import com.ketvoice.app.automix.BeatModel

@@ -9,7 +9,9 @@ import java.nio.ByteBuffer
 internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, private val withKey: Boolean = false,
                            private val thorough: Boolean = false, private val hint: BeatAnalysis.Hint? = null,
                            /** Set when the beat model reads this stretch too: true for an ending, false for an intro. */
-                           private val beatTail: Boolean? = null) : PcmTap {
+                           private val beatTail: Boolean? = null,
+                           /** 8.6: also read the stretch's sections ([SongSections]): true for an ending, false for a start. */
+                           private val sectionsOf: Boolean? = null) : PcmTap {
     private var tracker: OnsetTracker? = null
     private var beatPcm: BeatPcm? = null
     private var firstUs = 0L
@@ -26,7 +28,7 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         var current = tracker
         // A jump (the seek that starts the reading, or a rebuffer) starts the reading again.
         if (current == null || sampleRate != rate || kotlin.math.abs(positionUs - expectedUs) > 40_000L) {
-            current = OnsetTracker(sampleRate, channels, withKey)
+            current = OnsetTracker(sampleRate, channels, withKey, withTimbre = sectionsOf != null)
             tracker = current; rate = sampleRate; firstUs = positionUs
             beatPcm = if (beatTail != null) BeatPcm(sampleRate, channels, positionUs) else null
         }
@@ -42,8 +44,11 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         val read = tracker ?: return null
         // A reading that does not start where it was asked to is not trusted with positions.
         if (read.frames / read.fps < 6f || kotlin.math.abs(firstUs - fromUs) > 6_000_000L) return null
-        val signal = BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough, hint)
-        return beatPcm?.let { BeatModel.refine(signal, it, beatTail == true) } ?: signal
+        val envelope = read.snapshot()
+        val signal = BeatAnalysis.analyze(envelope, firstUs / 1000L, thorough, hint)
+        val beats = beatPcm?.let { BeatModel.refine(signal, it, beatTail == true) } ?: signal
+        val ending = sectionsOf ?: return beats
+        return beats.copy(sections = runCatching { SongSections.of(envelope, beats, ending) }.getOrNull() ?: emptyList())
     }
 }
 
@@ -63,7 +68,9 @@ internal enum class AnalysisDepth(val outroMs: Long, val introMs: Long, val key:
         val wanted = if (durationMs > 0) minOf(windowMs, durationMs) else windowMs
         // A reading made before the beat model was installed is made again, once, with it.
         val beat = analysis.analyser != 0 || !BeatModel.usable()
-        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD) && beat
+        // 8.6: « Maximum » reads again, once, a stretch kept before its sections were looked for.
+        val sections = !thorough || analysis.sections != null || !SongSections.wanted(this)
+        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD) && beat && sections
     }
 
     companion object {
@@ -195,6 +202,10 @@ internal object AnalysisStore {
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
         .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs).put("h", a.tempoHint.toDouble()).put("an", a.analyser)
         .put("gf", a.gapFromMs).put("gu", a.gapUntilMs).put("ac", a.activity.toDouble())
+        .also { o -> a.sections?.let { o.put("sv", SECTIONS_VERSION).put("sc", SongSections.encode(it)) } }
+
+    /** 8.6: the version of the sections kept ("sv"); a reading without it, or of another version, has none. */
+    internal const val SECTIONS_VERSION = 1
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -220,7 +231,8 @@ internal object AnalysisStore {
         val from = o.optLong("gf", -1); val until = o.optLong("gu", -1)
         val gap = from in startMs..end && until in from..end
         val activity = o.optDouble("ac", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..1_000f } ?: 0f
-        return copy(gapFromMs = if (gap) from else -1L, gapUntilMs = if (gap) until else -1L, activity = activity)
+        val sections = if (o.optInt("sv", 0) == SECTIONS_VERSION) SongSections.decode(o.optJSONArray("sc"), startMs, end) else null
+        return copy(gapFromMs = if (gap) from else -1L, gapUntilMs = if (gap) until else -1L, activity = activity, sections = sections)
     }
 }
 

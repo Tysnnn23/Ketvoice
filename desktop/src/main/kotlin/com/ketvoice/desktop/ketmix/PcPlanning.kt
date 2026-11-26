@@ -1,5 +1,6 @@
 package com.ketvoice.desktop.ketmix
 
+import com.ketvoice.app.automix.SongStructure
 import com.ketvoice.app.automix.AnalysisStore
 import com.ketvoice.app.automix.MusicalKey
 import com.ketvoice.app.automix.SegmentAnalysis

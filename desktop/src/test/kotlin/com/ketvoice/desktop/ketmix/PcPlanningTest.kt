@@ -1,5 +1,6 @@
 package com.ketvoice.desktop.ketmix
 
+import com.ketvoice.app.automix.SongStructure
 import com.ketvoice.app.automix.MixContext
 import com.ketvoice.app.automix.MixFacts
 import com.ketvoice.app.automix.MixKind

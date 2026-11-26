@@ -28,12 +28,16 @@ internal object StyleCuts {
 
     fun cuts(style: MixStyle) = style == MixStyle.Cut || style == MixStyle.Drop
 
-    /** Where the next title's groove comes in on a downbeat, or null when it has no drop worth jumping to. */
+    /**
+     * Where the next title's groove comes in on a downbeat, or null when it has no drop worth jumping to: where its
+     * intro ends (8.6, its sections, [SongSections.entry]), else where its level reaches that of its body.
+     */
     fun dropAt(b: SegmentAnalysis, incoming: MixFacts): Long? {
         if (!b.hasBeat || b.barOffset < 0) return null
         val bar = CutBudget.barMs(b)
-        if (b.riseMs - b.soundStartMs < MIN_INTRO_BARS * bar) return null
-        val drop = b.barAtOrAfter(b.riseMs - b.beatMs / 2.0)
+        val rise = SongSections.entry(b) ?: b.riseMs
+        if (rise - b.soundStartMs < MIN_INTRO_BARS * bar) return null
+        val drop = b.barAtOrAfter(rise - b.beatMs / 2.0)
         if (drop - b.soundStartMs > CutBudget.IN_BARS * bar || drop > b.startMs + b.lengthMs - 1_000L) return null
         if (incoming.vocalStartMs?.let { drop > it + 150L } == true) return null
         return drop.roundToLong()

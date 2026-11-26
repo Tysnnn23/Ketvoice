@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * description is all the tempo, beat and intro/outro analysis needs; the audio itself
  * is never kept.
  */
-internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey: Boolean = false) {
+internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey: Boolean = false, withTimbre: Boolean = false) {
     private val decimation = max(1, (sampleRate / 11_025f).roundToInt())
     /** Rate of the mono signal the analysis works on. */
     val rate: Float = sampleRate.toFloat() / decimation
@@ -38,6 +38,8 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey:
     private var hopEnergy = 0.0
     /** The notes heard, when the key is wanted too. */
     private val chroma: ChromaTracker? = if (withKey) ChromaTracker(rate) else null
+    /** The colour of the sound for the song's sections (8.6, see [SongSections]), when wanted. */
+    private val timbre: TimbreBands? = if (withTimbre) TimbreBands(rate / WINDOW) else null
 
     private var flux = FloatArray(4096)
     private var low = FloatArray(4096)
@@ -103,6 +105,7 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey:
             flux = flux.copyOf(frames * 2); low = low.copyOf(frames * 2); level = level.copyOf(frames * 2)
         }
         flux[frames] = total; low[frames] = bassRise; level[frames] = (hopEnergy / HOP).toFloat()
+        timbre?.add(real, imaginary)
         frames++
     }
 
@@ -110,7 +113,7 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey:
     fun timeOf(frame: Float): Float = (frame * HOP + ONSET_OFFSET) / rate
 
     fun snapshot(): OnsetEnvelope = OnsetEnvelope(flux.copyOf(frames), low.copyOf(frames), level.copyOf(frames), fps, ONSET_OFFSET / rate,
-        chroma?.snapshot(), keyRead = chroma != null)
+        chroma?.snapshot(), keyRead = chroma != null, timbre = timbre?.snapshot(), timbreFps = fps / TimbreBands.FRAMES)
 
     companion object {
         const val WINDOW = 512
@@ -125,7 +128,9 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey:
 
 /** What [OnsetTracker] kept of a stretch of audio. Frame `n` is at `offsetSeconds + n / fps`. */
 internal class OnsetEnvelope(val flux: FloatArray, val low: FloatArray, val level: FloatArray, val fps: Float,
-                             val offsetSeconds: Float, val chroma: FloatArray? = null, val keyRead: Boolean = false) {
+                             val offsetSeconds: Float, val chroma: FloatArray? = null, val keyRead: Boolean = false,
+                             /** [TimbreBands.BANDS] log band energies per frame at [timbreFps], from the first sample given; null when not read. */
+                             val timbre: FloatArray? = null, val timbreFps: Float = 0f) {
     val size: Int get() = flux.size
     val seconds: Float get() = size / fps
     fun timeOf(frame: Float): Float = offsetSeconds + frame / fps
@@ -133,6 +138,44 @@ internal class OnsetEnvelope(val flux: FloatArray, val low: FloatArray, val leve
     /** The frames from [from] to [until], as a stretch of their own. */
     fun slice(from: Int, until: Int): OnsetEnvelope = OnsetEnvelope(flux.copyOfRange(from, until), low.copyOfRange(from, until),
         level.copyOfRange(from, until), fps, offsetSeconds + from / fps)
+}
+
+/**
+ * Log-spaced band energies of the spectra [OnsetTracker] already computes, averaged over [FRAMES] of its frames
+ * (about 21 a second): a rough colour of the sound, enough to tell a chorus from a verse. Costs one pass over the
+ * bins of each spectrum and [BANDS] floats a frame.
+ */
+internal class TimbreBands(binHz: Float) {
+    private val ends = IntArray(BANDS) { band ->
+        val hz = LOW_HZ * Math.pow(HIGH_HZ / LOW_HZ, (band + 1.0) / BANDS)
+        (hz / binHz).toInt().coerceIn(band + 2, OnsetTracker.WINDOW / 2)
+    }
+    private val sum = FloatArray(BANDS)
+    private var count = 0
+    private var data = FloatArray(BANDS * 256)
+    private var size = 0
+
+    fun add(real: FloatArray, imaginary: FloatArray) {
+        var bin = 1
+        for (band in 0 until BANDS) {
+            var power = 0f
+            while (bin < ends[band]) { power += real[bin] * real[bin] + imaginary[bin] * imaginary[bin]; bin++ }
+            sum[band] += ln(1f + 1000f * power / (OnsetTracker.WINDOW * OnsetTracker.WINDOW / 16f))
+        }
+        if (++count < FRAMES) return
+        if (size + BANDS > data.size) data = data.copyOf(data.size * 2)
+        for (band in 0 until BANDS) { data[size++] = sum[band] / FRAMES; sum[band] = 0f }
+        count = 0
+    }
+
+    fun snapshot(): FloatArray = data.copyOf(size)
+
+    companion object {
+        const val BANDS = 16
+        const val FRAMES = 4
+        private const val LOW_HZ = 40.0
+        private const val HIGH_HZ = 5_500.0
+    }
 }
 
 /** In-place radix-2 FFT. */

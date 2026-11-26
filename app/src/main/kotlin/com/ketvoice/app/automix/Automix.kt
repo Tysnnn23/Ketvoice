@@ -577,7 +577,7 @@ internal object Automix {
         var outro = AnalysisStore.outro(current.id, duration, depth)?.takeIf { outHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (outro == null) {
             outCapture = if (separate) PcmCapture(stemOutFrom * 1000L, duration * 1000L) else null
-            outro = read(deck, control, item, outFrom, depth.outroMs, depth, valid, outHint, capture = outCapture, waveOf = current.id to duration)
+            outro = read(deck, control, item, outFrom, depth.outroMs, depth, valid, outHint, capture = outCapture, waveOf = current.id to duration, ending = true)
             outro?.let { AnalysisStore.put(current.id, duration, false, it) }
         } else if (separate) outCapture = capture(deck, control, item, stemOutFrom, duration - stemOutFrom, valid)
         if (!valid()) return null
@@ -586,7 +586,7 @@ internal object Automix {
         var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)?.takeIf { inHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (intro == null) {
             inCapture = if (separate) PcmCapture(0L, stemInUntil * 1000L) else null
-            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, valid, inHint, capture = inCapture, waveOf = next.track.id to next.track.durationMs)
+            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, valid, inHint, capture = inCapture, waveOf = next.track.id to next.track.durationMs, ending = false)
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
         } else if (separate) inCapture = capture(deck, control, nextItem, 0L, stemInUntil, valid)
         if (!valid()) return null
@@ -786,8 +786,10 @@ internal object Automix {
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
     private suspend fun read(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
                              depth: AnalysisDepth, valid: () -> Boolean, hint: BeatAnalysis.Hint? = null, key: Boolean = depth.key,
-                             capture: PcmCapture? = null, waveOf: Pair<String, Long>? = null, beatTail: Boolean? = null): SegmentAnalysis? {
-        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, key, depth.thorough, hint, beatTail)
+                             capture: PcmCapture? = null, waveOf: Pair<String, Long>? = null, beatTail: Boolean? = null,
+                             ending: Boolean? = null): SegmentAnalysis? {
+        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, key, depth.thorough, hint, beatTail,
+            ending?.takeIf { SongSections.wanted(depth) })
         // The same reading draws the stretch's wave for the DJ editor (6.1), kept apart from the analysis.
         val wave = waveOf?.let { WaveTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L) }
         control.automation = DeckAutomation.MUTE
@@ -874,7 +876,7 @@ internal object Automix {
                 }
                 if (!valid()) return
                 read(deck, control, media, from, span, depth, ::valid, hint, capture = recorded, waveOf = id to length,
-                    beatTail = if (BeatModel.usable()) !intro else null)?.let { AnalysisStore.put(id, length, intro, it) }
+                    beatTail = if (BeatModel.usable()) !intro else null, ending = !intro)?.let { AnalysisStore.put(id, length, intro, it) }
             } else if (wantStem) recorded = capture(deck, control, media, stemFrom, stemUntil - stemFrom, ::valid)
             val sound = recorded?.takeIf { valid() }?.pcm() ?: return
             // No more than two parts wait for the network at once: each is ten megabytes of sound.
@@ -1061,7 +1063,8 @@ internal object Automix {
             val known = if (tail) AnalysisStore.outro(track.id, duration, depth) else AnalysisStore.intro(track.id, key, depth)
             val hint = if (depth == AnalysisDepth.Light) null
                 else AnalysisStore.body(track.id, duration)?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
-            val analysis = if (known == null) AnalysisTap(analysisFrom * 1000L, analysisUntil * 1000L, depth.key, depth.thorough, hint, if (BeatModel.usable()) tail else null) else null
+            val analysis = if (known == null) AnalysisTap(analysisFrom * 1000L, analysisUntil * 1000L, depth.key, depth.thorough, hint, if (BeatModel.usable()) tail else null,
+                tail.takeIf { SongSections.wanted(depth) }) else null
             control.tap = if (analysis != null) BothTaps(wave, FromTap(analysisFrom * 1000L, analysis)) else wave
             deck.setMediaItem(media, from)
             val speed = analysisSpeed(appInFront)

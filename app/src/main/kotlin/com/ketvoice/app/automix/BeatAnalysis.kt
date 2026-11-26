@@ -66,7 +66,12 @@ internal data class SegmentAnalysis(
      * analysis), in ms; null when unknown, as always on the phone. When some lie in a window, [phraseStarts] gives
      * those, so that exits and entries land where the song itself turns a page.
      */
-    val sectionStartsMs: List<Double>? = null
+    val sectionStartsMs: List<Double>? = null,
+    /**
+     * 8.6: the sections of this stretch as the phone reads them ([SongSections]); null when they were not looked for
+     * (Light, Ketvoice Lite, a reading kept from before 8.6), empty when the stretch did not tell.
+     */
+    val sections: List<SongStructure.Section>? = null
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -87,11 +92,13 @@ internal data class SegmentAnalysis(
     fun phraseStarts(fromMs: Double, untilMs: Double): List<Double> {
         if (untilMs < fromMs) return emptyList()
         sectionStartsMs?.filter { it >= fromMs - 1e-6 && it <= untilMs + 1e-6 }?.takeIf { it.isNotEmpty() }?.let { return it.sorted() }
+        // 8.6: where a section of this stretch starts (never a chorus's own start), else the phrases that do not open a chorus.
+        SongSections.exits(this, fromMs, untilMs)?.takeIf { it.isNotEmpty() }?.let { return it }
         if (!hasPhrases) return emptyList()
         val period = phraseMs
         var at = phraseAtMs + kotlin.math.ceil((fromMs - phraseAtMs) / period - 1e-6) * period
         val found = ArrayList<Double>()
-        while (at <= untilMs + 1e-6 && found.size < 64) { found += at; at += period }
+        while (at <= untilMs + 1e-6 && found.size < 64) { if (!SongSections.opensChorus(this, at)) found += at; at += period }
         return found
     }
 

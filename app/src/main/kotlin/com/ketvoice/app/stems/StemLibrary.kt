@@ -12,6 +12,7 @@ import com.ketvoice.app.automix.AnalysisStore
 import com.ketvoice.app.automix.AnalysisTap
 import com.ketvoice.app.automix.Automix
 import com.ketvoice.app.automix.BothTaps
+import com.ketvoice.app.automix.SongSections
 import com.ketvoice.app.automix.PcmCapture
 import com.ketvoice.app.automix.PcmTap
 import com.ketvoice.app.data.AppSettings
@@ -260,7 +261,8 @@ internal object StemLibrary {
         if (measured && !wantStem) return
         val stemFrom = if (intro) 0L else maxOf(fromMs, untilMs - StemEngine.MAX_PART_MS)
         val stemUntil = if (intro) minOf(untilMs, StemEngine.MAX_PART_MS) else untilMs
-        val analysis = if (measured) null else AnalysisTap(fromMs * 1000L, untilMs * 1000L, depth.key, depth.thorough, null)
+        val analysis = if (measured) null else AnalysisTap(fromMs * 1000L, untilMs * 1000L, depth.key, depth.thorough, null,
+            sectionsOf = (!intro).takeIf { SongSections.wanted(depth) })
         val capture = if (wantStem) PcmCapture(stemFrom * 1000L, stemUntil * 1000L) else null
         val tap: PcmTap = when {
             analysis != null && capture != null -> BothTaps(analysis, capture)
