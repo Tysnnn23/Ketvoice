@@ -1,0 +1,114 @@
+{
+  "schema": 8,
+  "edition": "tv",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "source_commit": "b5ae9c3d0c3368ba3ec086d5a7aada8ebff35698",
+  "created_at": "2026-11-26T19:45:03.611062+00:00",
+  "build_origin": {
+    "kind": "github_actions",
+    "workflow": "android.yml",
+    "run_id": 45879017018,
+    "artifact": {
+      "id": 15149460881,
+      "sha256": "5f344c3f4f34f418bd8a4eab81445c5351d4bc9f85c4305d3bbc73c6b6f9669d"
+    },
+    "gradle": "assembleTvRelease",
+    "note": "signed by CI with the pinned keystore secret (same certificate as the phone APKs); no Discord bridge and no bundled rhythm model in the TV flavour"
+  },
+  "local_validation": {
+    "result": "tested in a cloud container: the TV suite (app/src/testTv), the mobile Ketmix and audio-chain suites, release lint of the TV flavour, the UI text audit and the APK checker",
+    "commands": [
+      "testTvDebugUnitTest --tests 'com.ketvoice.app.tv.*' (36 tests, 0 failures, merged tree)",
+      "tools/test_verify_apk.py with build-tools 36 and 37 signer formats (21 tests)",
+      "testMobileDebugUnitTest AudioChainPlaybackTest, *automix*, UiTextDictionaryTest, Romanizer, PlaybackRevival (238, 0 failures, on the TV branch)",
+      "assembleTvRelease and lintTvRelease (0 errors, on the TV branch)",
+      "tools/test_verify_apk.py (19 tests)",
+      "tools/audit_ui_texts.py --check (0 unaccounted)"
+    ],
+    "ci_validation": "run 45879017018: phone, Quest and Lite builds and suites unchanged, plus assembleTvRelease, the curated testTvDebugUnitTest set (97 tests, 0 failures (LiteTuningTest, ui.update.*, tv.*)), lintTvRelease, the TV APK checks (package, leanback launcher, touchscreen not required, ARM ABIs, no Discord bridge) and the dex register check",
+    "first_ci_runs": "45861152818/45861152816 on 9ce3712: the UI text audit flagged five English checksum diagnostics of the TV updater (listed as non-UI) and the desktop build lacked VERSION_CODES in Romanizer (plain API level); fixed in 043cac3",
+    "host_previews": "Robolectric renders at 1920x1080 driven only by D-pad key events (app/build/host-ui-preview/tv): Home, row focus, open rail, Library, Search keyboard, Now Playing with lyrics, with the queue and asleep, Favourites, Settings, QR sign-in, Artist, title menu, Home on a Light-tier TV; looked at by the agent and by the lead",
+    "performance_host": "walking a Home row: 0 recompositions of page, rows and cards; 20 position ticks on Now Playing: 1 page recomposition and 40 of the two time labels; software draw of the 1080p window about 22-29 ms; first Home composition about 260 ms on the host; covers decoded at their shown size, RGB565 on the Light tier; no live blur (48x27 decode blurred once)",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "features_tv_1_0": "remote-first 10-foot UI in plain Compose (side rail, Home rows, Search with an arrow keyboard and the TV speech recognizer, Library, album/artist/playlist pages, title menu on Menu or long OK), Now Playing with the Canvas full screen or cover colours, Cascade lyrics or queue, controls that sleep after 8 s; sign-in by QR code through device-link (AccountSession.signInWithLink, never a password, refused for the publishing account); the phone's Player, sync (favourites, playlists, artists, settings, listening, Discord choice), Ketmix with TvCapability tiers (Light/Balanced/Full set the first ketmixAnalysis and performance defaults); the in-app updater reads tv-v* releases and checks SHA256SUMS.txt"
+  },
+  "server": {
+    "changed_in_this_version": true,
+    "database": "migration 20261126180000_device_kind_tv applied (device kind 'tv' allowed in ketvoice_devices and ketvoice_device_links)",
+    "function": "device-link redeployed with 'tv' in its kinds (version 3, verify_jwt true)"
+  },
+  "tests": {
+    "tv": {
+      "jvm_curated_ci": "97 tests, 0 failures (LiteTuningTest, ui.update.*, tv.*)",
+      "host_local": "36 tests, 0 failures"
+    },
+    "dex_register_check": "tools/check_dex_registers.py in CI on the TV APK"
+  },
+  "lint": {
+    "tv": "lintTvRelease passed in CI run 45879017018",
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-TV-1.0.0.apk",
+      "sha256": "405e9b4a7658bfd67652c3e4a921155d43eaf5609c99d3e28489c35369d62031",
+      "bytes": 58559963,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.tv",
+      "version": "1.0.0",
+      "versionCode": 1,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "tv"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_tv_build": false,
+    "note": "the TV flavour has no Discord bridge; the Discord choice still syncs with the account"
+  },
+  "credential_scan": {
+    "entries": 590,
+    "findings": 0,
+    "scope": "the TV release APK",
+    "kind": "credential_patterns (tools/scan_release.py)"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the phone's in-app updater and the website read the latest release (v9.1.1)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-26T19:45:03.611062+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une r\u00e8gle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical Android TV / Google TV installation and all on-device behaviour of Ketvoice TV 1.0.0"
+  },
+  "owner_request_2026_11_26_tv_1_0_0": {
+    "statement": "\u00ab Ok maintenant fait la premi\u00e8re app Ketvoice 1.0.0 TV super optimis\u00e9e et performante avec un super rendu. Connexion bref tout et m\u00eame Ketmix. Fait tout ! \u00bb",
+    "done": "a separate Android TV / Google TV app with QR sign-in, synced library, search, full-screen player with Canvas and lyrics, Ketmix and its own updates; nothing ran on a real TV or an emulator"
+  },
+  "not_validated": [
+    "installation and use on a real Android TV, Google TV or Chromecast with Google TV, and on an Android TV emulator",
+    "D-pad feel, remote media keys, voice search with a real speech recognizer, the TV's Now Playing card",
+    "Canvas hardware decoding and startup time on a real TV box (only host measurements)",
+    "Robolectric runs on API 28-30 runtimes (host tests ran on SDK 35)",
+    "QR sign-in end to end with a real phone and account",
+    "the in-app TV update offer against a real tv-v release",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Watch Next / home-screen channels yet.",
+    "No beat-model download screen on TV: Ketmix uses its own analysis.",
+    "No Discord Rich Presence on TV."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
