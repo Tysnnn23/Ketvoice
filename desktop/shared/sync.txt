@@ -9,6 +9,9 @@ sync/SyncedTracks.kt
 sync/CloudLibrary.kt
 sync/LibrarySync.kt
 sync/DeviceIdentity.kt
+# 9.2 « tout synchroniser »: recently played and statistics per device, Discord's link and choice.
+sync/ListeningKind.kt
+sync/ConnectionsKind.kt
 # Phase 3 (winremote): phone control over Ketogether's Realtime transport.
 together/RealtimeTransport.kt
 together/TogetherRoom.kt

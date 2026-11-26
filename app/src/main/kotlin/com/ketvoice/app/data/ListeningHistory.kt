@@ -8,10 +8,21 @@ import kotlinx.coroutines.flow.StateFlow
 object ListeningHistory {
     private val gson = Gson()
     private var prefs: android.content.SharedPreferences? = null
+    // The `_…` flows hold this device's own listening (what it persists and publishes to the account); the public
+    // flows are that plus what the account's other devices heard ([adoptOthers]), so every page shows the sum.
     private val _tracks = MutableStateFlow<List<Track>>(emptyList())
-    val tracks: StateFlow<List<Track>> = _tracks
+    private val _allTracks = MutableStateFlow<List<Track>>(emptyList())
+    val tracks: StateFlow<List<Track>> = _allTracks
     private val _known = MutableStateFlow<List<Track>>(emptyList())
-    val knownTracks: StateFlow<List<Track>> = _known
+    private val _allKnown = MutableStateFlow<List<Track>>(emptyList())
+    val knownTracks: StateFlow<List<Track>> = _allKnown
+    /** When each of this device's recent titles was heard (9.2), so recents of several devices interleave. */
+    private var recentAt: Map<String, Long> = emptyMap()
+    private val _ownChanges = MutableStateFlow(0L)
+    /** Counts this device's own listening changes (not the other devices'): the account's sync follows it. */
+    internal val ownChanges: StateFlow<Long> = _ownChanges
+    /** The other devices of the account, as the last sync brought them. */
+    private var others: List<DeviceListening> = emptyList()
     /**
      * When each title was last heard (7.1, « Radio sans répétition »), by id and by recording ([heardKeys]),
      * for the last [HEARD_KEEP_MS] only: the radio and autoplay leave out what was heard a few hours ago.
@@ -35,24 +46,29 @@ object ListeningHistory {
     }
 
     private val _playCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val playCounts: StateFlow<Map<String, Int>> = _playCounts
+    private val _allCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val playCounts: StateFlow<Map<String, Int>> = _allCounts
 
     // Temps d'écoute RÉEL : somme des positions réellement jouées (deltas du
     // lecteur), pas une estimation plays × durée. Persisté au fil de l'eau.
     private val _listenedMs = MutableStateFlow(0L)
-    val listenedMs: StateFlow<Long> = _listenedMs
+    private val _allListened = MutableStateFlow(0L)
+    val listenedMs: StateFlow<Long> = _allListened
     private var unflushedMs = 0L
     private val _days = MutableStateFlow<Map<String, DayStat>>(emptyMap())
+    private val _allDays = MutableStateFlow<Map<String, DayStat>>(emptyMap())
     /** Listening of the last two weeks, per day: what "your week" is made of. */
-    internal val days: StateFlow<Map<String, DayStat>> = _days
+    internal val days: StateFlow<Map<String, DayStat>> = _allDays
     /** Listening per calendar year (since 5.9.0), for Ketvoice Wrapped: time and plays per title, keyed "2026". */
     private val _years = MutableStateFlow<Map<String, DayStat>>(emptyMap())
-    internal val years: StateFlow<Map<String, DayStat>> = _years
+    private val _allYears = MutableStateFlow<Map<String, DayStat>>(emptyMap())
+    internal val years: StateFlow<Map<String, DayStat>> = _allYears
     private fun year() = java.time.LocalDate.now().year.toString()
     private fun today() = java.time.LocalDate.now()
     /** Listening per calendar month (6.1), for the monthly Replay; keyed "2026-11", one preference each. */
     private val _months = MutableStateFlow<Map<String, MonthStat>>(emptyMap())
-    internal val months: StateFlow<Map<String, MonthStat>> = _months
+    private val _allMonths = MutableStateFlow<Map<String, MonthStat>>(emptyMap())
+    internal val months: StateFlow<Map<String, MonthStat>> = _allMonths
     /** Artists ever heard (normalised names): a first listen is a discovery of the month. */
     private var seenArtists = LinkedHashSet<String>()
     private const val MAX_SEEN_ARTISTS = 4000
@@ -77,7 +93,53 @@ object ListeningHistory {
         _days.value = ListeningWeek.trim(ListeningWeek.decode(prefs!!.getString("days", null)), today())
         _years.value = Wrapped.decode(prefs!!.getString("years", null))
         runCatching { loadMonths(prefs!!) }
-        runCatching { ListeningStats.refresh() }
+        recentAt = runCatching {
+            val root = com.google.gson.JsonParser.parseString(prefs!!.getString("recentAt", "{}"))
+            root.asJsonObject.entrySet().associate { (key, value) -> key to value.asLong }
+        }.getOrDefault(emptyMap())
+        publish()
+    }
+
+    /** This device's own listening, as the account's `listening` document carries it (9.2). */
+    @Synchronized internal fun own(): DeviceListening {
+        val heard = _heardAt.value
+        val recent = _tracks.value.mapNotNull { t ->
+            ListeningShare.shareable(t)?.let { Heard(it, recentAt[t.id] ?: heard[t.id] ?: 0L) }
+        }
+        return DeviceListening(recent, _known.value.mapNotNull(ListeningShare::shareable), _playCounts.value,
+            _listenedMs.value + pendingMs, _days.value, _years.value, _months.value)
+    }
+
+    internal val ownTracks: List<Track> get() = _tracks.value
+    internal val ownKnown: List<Track> get() = _known.value
+    internal val ownCounts: Map<String, Int> get() = _playCounts.value
+    internal val ownListenedMs: Long get() = _listenedMs.value
+
+    /** What the account's other devices heard, from the last sync; empty when signed out. */
+    @Synchronized internal fun adoptOthers(devices: List<DeviceListening>) {
+        if (devices == others) return
+        others = devices
+        publish(ownChange = false)
+    }
+
+    /** The public flows again: this device's own listening plus the others'. Called after every change. */
+    private fun publish(refreshStats: Boolean = true, ownChange: Boolean = true) {
+        if (ownChange) _ownChanges.value = _ownChanges.value + 1
+        if (others.isEmpty()) {
+            _allTracks.value = _tracks.value; _allKnown.value = _known.value; _allCounts.value = _playCounts.value
+            _allListened.value = _listenedMs.value; _allDays.value = _days.value; _allYears.value = _years.value
+            _allMonths.value = _months.value
+        } else {
+            val ownTracks = _tracks.value
+            val heard = _heardAt.value
+            val own = DeviceListening(ownTracks.map { Heard(it, recentAt[it.id] ?: heard[it.id] ?: 0L) }, _known.value,
+                _playCounts.value, _listenedMs.value, _days.value, _years.value, _months.value)
+            val all = ListeningShare.combine(own, others)
+            _allTracks.value = all.recent.map { it.track }; _allKnown.value = all.known; _allCounts.value = all.counts
+            _allListened.value = all.listenedMs; _allDays.value = ListeningWeek.trim(all.days, today())
+            _allYears.value = all.years; _allMonths.value = all.months
+        }
+        if (refreshStats) runCatching { ListeningStats.refresh() }
     }
 
     private fun loadMonths(p: android.content.SharedPreferences) {
@@ -115,6 +177,7 @@ object ListeningHistory {
         _months.value = ListeningMonths.addMix(_months.value, today())
         _days.value = ListeningWeek.addMix(_days.value, today())
         prefs?.edit()?.putString(monthPrefKey(), currentMonthJson())?.putString("days", ListeningWeek.encode(_days.value))?.apply()
+        publish()
     }
 
     /**
@@ -145,6 +208,7 @@ object ListeningHistory {
         _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs, hour)
         _years.value = Wrapped.addTime(_years.value, year(), deltaMs)
         _months.value = ListeningMonths.addTime(_months.value, today(), hour, deltaMs)
+        publish(refreshStats = false)
         unflushedMs += deltaMs
         if (unflushedMs >= 15_000L) persistListened()
     }
@@ -166,15 +230,18 @@ object ListeningHistory {
         unflushedMs = 0L
         pendingMs = 0L
         prefs?.edit()?.putLong("listenedMs", 0L)?.apply()
+        publish()
     }
     @Synchronized fun rememberTrack(track: Track) {
         _known.value = (listOf(track.copy(streamUrl = null, downloadUrl = null)) + _known.value.filterNot { it.id == track.id }).take(400)
         prefs?.edit()?.putString("known", gson.toJson(_known.value))?.apply()
+        publish()
     }
     @Synchronized fun record(track: Track) {
         val saved = track.copy(streamUrl = null, downloadUrl = null)
         rememberTrack(saved)
         _tracks.value = recentWith(_tracks.value, saved)
+        recentAt = (recentAt.filterKeys { id -> _tracks.value.any { it.id == id } } + (track.id to System.currentTimeMillis()))
         val counts = _playCounts.value.toMutableMap()
         counts[track.id] = (counts[track.id] ?: 0) + 1
         if (counts.size > 550) {
@@ -192,12 +259,12 @@ object ListeningHistory {
         _days.value = ListeningWeek.addPlay(_days.value, today(), track.id, newArtist != null)
         _years.value = Wrapped.addPlay(_years.value, year(), track.id)
         _months.value = ListeningMonths.addPlay(_months.value, today(), saved, newArtist)
-        prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
+        prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))?.putString("recentAt", gson.toJson(recentAt))
             ?.putString("counts", gson.toJson(counts))?.putString("heardAt", gson.toJson(_heardAt.value))?.putString("days", ListeningWeek.encode(_days.value))
             ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())
             ?.also { if (newArtist != null) it.putString("artistsSeen", ListeningMonths.encodeSeen(seenArtists)) }?.apply()
-        // Keep the recap projection warm so the stats screen opens instantly.
-        runCatching { ListeningStats.refresh() }
+        // Keep the recap projection warm so the stats screen opens instantly (publish refreshes it).
+        publish()
     }
     @Synchronized fun replacePublication(track: Track) {
         if (ImportedSong.id(track) == null) return
@@ -205,6 +272,7 @@ object ListeningHistory {
         _tracks.value = _tracks.value.map { if (it.id == track.id) safe else it }
         _known.value = _known.value.map { if (it.id == track.id) safe else it }
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))?.putString("known", gson.toJson(_known.value))?.apply()
+        publish()
     }
     fun recentWith(previous: List<Track>, track: Track): List<Track> =
         (listOf(track) + previous.filterNot {
@@ -240,7 +308,7 @@ object ListeningHistory {
         _playCounts.value = nextCounts
         _listenedMs.value = nextTime
         unflushedMs = 0L
-        runCatching { ListeningStats.refresh() }
+        publish()
     }
 
     /**
@@ -262,6 +330,6 @@ object ListeningHistory {
         val edit = p.edit().putString("days", ListeningWeek.encode(_days.value)).putString("years", ListeningWeek.encode(_years.value))
         _months.value.forEach { (month, stat) -> edit.putString(ListeningMonths.PREFIX + month, ListeningMonths.encode(stat)) }
         edit.commit()
-        runCatching { ListeningStats.refresh() }
+        publish()
     }
 }

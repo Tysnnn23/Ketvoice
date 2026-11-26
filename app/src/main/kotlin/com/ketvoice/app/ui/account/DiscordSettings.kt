@@ -118,6 +118,12 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 else -> Box(Modifier.size(9.dp).clip(CircleShape).background(theme.secondary.copy(alpha = .45f)))
             }
         }
+        // 9.2: Discord linked on another device of the account (Ketvoice for Windows), as that device told it.
+        val others by com.ketvoice.app.sync.ConnectionsKind.others.collectAsState()
+        com.ketvoice.app.sync.ConnectionsKind.elsewhere(others)?.let { other ->
+            Text(com.ketvoice.app.data.AppText.t("Discord connecté sur {0}").replace("{0}", other.device + (other.user?.let { " · $it" } ?: "")),
+                localize = false, color = theme.secondary, style = Ket27.Type.footnote, modifier = Modifier.padding(top = 6.dp))
+        }
 
         if (Discord.available && discord.presenceOnly) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -53,6 +53,9 @@ internal object SyncProblems {
         }
         return SyncProblem.SERVER
     }
+
+    /** The server does not know a kind (its check predates it): a bad request, never a session or network problem. */
+    fun refusedKind(status: Int): Boolean = status == 400 || status == 422
 }
 
 /** What the cloud side of a sync round needs (the real table, or a fake one in tests). */
@@ -103,7 +106,15 @@ internal class SyncRound(private val cloud: CloudPort, private val deviceId: Str
  */
 object LibrarySync {
     private const val DEBOUNCE_MS = 4_000L
-    private val kinds: List<SyncKind> = listOf(FavoritesKind, PlaylistsKind, ArtistsKind, SettingsKind)
+    private val kinds: List<SyncKind> = listOf(FavoritesKind, PlaylistsKind, ArtistsKind, SettingsKind, ListeningKind, ConnectionsKind)
+    /**
+     * Kinds added in 9.2: a server that does not take them yet (its `kind` check predates them) answers 400, and
+     * the rest of the library still syncs instead of the whole round failing.
+     */
+    private val newerKinds: Set<String> = setOf(ListeningKind.name, ConnectionsKind.name)
+    private var refused: Set<String> = emptySet()
+    private var listeningJob: Job? = null
+    @Volatile private var applying = false
     private val _status = MutableStateFlow(SyncStatus())
     val status: StateFlow<SyncStatus> = _status
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -124,6 +135,7 @@ object LibrarySync {
         this.context = context.applicationContext
         SyncedTracks.init(context)
         _status.value = SyncStatus(lastSuccess = SyncStore.lastSuccess(context))
+        AccountSession.userId()?.let { uid -> scope.launch { restore(context.applicationContext, uid) } }
         watch(context.applicationContext)
         request(if (fresh) 0L else 1_500L)
     }
@@ -132,8 +144,10 @@ object LibrarySync {
         pending?.cancel(); watchers?.cancel(); watchers = null; poller?.cancel(); poller = null; libraryToken = null
         prefsListener?.let { context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(it) }
         prefsListener = null
+        listeningJob?.cancel(); listeningJob = null; refused = emptySet()
         SyncStore.forget(context)
         SyncedTracks.forget(context)
+        ListeningKind.forget(); ConnectionsKind.forget()
         com.ketvoice.app.remote.RemoteKeyStore.forget(context)
         _status.value = SyncStatus()
     }
@@ -160,13 +174,31 @@ object LibrarySync {
     /** The app goes to the background: what changed here goes out now. */
     fun onBackground() {
         poller?.cancel(); poller = null
-        if (AccountSession.userId() != null) { request(0L); SharedPlaylists.onBackground() }
+        if (AccountSession.userId() != null) { ListeningKind.invalidate(); request(0L); SharedPlaylists.onBackground() }
+    }
+
+    /** The other devices' listening and Discord links as last agreed: the pages show them before the first round ends. */
+    private fun restore(context: Context, uid: String) = runCatching {
+        ListeningKind.restore(context, SyncStore.read(context, uid, ListeningKind.name))
+        ConnectionsKind.restore(context, SyncStore.read(context, uid, ConnectionsKind.name))
+    }
+
+    /** This device's Discord link changed (linked, unlinked, another name): the other devices learn it soon. */
+    fun connectionsChanged() = request()
+
+    /**
+     * This device heard something: its listening goes to the account at most every [ListeningKind.REFRESH_MS]
+     * (a round per play or per second of music would be far too many).
+     */
+    private fun listeningChanged() {
+        if (listeningJob?.isActive == true || ListeningKind.name in refused) return
+        listeningJob = scope.launch { delay(ListeningKind.REFRESH_MS); ListeningKind.invalidate(); request(0L) }
     }
 
     /** One small read (each kind's revision); a full round only when another device wrote since the last look. */
     private suspend fun poll() {
         if (AccountSession.userId() == null) return
-        val token = CloudLibrary.revisions(kinds.map { it.name })
+        val token = CloudLibrary.revisions(kinds.map { it.name }.filterNot { it in refused })
         if (ChangeToken.changed(libraryToken, token)) request(0L)
         libraryToken = token
         // The profile row is as small; its photo is named per upload, so only a new photo is downloaded.
@@ -174,7 +206,8 @@ object LibrarySync {
     }
 
     fun request(delayMs: Long = DEBOUNCE_MS) {
-        if (context == null || AccountSession.userId() == null) return
+        // What a round applies here is not a change of this device: asking again would cancel the round itself.
+        if (applying || context == null || AccountSession.userId() == null) return
         pending?.cancel()
         pending = scope.launch { delay(delayMs); runCatching { syncAll() } }
     }
@@ -182,6 +215,7 @@ object LibrarySync {
     /** Before signing out: the last changes are sent, for at most a few seconds. */
     internal suspend fun flush() {
         pending?.cancel()
+        ListeningKind.invalidate()
         withTimeoutOrNull(5_000) { runCatching { syncAll() } }
     }
 
@@ -192,6 +226,8 @@ object LibrarySync {
             launch { com.ketvoice.app.data.PlaylistStore.lists.drop(1).collect { request() } }
             launch { snapshotFlow { com.ketvoice.app.data.ArtistPrefs.blocked to com.ketvoice.app.data.ArtistPrefs.favourites }.drop(1).collect { request() } }
             launch { com.ketvoice.app.automix.MixPresetStore.revision.drop(1).collect { request() } }
+            launch { com.ketvoice.app.data.ListeningHistory.ownChanges.drop(1).collect { listeningChanged() } }
+            launch { snapshotFlow { com.ketvoice.app.data.AppSettings.discordPresence.value }.drop(1).collect { request() } }
         }
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key in SettingsKind.keys) request() }
         prefsListener = listener
@@ -206,6 +242,7 @@ object LibrarySync {
     suspend fun syncNow(): SyncProblem {
         pending?.cancel()
         failures = 0
+        ListeningKind.invalidate()
         return syncAll()
     }
 
@@ -215,12 +252,12 @@ object LibrarySync {
         _status.value = _status.value.copy(running = true)
         try {
             val round = SyncRound(cloud, DeviceIdentity.id(ctx), ServerClock::now)
-            val again = kinds.map { kind -> syncKind(ctx, uid, kind, round) }.any { it }
+            val again = kinds.filterNot { it.name in refused }.map { kind -> syncOne(ctx, uid, kind, round) }.any { it }
             failures = 0
             val at = System.currentTimeMillis()
             SyncStore.markSuccess(ctx, at)
             _status.value = SyncStatus(lastSuccess = at)
-            if (again) request()
+            if (again || ListeningKind.takeResend()) request()
             SyncProblem.NONE
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
@@ -232,6 +269,14 @@ object LibrarySync {
         }
     } }
 
+    private suspend fun syncOne(context: Context, uid: String, kind: SyncKind, round: SyncRound): Boolean = try {
+        syncKind(context, uid, kind, round)
+    } catch (error: CloudHttpError) {
+        if (kind.name !in newerKinds || !SyncProblems.refusedKind(error.status)) throw error
+        refused = refused + kind.name
+        false
+    }
+
     /** Returns true when this device changed during the round: its changes go out in the next one. */
     private suspend fun syncKind(context: Context, uid: String, kind: SyncKind, round: SyncRound): Boolean {
         val previous = SyncStore.read(context, uid, kind.name)
@@ -240,7 +285,10 @@ object LibrarySync {
         if (merged.live != snapshot) {
             val still = withContext(Dispatchers.Main) { kind.snapshot(context, previous ?: SyncDoc()) }
             if (still != snapshot) return true
-            withContext(Dispatchers.Main) { kind.apply(context, merged.live) }
+            withContext(Dispatchers.Main) {
+                applying = true
+                try { kind.apply(context, merged.live) } finally { applying = false }
+            }
         }
         SyncStore.write(context, uid, kind.name, merged)
         return false

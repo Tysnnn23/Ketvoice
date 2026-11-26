@@ -62,6 +62,8 @@ ui/player/LivelyLyricsTest.kt
 data/LyricsDraftTest.kt
 # Windows 2.0 (connections): live sync, scrobbling, sign-in by QR code (and the QR encoder's reference vectors).
 sync/PlaybackSyncTest.kt
+# 9.2 « tout synchroniser »: listening per device, Discord, an emoji-only playlist with its cover.
+sync/ListeningSyncTest.kt
 scrobble/ScrobblingTest.kt
 account/DeviceCodeTest.kt
 together/QrCodeTest.kt

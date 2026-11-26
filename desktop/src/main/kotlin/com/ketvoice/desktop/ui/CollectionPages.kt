@@ -248,10 +248,13 @@ fun ArtistPage(ref: ArtistRef) {
     }
 }
 
-/** A mosaic of the first four covers (a playlist without its own artwork). */
+/**
+ * A playlist's artwork: its own when it has one, else a mosaic of its first four covers, each read as the phone reads
+ * it (the catalogue's override, then the cover found for the title, then the title's own).
+ */
 @Composable
-fun Mosaic(tracks: List<Track>, size: androidx.compose.ui.unit.Dp) {
-    val covers = tracks.mapNotNull { it.coverUrl }.distinct().take(4)
+fun Mosaic(tracks: List<Track>, size: androidx.compose.ui.unit.Dp, own: String? = null) {
+    val covers = if (own != null) listOf(own) else mosaicCovers(tracks)
     if (covers.size < 4) { Artwork(covers.firstOrNull(), size, radius = Ket27Desk.Radius.artwork, shadow = if (size > 100.dp) 24.dp else 0.dp); return }
     Box(Modifier.size(size).clip(RoundedCornerShape(if (size > 100.dp) Ket27Desk.Radius.artwork else 6.dp))) {
         Column {
@@ -259,6 +262,10 @@ fun Mosaic(tracks: List<Track>, size: androidx.compose.ui.unit.Dp) {
         }
     }
 }
+
+/** The four covers a playlist's mosaic shows. */
+internal fun mosaicCovers(tracks: List<Track>): List<String> =
+    tracks.mapNotNull { com.ketvoice.app.data.ArtworkRepo.coverForTrack(it) ?: it.coverUrl }.distinct().take(4)
 
 @Composable
 fun PlaylistPage(id: String) {
@@ -272,7 +279,7 @@ fun PlaylistPage(id: String) {
     if (p == null) { Page(null, "playlist") { item { EmptyMessage("Playlist introuvable", "Cette playlist a été supprimée.") } }; return }
     Page(null, "playlist") {
         item("header") {
-            CollectionHeader({ Mosaic(p.tracks, 240.dp) }, "Playlist", p.name, AppText.t("Vous"), null,
+            CollectionHeader({ Mosaic(p.tracks, 240.dp, p.coverUrl) }, "Playlist", p.name, AppText.t("Vous"), null,
                 if (p.tracks.isEmpty()) AppText.t("Aucun titre") else durationLabel(p.tracks), ket.accent, p.tracks,
                 titleSlot = if (!renaming) null else { { RenameField(p.name) { name -> renaming = false; if (name.isNotBlank() && name != p.name) library.renamePlaylist(p.id, name) } } },
                 extraButtons = {

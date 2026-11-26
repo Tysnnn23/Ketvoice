@@ -141,6 +141,12 @@ internal fun lastSync(at: Long, now: Long = System.currentTimeMillis()): String 
     return AppText.t("Dernier envoi") + " · " + DateTimeFormatter.ofPattern(if (sameDay) "HH:mm" else "dd/MM HH:mm").format(then)
 }
 
+/** « Discord connecté sur Pixel 9 · name », when another device of the account has Discord linked. */
+internal fun discordElsewhere(links: List<com.ketvoice.app.sync.DiscordLink>): String? =
+    com.ketvoice.app.sync.ConnectionsKind.elsewhere(links)?.let { other ->
+        AppText.t("Discord connecté sur {0}").replace("{0}", other.device + (other.user?.let { " · $it" } ?: ""))
+    }
+
 @Composable
 private fun DiscordCard() {
     val status by DiscordPresence.status.collectAsState()
@@ -151,6 +157,9 @@ private fun DiscordCard() {
         else -> AppText.t("En attente de Discord · le statut s'affiche pendant la lecture")
     }
     ServiceRow("D", Color(0xFF5865F2), "Discord", text, status == DiscordStatus.CONNECTED && ConnectPrefs.discord.value, "discord")
+    // 9.2: Discord linked on another device of the account (the phone), as that device told it; its tokens stay there.
+    val others by com.ketvoice.app.sync.ConnectionsKind.others.collectAsState()
+    discordElsewhere(others)?.let { Note(it) }
     Hairline()
     ToggleRow("Statut Discord pendant la lecture", ConnectPrefs.discord.value, "discord-presence") { ConnectPrefs.set(ConnectPrefs.discord, "discord", it) }
     Hairline()

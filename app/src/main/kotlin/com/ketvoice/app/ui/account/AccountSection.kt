@@ -97,7 +97,7 @@ private fun SignedOutCard(message: String?) {
         }
         Column(Modifier.padding(start = 14.dp).weight(1f)) {
             Text("Compte Ketvoice", color = theme.onBackground, style = Ket27.Type.title3)
-            Text("Vos favoris, playlists et réglages sur tous vos appareils.", color = theme.secondary, style = Ket27.Type.footnote)
+            Text("Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.", color = theme.secondary, style = Ket27.Type.footnote)
         }
     }
     if (message != null) Text(message, color = theme.secondary, style = Ket27.Type.footnote, modifier = Modifier.padding(top = 10.dp))

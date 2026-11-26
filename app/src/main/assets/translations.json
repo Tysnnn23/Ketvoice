@@ -3187,7 +3187,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Dropped links: a Deezer, Spotify or YouTube link dragged onto the window is sent to that service to find out the track's name.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "After each transition, 👍 or 👎 on the player. In the automatic style, Ketmix leaves out the transitions you don't like; a style you picked yourself is never replaced. Everything stays on this phone.",
   "Aucune transition pour l'instant": "No transition yet",
-  "Ketmix a tout oublié": "Ketmix forgot everything"
+  "Ketmix a tout oublié": "Ketmix forgot everything",
+  "Discord connecté sur {0}": "Discord connected on {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Your favourites, playlists, recently played, statistics and settings on all your devices."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -6377,7 +6379,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "छोड़े गए लिंक: विंडो पर खींचा गया Deezer, Spotify या YouTube लिंक ट्रैक का नाम जानने के लिए उसी सेवा को भेजा जाता है।",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "हर ट्रांज़िशन के बाद प्लेयर पर 👍 या 👎। ऑटोमैटिक स्टाइल में Ketmix वे ट्रांज़िशन छोड़ देता है जो आपको पसंद नहीं; आपका खुद चुना स्टाइल कभी नहीं बदला जाता। सब कुछ इसी फ़ोन पर रहता है।",
   "Aucune transition pour l'instant": "अभी तक कोई ट्रांज़िशन नहीं",
-  "Ketmix a tout oublié": "Ketmix ने सब कुछ भुला दिया"
+  "Ketmix a tout oublié": "Ketmix ने सब कुछ भुला दिया",
+  "Discord connecté sur {0}": "{0} पर Discord कनेक्टेड",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "आपके पसंदीदा, प्लेलिस्ट, हाल में सुने गए, आँकड़े और सेटिंग्स आपके सभी डिवाइस पर।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -9567,7 +9571,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "ドロップしたリンク: ウィンドウにドラッグした Deezer、Spotify、YouTube のリンクは、曲名を調べるためにそのサービスへ送信されます。",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "トランジションのたびにプレーヤーで 👍 または 👎。自動スタイルでは、気に入らないトランジションを Ketmix が使わなくなります。自分で選んだスタイルが置き換えられることはありません。すべてこのスマートフォン内に保存されます。",
   "Aucune transition pour l'instant": "まだトランジションはありません",
-  "Ketmix a tout oublié": "Ketmix は学習内容をすべて忘れました"
+  "Ketmix a tout oublié": "Ketmix は学習内容をすべて忘れました",
+  "Discord connecté sur {0}": "{0} で Discord に接続済み",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "お気に入り、プレイリスト、最近再生した曲、統計、設定をすべてのデバイスで。"
  },
  "zh": {
   "Reverb": "混响",
@@ -12757,7 +12763,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "拖入的链接：拖到窗口中的 Deezer、Spotify 或 YouTube 链接会发送给该服务，以获取歌曲名称。",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "每次过渡后，在播放器上点 👍 或 👎。在自动风格下，Ketmix 会避开你不喜欢的过渡；你手动选择的风格永远不会被替换。所有数据都只保存在这部手机上。",
   "Aucune transition pour l'instant": "暂无过渡",
-  "Ketmix a tout oublié": "Ketmix 已忘记所有内容"
+  "Ketmix a tout oublié": "Ketmix 已忘记所有内容",
+  "Discord connecté sur {0}": "已在 {0} 上连接 Discord",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "您的收藏、播放列表、最近播放、统计和设置，在所有设备上同步。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -15947,7 +15955,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Перетащенные ссылки: ссылка Deezer, Spotify или YouTube, перетащенная в окно, отправляется этому сервису, чтобы узнать название трека.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "После каждого перехода — 👍 или 👎 в плеере. В автоматическом стиле Ketmix не использует переходы, которые вам не нравятся; стиль, выбранный вручную, никогда не заменяется. Всё хранится только на этом телефоне.",
   "Aucune transition pour l'instant": "Пока нет переходов",
-  "Ketmix a tout oublié": "Ketmix всё забыл"
+  "Ketmix a tout oublié": "Ketmix всё забыл",
+  "Discord connecté sur {0}": "Discord подключён на {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Избранное, плейлисты, недавно прослушанное, статистика и настройки на всех ваших устройствах."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -19137,7 +19147,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Link trascinati: un link Deezer, Spotify o YouTube trascinato nella finestra viene inviato a quel servizio per conoscere il titolo del brano.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "Dopo ogni transizione, 👍 o 👎 sul lettore. Nello stile automatico, Ketmix lascia da parte le transizioni che non ti piacciono; uno stile scelto a mano non viene mai sostituito. Tutto resta su questo telefono.",
   "Aucune transition pour l'instant": "Ancora nessuna transizione",
-  "Ketmix a tout oublié": "Ketmix ha dimenticato tutto"
+  "Ketmix a tout oublié": "Ketmix ha dimenticato tutto",
+  "Discord connecté sur {0}": "Discord connesso su {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Preferiti, playlist, ascolti recenti, statistiche e impostazioni su tutti i tuoi dispositivi."
  },
  "es": {
   "Reverb": "Reverb",
@@ -22327,7 +22339,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Enlaces soltados: un enlace de Deezer, Spotify o YouTube arrastrado a la ventana se envía a ese servicio para conocer el título.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "Después de cada transición, 👍 o 👎 en el reproductor. En el estilo automático, Ketmix deja de lado las transiciones que no te gustan; un estilo elegido a mano nunca se sustituye. Todo se queda en este teléfono.",
   "Aucune transition pour l'instant": "Aún no hay transiciones",
-  "Ketmix a tout oublié": "Ketmix lo ha olvidado todo"
+  "Ketmix a tout oublié": "Ketmix lo ha olvidado todo",
+  "Discord connecté sur {0}": "Discord conectado en {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Tus favoritos, listas, escuchas recientes, estadísticas y ajustes en todos tus dispositivos."
  },
  "de": {
   "Reverb": "Reverb",
@@ -25517,7 +25531,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Abgelegte Links: Ein in das Fenster gezogener Deezer-, Spotify- oder YouTube-Link wird an diesen Dienst gesendet, um den Titel zu erfahren.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "Nach jedem Übergang 👍 oder 👎 im Player. Im automatischen Stil lässt Ketmix die Übergänge weg, die dir nicht gefallen; ein selbst gewählter Stil wird nie ersetzt. Alles bleibt auf diesem Telefon.",
   "Aucune transition pour l'instant": "Noch kein Übergang",
-  "Ketmix a tout oublié": "Ketmix hat alles vergessen"
+  "Ketmix a tout oublié": "Ketmix hat alles vergessen",
+  "Discord connecté sur {0}": "Discord verbunden auf {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Deine Favoriten, Playlists, zuletzt gehörten Titel, Statistiken und Einstellungen auf all deinen Geräten."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -28707,7 +28723,9 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "Links soltos: um link do Deezer, Spotify ou YouTube arrastado para a janela é enviado a esse serviço para saber o nome da faixa.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "Depois de cada transição, 👍 ou 👎 no player. No estilo automático, o Ketmix deixa de lado as transições de que você não gosta; um estilo escolhido à mão nunca é substituído. Tudo fica neste telefone.",
   "Aucune transition pour l'instant": "Nenhuma transição ainda",
-  "Ketmix a tout oublié": "O Ketmix esqueceu tudo"
+  "Ketmix a tout oublié": "O Ketmix esqueceu tudo",
+  "Discord connecté sur {0}": "Discord conectado em {0}",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "Seus favoritos, playlists, ouvidas recentemente, estatísticas e ajustes em todos os seus dispositivos."
  },
  "ko": {
   "Reverb": "리버브",
@@ -31897,6 +31915,8 @@
   "Liens déposés : un lien Deezer, Spotify ou YouTube glissé dans la fenêtre est envoyé à ce service pour connaître le titre.": "끌어다 놓은 링크: 창에 끌어다 놓은 Deezer, Spotify, YouTube 링크는 곡 이름을 알아내기 위해 해당 서비스로 전송됩니다.",
   "Après chaque transition, 👍 ou 👎 sur le lecteur. En style automatique, Ketmix laisse de côté les transitions que vous n'aimez pas ; un style choisi à la main n'est jamais remplacé. Tout reste sur ce téléphone.": "전환이 끝날 때마다 플레이어에서 👍 또는 👎. 자동 스타일에서는 마음에 들지 않는 전환을 Ketmix가 사용하지 않습니다. 직접 고른 스타일은 절대 바뀌지 않습니다. 모든 정보는 이 휴대폰에만 저장됩니다.",
   "Aucune transition pour l'instant": "아직 전환이 없습니다",
-  "Ketmix a tout oublié": "Ketmix가 모두 잊었습니다"
+  "Ketmix a tout oublié": "Ketmix가 모두 잊었습니다",
+  "Discord connecté sur {0}": "{0}에서 Discord 연결됨",
+  "Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.": "즐겨찾기, 플레이리스트, 최근 재생, 통계, 설정을 모든 기기에서."
  }
 }

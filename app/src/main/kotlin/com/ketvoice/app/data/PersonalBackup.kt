@@ -112,8 +112,9 @@ internal object PersonalBackup {
         }.toMap()
         val artists = context.getSharedPreferences("artist-prefs", Context.MODE_PRIVATE)
         return PersonalBackupData(PlaylistStore.lists.value, AppSettings.favoriteIds.value.filter(::cleanId).toSet(),
-            settings, ListeningHistory.tracks.value, ListeningHistory.knownTracks.value,
-            ListeningHistory.playCounts.value.filterKeys(::cleanId), ListeningHistory.listenedMs.value, offsets, points,
+            // This device's own listening only: what other devices of the account heard stays theirs (9.2).
+            settings, ListeningHistory.ownTracks, ListeningHistory.ownKnown,
+            ListeningHistory.ownCounts.filterKeys(::cleanId), ListeningHistory.ownListenedMs, offsets, points,
             artists.getString("blocked", "").orEmpty(), artists.getString("favourites", "").orEmpty(), collectListening(context))
     }
 

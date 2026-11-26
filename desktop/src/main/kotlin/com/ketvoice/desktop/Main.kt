@@ -320,6 +320,9 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
     // Windows 2.0: the lyrics engine and word sync by AI, the import page, followed playlists, drop anywhere, the watched library.
     com.ketvoice.desktop.ui.PcLyricsLibrary.start(context, scope)
+    // 9.2: Discord's choice and link follow the account; plugged in before the account's first sync round.
+    com.ketvoice.desktop.connect.ConnectPrefs.init(context)
+    com.ketvoice.desktop.connect.DiscordAccount.install(scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)
     // Phone control: this PC joins the account's private room while signed in.
     com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)

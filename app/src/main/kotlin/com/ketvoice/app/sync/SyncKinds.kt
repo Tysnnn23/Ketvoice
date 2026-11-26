@@ -29,7 +29,15 @@ internal object SyncTracks {
         downloadUrl = null, canvasUrl = null,
         coverUrl = track.coverUrl?.takeIf { it.startsWith("https://") && it.length <= 1000 })
 
-    fun json(track: Track): JSONObject = DownloadQueue.trackToJson(clean(track))
+    /**
+     * The cover another device can load: the title's own when it is on https, else the one this device found for it
+     * (a downloaded title's cover is a file here). Without it a playlist showed no cover on Windows (9.2).
+     */
+    fun withCover(track: Track): Track = if (track.coverUrl?.startsWith("https://") == true) track
+        else com.ketvoice.app.data.ArtworkRepo.covers.value["t:${track.id}"]?.takeIf { it.startsWith("https://") && it.length <= 1000 }
+            ?.let { track.copy(coverUrl = it) } ?: track
+
+    fun json(track: Track): JSONObject = DownloadQueue.trackToJson(clean(withCover(track)))
     fun text(track: Track): String = Canonical.text(json(track))
     fun parse(text: String): Track? = runCatching { DownloadQueue.trackFromJson(JSONObject(text))?.let(::clean) }.getOrNull()
         ?.takeIf { it.id.length <= 256 && it.title.length <= 300 }

@@ -90,7 +90,7 @@ private fun SignedIn(email: String) {
         if (sync.running) Spinner() else KetTextLink("Synchroniser", "account-sync") { scope.launch { runCatching { LibrarySync.syncNow() } } }
     }
     Hairline()
-    KText("Vos favoris, playlists et réglages sur tous vos appareils.", Ket27Desk.Type.footnote,
+    KText("Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.", Ket27Desk.Type.footnote,
         Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = ket.secondary, maxLines = 2)
     if (confirmOut) ConfirmDialog(AppText.t("Se déconnecter"),
         AppText.t("Votre bibliothèque reste sur cet appareil. Elle ne se synchronise plus jusqu'à la prochaine connexion."),
@@ -132,7 +132,7 @@ private fun SignInForm(message: String?) {
         if (creating) AccountSession.signUp(name, email, password) else AccountSession.signIn(email, password)
     }
     Column(Modifier.fillMaxWidth().testTag("account-form")) {
-        KText("Vos favoris, playlists et réglages sur tous vos appareils.", Ket27Desk.Type.subheadline,
+        KText("Vos favoris, playlists, écoutes récentes, statistiques et réglages sur tous vos appareils.", Ket27Desk.Type.subheadline,
             Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), maxLines = 2)
         KText("Rien n'est envoyé tant que vous n'êtes pas connecté.", Ket27Desk.Type.footnote,
             Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 10.dp), color = ket.secondary, maxLines = 2)

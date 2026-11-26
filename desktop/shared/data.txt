@@ -44,6 +44,7 @@ util/FileMoves.kt
 data/MediaOverrides.kt
 data/ListeningHistory.kt
 data/ListeningWeek.kt
+data/ListeningShare.kt
 data/PersonalMixes.kt
 data/Recommender.kt
 data/CanvasCachePlan.kt

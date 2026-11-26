@@ -280,7 +280,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playlistResults(lists
     item("p") {
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
             items(lists.size) { i -> val p = lists[i]
-                AlbumCard(AlbumRef(p.id, p.name, "", p.tracks.firstOrNull()?.coverUrl), 176.dp, { nav.push(Route.Playlist(p.id)) },
+                AlbumCard(AlbumRef(p.id, p.name, "", p.coverUrl ?: mosaicCovers(p.tracks).firstOrNull()), 176.dp, { nav.push(Route.Playlist(p.id)) },
                     subtitle = com.ketvoice.app.data.AppText.t("${p.tracks.size} titres"))
             }
         }

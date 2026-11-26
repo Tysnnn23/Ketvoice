@@ -84,6 +84,8 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
         runCatching { com.ketvoice.app.data.CustomLyrics.init(this) }
         // The Ketvoice account: a remembered session is renewed and the library synced; nothing is sent otherwise.
+        // 9.2: Discord's link is told to the account's other devices (never its tokens); plugged in before the first sync.
+        runCatching { com.ketvoice.app.discord.DiscordAccountSync.install() }
         runCatching { com.ketvoice.app.account.AccountSession.init(this) }
         // Faster start (5.9.0): what the first screen does not need is read beside it, off the main thread —
         // the lyrics index (up to a few megabytes) and the launcher icon check (calls to the package manager).

@@ -19,6 +19,8 @@ object ConnectPrefs {
 
     /** « Statut Discord »: on by default (owner's pick), shown only while a title plays. */
     val discord = mutableStateOf(true)
+    /** The Discord user the local Discord app last named (display only; the account's other devices see it, 9.2). */
+    val discordUser = mutableStateOf("")
     /** « Masquer le titre »: Discord shows that Ketvoice plays, not what. */
     val discordHideTitle = mutableStateOf(false)
     /** « Synchronisation en direct »: this device's playback goes to the account while signed in. */
@@ -38,6 +40,7 @@ object ConnectPrefs {
         val p = prefs() ?: return
         discord.value = p.getBoolean("discord", true)
         discordHideTitle.value = p.getBoolean("discordHideTitle", false)
+        discordUser.value = p.getString("discordUser", "").orEmpty()
         liveSync.value = p.getBoolean("liveSync", true)
         lastfmOn.value = p.getBoolean("lastfmOn", true)
         listenBrainzOn.value = p.getBoolean("listenBrainzOn", true)
@@ -50,9 +53,19 @@ object ConnectPrefs {
     private fun prefs() = context?.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun set(state: MutableState<Boolean>, key: String, on: Boolean) {
+        adopt(state, key, on)
+        // « Statut Discord » follows the account (9.2): the other devices take the latest choice.
+        if (key == "discord") runCatching { com.ketvoice.app.sync.LibrarySync.connectionsChanged() }
+    }
+
+    /** A value that came from the account: kept here, not sent back. */
+    fun adopt(state: MutableState<Boolean>, key: String, on: Boolean) {
         state.value = on
         prefs()?.edit()?.putBoolean(key, on)?.apply()
     }
+
+    /** Whether the listener ever set [key] on this PC (a default never overrides the other devices' choice). */
+    fun chosen(key: String): Boolean = prefs()?.contains(key) == true
 
     fun setText(state: MutableState<String>, key: String, value: String) {
         state.value = value
