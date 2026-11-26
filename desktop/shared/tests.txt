@@ -11,6 +11,7 @@ automix/MixBench.kt
 automix/MixShapeTest.kt
 automix/MixStudioTest.kt
 automix/MusicalKeyTest.kt
+automix/SongSectionsTest.kt
 automix/TransitionPlannerTest.kt
 data/AppLanguageTest.kt
 data/ArtistPrefsTest.kt

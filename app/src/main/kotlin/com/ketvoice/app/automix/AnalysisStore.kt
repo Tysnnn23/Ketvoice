@@ -46,9 +46,12 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         if (read.frames / read.fps < 6f || kotlin.math.abs(firstUs - fromUs) > 6_000_000L) return null
         val envelope = read.snapshot()
         val signal = BeatAnalysis.analyze(envelope, firstUs / 1000L, thorough, hint)
-        val beats = beatPcm?.let { BeatModel.refine(signal, it, beatTail == true) } ?: signal
+        var mels: BeatModel.Mels? = null
+        val beats = beatPcm?.let { BeatModel.refine(signal, it, beatTail == true) { read -> if (sectionsOf != null) mels = read } } ?: signal
         val ending = sectionsOf ?: return beats
-        return beats.copy(sections = runCatching { SongSections.of(envelope, beats, ending) }.getOrNull() ?: emptyList())
+        // The beat model's own log-mel frames when they cover the stretch, else the band energies read with it.
+        val sections = runCatching { mels?.let { SongSections.of(it, beats, ending) } ?: SongSections.of(envelope, beats, ending) }.getOrNull()
+        return beats.copy(sections = sections ?: emptyList())
     }
 }
 
@@ -68,9 +71,8 @@ internal enum class AnalysisDepth(val outroMs: Long, val introMs: Long, val key:
         val wanted = if (durationMs > 0) minOf(windowMs, durationMs) else windowMs
         // A reading made before the beat model was installed is made again, once, with it.
         val beat = analysis.analyser != 0 || !BeatModel.usable()
-        // 8.6: « Maximum » reads again, once, a stretch kept before its sections were looked for.
-        val sections = !thorough || analysis.sections != null || !SongSections.wanted(this)
-        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD) && beat && sections
+        // A reading kept before 8.6 has no sections and is not read again for them: they come with the next reading.
+        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD) && beat
     }
 
     companion object {

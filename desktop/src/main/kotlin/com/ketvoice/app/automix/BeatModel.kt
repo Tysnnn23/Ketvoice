@@ -178,17 +178,28 @@ internal object BeatModel {
         fullFile()?.let { runCatching { OnnxBeatNet(it, full = true) }.getOrNull() } ?: file().takeIf { ready }?.let { OnnxBeatNet(it) }
     }
 
-    /** [dsp] with the model's beats and bars where it is sure of them; [dsp] as it was (marked as tried) otherwise. Never throws. */
-    fun refine(dsp: SegmentAnalysis, pcm: BeatPcm, tail: Boolean): SegmentAnalysis {
-        val read = runCatching { pcm.window(tail)?.let { (samples, originMs) -> read(dsp, samples, originMs) } }.getOrNull()
+    /** The log-mel frames the model read ([BeatSpectrogram]) and where in the title the first one is, in ms (for [SongSections]). */
+    class Mels(val frames: FloatArray, val originMs: Double)
+
+    /**
+     * [dsp] with the model's beats and bars where it is sure of them; [dsp] as it was (marked as tried) otherwise. Never throws.
+     * [mels] is handed the frames the model read, when it ran.
+     */
+    fun refine(dsp: SegmentAnalysis, pcm: BeatPcm, tail: Boolean, mels: ((Mels) -> Unit)? = null): SegmentAnalysis {
+        val read = runCatching { pcm.window(tail)?.let { (samples, originMs) -> read(dsp, samples, originMs, mels) } }.getOrNull()
         return BeatMapping.merge(dsp, read)
     }
 
-    private fun read(dsp: SegmentAnalysis, samples: FloatArray, originMs: Double): SegmentAnalysis? =
-        openNet()?.use { net -> BeatMapping.segment(predict(net, samples), dsp, originMs) }
+    private fun read(dsp: SegmentAnalysis, samples: FloatArray, originMs: Double, mels: ((Mels) -> Unit)?): SegmentAnalysis? =
+        openNet()?.use { net ->
+            val spect = BeatSpectrogram.compute(samples)
+            mels?.invoke(Mels(spect, originMs))
+            BeatMapping.segment(predictSpect(net, spect), dsp, originMs)
+        }
 
-    internal fun predict(net: BeatRunner, samples: FloatArray): BeatPost.Times {
-        val spect = BeatSpectrogram.compute(samples)
+    internal fun predict(net: BeatRunner, samples: FloatArray): BeatPost.Times = predictSpect(net, BeatSpectrogram.compute(samples))
+
+    private fun predictSpect(net: BeatRunner, spect: FloatArray): BeatPost.Times {
         val frames = spect.size / BeatSpectrogram.MELS
         val window = BeatPost.Window(net.frames)
         val starts = BeatPost.starts(frames, window)

@@ -83,6 +83,27 @@ class SongSectionsTest {
         assertEquals(8 * barMs, SongSections.entry(a.copy(sections = sections))!!.toDouble(), barMs)
     }
 
+    @Test fun theBeatModelsFramesAreUsedWhenTheyCoverTheStretch() {
+        val plan = "vvvvvvvv" + "cccccccc" + "vvvvvvvv" + "cccccccc" + "oooooooo"
+        val fps = BeatSpectrogram.RATE.toFloat() / BeatSpectrogram.HOP
+        val mels = BeatSpectrogram.MELS
+        val perBar = (barMs / 1000 * fps).toInt()
+        val data = FloatArray(plan.length * perBar * mels)
+        val rng = java.util.Random(3)
+        for ((bar, part) in plan.withIndex()) for (f in 0 until perBar) for (m in 0 until mels) {
+            val shape = when (part) { 'v' -> if (m in 20..70) 2.5f else .8f; 'c' -> if (m in 50..110) 4.2f else 2.6f; else -> if (m < 30) 1f else .15f }
+            data[(bar * perBar + f) * mels + m] = shape + rng.nextFloat() * .2f
+        }
+        val a = SegmentAnalysis(100_000, (plan.length * barMs).toLong(), 120f, 100_000.0, .9f, 0, -14f)
+        val sections = SongSections.of(BeatModel.Mels(data, 100_000.0), a, ending = true)!!
+        val found = sections.drop(1).map { it.startMs }
+        for (t in listOf(8, 16, 24, 32).map { 100_000L + it * barMs.toLong() })
+            assertTrue("boundary at $t missing in $found", found.any { abs(it - t) <= barMs.toLong() })
+        assertEquals(Label.Outro, sections.last().label)
+        assertEquals(a.startMs + a.lengthMs, sections.last().endMs)
+        assertNull("frames that start too late leave it to the band energies", SongSections.of(BeatModel.Mels(data, 110_000.0), a, ending = true))
+    }
+
     @Test fun nothingIsGuessedWithoutBarsOrBandEnergies() {
         val (envelope, a) = stretch("vvvvvvvvcccccccc")
         assertNull(SongSections.of(envelope, a.copy(barOffset = -1), ending = true))
@@ -148,10 +169,8 @@ class SongSectionsTest {
         assertNotNull(AnalysisStore.decode(old))
     }
 
-    @Test fun maximumReadsAgainAStretchWithoutSections() {
+    @Test fun aReadingWithoutSectionsIsNotReadAgainForThem() {
         val a = SegmentAnalysis(155_000, 75_000, 120f, 155_000.0, .9f, 0, -14f, key = 3, analyser = 1)
-        assertTrue(AnalysisDepth.Balanced.satisfiedBy(a, AnalysisDepth.Balanced.outroMs, 230_000))
-        assertFalse(AnalysisDepth.Maximum.satisfiedBy(a, AnalysisDepth.Maximum.outroMs, 230_000))
-        assertTrue(AnalysisDepth.Maximum.satisfiedBy(a.copy(sections = emptyList()), AnalysisDepth.Maximum.outroMs, 230_000))
+        assertTrue(AnalysisDepth.Maximum.satisfiedBy(a, AnalysisDepth.Maximum.outroMs, 230_000))
     }
 }

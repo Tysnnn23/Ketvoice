@@ -34,11 +34,29 @@ internal object SongSections {
      */
     fun of(envelope: OnsetEnvelope, a: SegmentAnalysis, ending: Boolean): List<Section>? {
         val timbre = envelope.timbre?.takeIf { it.isNotEmpty() && envelope.timbreFps > 0f } ?: return null
-        val bars = bars(a).takeIf { it.isNotEmpty() } ?: return null
-        val relative = bars.map { it - a.startMs }
-        val found = SongStructure.sections(timbre, TimbreBands.BANDS, envelope.timbreFps, relative, a.lengthMs)
-        return placed(found.map { Section(it.startMs + a.startMs, it.endMs + a.startMs, it.label) }, ending)
+        return read(timbre, TimbreBands.BANDS, envelope.timbreFps, a.startMs.toDouble(), a, ending)
     }
+
+    /** The same from the beat model's log-mel frames, when they cover the whole stretch (else null: the band energies do). */
+    fun of(mels: BeatModel.Mels, a: SegmentAnalysis, ending: Boolean): List<Section>? {
+        val fps = BeatSpectrogram.RATE.toFloat() / BeatSpectrogram.HOP
+        val untilMs = mels.originMs + mels.frames.size / BeatSpectrogram.MELS / fps * 1000.0
+        if (mels.originMs > a.startMs + COVER_MS || untilMs < a.startMs + a.lengthMs - COVER_MS) return null
+        return read(mels.frames, BeatSpectrogram.MELS, fps, mels.originMs, a, ending)
+    }
+
+    /** [frames] of [bands] values at [fps], the first at [originMs] in the title. */
+    private fun read(frames: FloatArray, bands: Int, fps: Float, originMs: Double, a: SegmentAnalysis, ending: Boolean): List<Section>? {
+        val bars = bars(a).filter { it >= originMs - 1.0 }.takeIf { it.isNotEmpty() } ?: return null
+        val end = a.startMs + a.lengthMs
+        val lengthMs = (end - originMs).toLong()
+        val found = SongStructure.sections(frames, bands, fps, bars.map { it - originMs }, lengthMs)
+        fun inTitle(ms: Long) = (ms + originMs).toLong().coerceIn(a.startMs, end)
+        return placed(found.mapIndexed { i, s -> Section(if (i == 0) a.startMs else inTitle(s.startMs), inTitle(s.endMs), s.label) }, ending)
+    }
+
+    /** How far the model's frames may fall short of the stretch at either end. */
+    private const val COVER_MS = 1_500L
 
     /** An ending has no intro and a start no outro: there the stretch, not the title, begins or stops. */
     internal fun placed(sections: List<Section>, ending: Boolean): List<Section> = sections.mapIndexed { i, s ->

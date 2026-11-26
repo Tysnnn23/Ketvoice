@@ -22,3 +22,4 @@ automix/TransitionPlanner.kt
 automix/AnalysisStore.kt
 automix/MixStudio.kt
 automix/SongStructure.kt
+automix/SongSections.kt
