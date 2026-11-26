@@ -281,7 +281,7 @@ private fun TvLyricsPanel(track: Track) {
         when {
             !AppSettings.syncedLyrics.value -> TvEmpty("Paroles masquées", "Activez les paroles dans Réglages.")
             lyrics.lines.isEmpty() && !lyrics.loading -> TvEmpty("Pas de paroles pour ce titre", "Ketvoice les cherche chez chaque fournisseur à chaque écoute.")
-            else -> LyricsPane(track, expanded = true, onSource = {}, modifier = Modifier.fillMaxSize(), fontScale = 1.08f)
+            else -> LyricsPane(track, expanded = true, onSource = {}, modifier = Modifier.fillMaxSize(), fontScale = 1.08f * com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
         }
     }
 }
