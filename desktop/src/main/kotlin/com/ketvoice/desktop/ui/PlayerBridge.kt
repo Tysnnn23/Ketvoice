@@ -52,7 +52,7 @@ interface PlayerControls {
 
 private val NoErrors = kotlinx.coroutines.flow.MutableSharedFlow<String>()
 
-data class UserPlaylist(val id: String, val name: String, val tracks: List<Track> = emptyList())
+data class UserPlaylist(val id: String, val name: String, val tracks: List<Track> = emptyList(), val cover: String? = null)
 
 /** A download and its progress (0..1; 1 when the file is complete). */
 data class DownloadItem(val track: Track, val progress: Float) { val done: Boolean get() = progress >= 1f }
@@ -159,7 +159,7 @@ object LibraryBridge : LibraryStore {
     /** An imported entry the catalogue has not matched yet still shows by its title and artist. */
     internal fun toUi(p: LocalPlaylist) = UserPlaylist(p.id, p.name, p.entries.map { e ->
         e.track ?: Track("entry:${e.id}", e.title, e.artist, "")
-    })
+    }, p.coverUrl)
 
     internal fun downloadsOf(items: List<DesktopDownloader.Item>, tasks: Map<String, com.ketvoice.app.data.DownloadTask>): List<DownloadItem> {
         val saved = items.map { DownloadItem(it.track, 1f) }

@@ -38,8 +38,18 @@ object LastPage {
     suspend fun coverBytes(url: String?): ByteArray? {
         kotlinx.coroutines.delay(3_000)
         val image = Covers.cached(url) ?: return null
+        // Covers are now decoded at the screen's size (up to 3000 px): the first frame's stand-in needs far less.
         return runCatching {
-            org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap()).use { it.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes }
+            org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap()).use { full ->
+                val long = maxOf(full.width, full.height)
+                if (long <= 720) return@use full.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes
+                val w = full.width * 720 / long; val h = full.height * 720 / long
+                org.jetbrains.skia.Surface.makeRasterN32Premul(w, h).use { s ->
+                    s.canvas.drawImageRect(full, org.jetbrains.skia.Rect.makeWH(full.width.toFloat(), full.height.toFloat()),
+                        org.jetbrains.skia.Rect.makeWH(w.toFloat(), h.toFloat()), org.jetbrains.skia.SamplingMode.MITCHELL, null, true)
+                    s.makeImageSnapshot().use { it.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes }
+                }
+            }
         }.getOrNull()
     }
 

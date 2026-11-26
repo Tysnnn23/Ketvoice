@@ -1,30 +1,20 @@
 package com.ketvoice.desktop.ui
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,29 +59,29 @@ internal fun rememberGlide(target: Dp, label: String): State<Dp> =
     animateDpAsState(target, Motion.Springs.SMOOTH.motion(), label = label)
 
 /**
- * The windowed full player's Canvas: the column's full width from its top, at the media's height (down to the window's
- * foot at most, then only the foot is cut), its foot dissolving into the player's moving colours.
+ * The windowed full player's Canvas column: as tall as the window and, as wide as the Canvas's shape at that height,
+ * between [MIN_SHARE] of the window (an upright Canvas is not a thin strip, its foot is cut a little instead) and what
+ * the controls leave ([CONTROLS_DP] beside it, or half the window with the lyrics). The Canvas fills it edge to edge.
  */
-@Composable
-internal fun PlayerCanvasByFormat(canvas: String, playing: Boolean, modifier: Modifier = Modifier) {
-    val (aspect, onAspect) = rememberCanvasAspect(canvas)
-    val poster = rememberCanvasPoster(canvas)
-    BoxWithConstraints(modifier.testTag("canvas-by-format")) {
-        val target = PlayerArtworkSize.heightDp(maxWidth.value, aspect, maxHeight.value).dp
-        val height by rememberGlide(target, "canvas-height")
-        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(height).clipToBounds()
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                drawRect(Brush.verticalGradient(.86f to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
-            }.testTag("canvas-edge")) {
-            Box(Modifier.fillMaxSize().topAnchoredCrop(aspect ?: 1f)) {
-                poster?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                CanvasVideo(canvas, playing && canvasMoves(), Modifier.fillMaxSize(), onAspect = onAspect)
-            }
-        }
+internal object CanvasArea {
+    const val MIN_SHARE = .38f
+    const val CONTROLS_DP = 480f
+
+    fun widthDp(windowWidthDp: Float, windowHeightDp: Float, aspect: Float?, lyrics: Boolean): Float {
+        val shape = aspect?.takeIf { it.isFinite() && it > 0f } ?: CanvasSizing.UPRIGHT
+        val least = windowWidthDp * MIN_SHARE
+        val most = (if (lyrics) windowWidthDp * .5f else windowWidthDp - CONTROLS_DP).coerceAtLeast(least)
+        return (windowHeightDp * shape).coerceIn(least, most)
     }
 }
+
+/** Its end edge dissolves into what is behind it (the player's moving colours), over the last [from] of its width. */
+internal fun Modifier.featherEnd(from: Float = .86f): Modifier =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            drawRect(Brush.horizontalGradient(from to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
+        }
 
 /**
  * The media laid out at its own shape across the box, from the top: when the box is shorter only its foot is cut,

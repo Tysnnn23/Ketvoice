@@ -23,5 +23,7 @@ ui/player/LyricsWords.kt
 ui/player/KaraokeDraw.kt
 ui/player/LyricsBlur.kt
 ui/player/PlayerArtworkMath.kt
+# Studio framings (album page and player) drawn as on the phone: the pure geometry and its Compose layer.
+ui/sub/Framing.kt
 # Windows 2.0 listening rooms: Ketogether's words and colours (activity lines, endings, sync).
 ui/together/KetogetherLook.kt

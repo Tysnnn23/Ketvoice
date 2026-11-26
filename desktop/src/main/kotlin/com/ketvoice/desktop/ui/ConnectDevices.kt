@@ -139,13 +139,13 @@ internal fun ResumeElsewhereCard() {
 internal fun ResumeCard(session: RemoteSession) {
     val ket = LocalKet.current
     val picture = rememberGlassBackdrop()
-    val colours = rememberCoverColors(session.track.coverUrl)
+    val colours = rememberCoverColors(CoverSources.track(session.track))
     Box(Modifier.then(PageEdges.sides()).padding(top = 20.dp).widthIn(max = 760.dp).testTag("resume-elsewhere")) {
         Box(Modifier.matchParentSize().clip(RoundedCornerShape(Ket27Desk.Radius.card)).glassSource(picture)
             .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(colours?.first ?: ket.accent, (colours?.second ?: ket.card).copy(alpha = .7f)))))
         Row(Modifier.fillMaxWidth().glass(picture, Ket27Desk.Radius.card, Color.Black.copy(alpha = .18f), GlassStyle.Clear, rim = Color.White.copy(alpha = .28f))
             .padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Artwork(session.track.coverUrl, 64.dp, radius = 10.dp)
+            Artwork(CoverSources.track(session.track), 64.dp, radius = 10.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 KText(AppText.t("Reprendre là où tu en étais").uppercase(), Ket27Desk.Type.eyebrow, color = Color.White.copy(alpha = .8f), translate = false)

@@ -120,7 +120,7 @@ class VideoFrames(file: File, maxWidth: Int, maxHeight: Int) : Closeable {
 
     private fun scale(into: ByteArray) {
         sws = sws_getCachedContext(sws, frame.width(), frame.height(), frame.format(), width, height, AV_PIX_FMT_BGRA,
-            SWS_BILINEAR, null, null, null as DoublePointer?)
+            SWS_BICUBIC or SWS_ACCURATE_RND, null, null, null as DoublePointer?)
         sws_scale(sws, frame.data(), frame.linesize(), 0, frame.height(), outData, outLines)
         val row = width * 4
         if (stride == row) out.position(0).get(into, 0, row * height)

@@ -123,7 +123,7 @@ val LocalLyricsFeed = staticCompositionLocalOf<LyricsFeed> { RepoLyricsFeed }
 internal fun rememberDeskSungInk(track: Track, full: Boolean): Color {
     val ket = LocalKet.current
     val mode = AppSettings.lyricsSung.value
-    val cover = if (mode == com.ketvoice.app.theme.LyricsLook.SUNG_COVER) rememberCoverColors(track.coverUrl)?.second else null
+    val cover = if (mode == com.ketvoice.app.theme.LyricsLook.SUNG_COVER) rememberCoverColors(CoverSources.track(track))?.second else null
     return deskSungInk(mode, full, ket.label, ket.accent, ket.ground, ket.card, cover, AppSettings.lyricsSungArgb.value)
 }
 

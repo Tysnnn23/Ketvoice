@@ -132,7 +132,7 @@ private fun IslandTop(track: Track?, onOpenPlayer: () -> Unit, width: Dp) {
     val scope = LocalPlayerScope.current
     Row(Modifier.fillMaxWidth().height(ShellMetrics.ISLAND_HEIGHT).padding(start = 10.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(48.dp).clickable(enabled = track != null, onClick = onOpenPlayer).testTag("lcd-artwork")) {
-            Artwork(track?.coverUrl, 48.dp, Modifier.shared("np:cover", scope), radius = 12.dp)
+            Artwork(CoverSources.track(track), 48.dp, Modifier.shared("np:cover", scope), radius = 12.dp)
         }
         Spacer(Modifier.width(12.dp))
         // The « LCD » of 1.x (its tag wraps the clickable part, whose words merge into it).

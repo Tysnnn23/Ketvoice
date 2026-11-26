@@ -196,42 +196,46 @@ fun FullPlayer(onClose: () -> Unit) {
     val player = LocalPlayer.current
     val state by player.state.collectAsState()
     val track = state.current ?: run { LaunchedEffect(Unit) { onClose() }; return }
-    val colors = rememberCoverColors(track.coverUrl)
+    val colors = rememberCoverColors(CoverSources.track(track))
     val ground = (colors?.first ?: Color(0xFF2C2C2E)).let { androidx.compose.ui.graphics.lerp(it, Color.Black, .45f) }
     val canvas = rememberPlayerCanvas(track, state.queue, state.index)
     var lyrics by FullPlayerLyrics.shown
     val actions = LocalTrackActions.current
     val backdrop = com.ketvoice.desktop.ui.glass.rememberGlassBackdrop()
     val scope = LocalPlayerScope.current
+    // Opening the player looks for what the owner published lately (at most every 20 s).
+    LaunchedEffect(Unit) { com.ketvoice.desktop.library.StudioContent.touch() }
     Box(Modifier.fillMaxSize().unfold().testTag("full-player")) {
         // The cover's colours turning slowly into each other (the phone's ArtworkFlow), under a veil for the white text.
         Box(Modifier.fillMaxSize().background(ground).glassSource(backdrop)) {
-            CoverFlowBackground(track.coverUrl, state.isPlaying)
+            CoverFlowBackground(CoverSources.track(track), state.isPlaying)
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .26f)))
             Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
                 listOf(Color.Black.copy(alpha = .10f), Color.Transparent, Color.Black.copy(alpha = .30f)))))
         }
-        Row(Modifier.fillMaxSize()) {
-            // The artwork's place: the cover, or the Canvas edge to edge at the height of its format (8.3).
-            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                if (canvas != null) PlayerCanvasByFormat(canvas, state.isPlaying, Modifier.fillMaxSize())
-                else androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(start = 72.dp, end = 40.dp, top = 72.dp, bottom = 72.dp),
-                    contentAlignment = Alignment.Center) {
-                    val side = minOf(maxWidth, maxHeight, 520.dp)
-                    Artwork(track.coverUrl, side, Modifier.shared("np:cover", scope), radius = Ket27Desk.Radius.card, shadow = 48.dp)
-                }
-            }
-            Column((if (lyrics) Modifier.weight(1f) else Modifier.width(480.dp)).fillMaxHeight().padding(start = 28.dp, end = 64.dp, top = 64.dp, bottom = 48.dp),
-                verticalArrangement = if (lyrics) Arrangement.Top else Arrangement.Center) {
-                PlayerControlsBlock(track, compact = lyrics, backdrop = backdrop)
-                // What other features show here (the live mix view while Ketmix crosses two titles).
-                FullPlayerSlots.all.forEach { androidx.compose.runtime.key(it.id) { it.content(backdrop, lyrics) } }
-                if (lyrics) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth().weight(1f)) {
-                        CascadeLyrics(track, LyricsLook.Full, Modifier.weight(1f).fillMaxHeight())
-                        Box(Modifier.fillMaxHeight().padding(start = 12.dp), contentAlignment = Alignment.Center) { DeskVoiceSlider(track, onDark = true) }
+        val (aspect, onAspect) = rememberCanvasAspect(canvas)
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            val area by rememberGlide(CanvasArea.widthDp(maxWidth.value, maxHeight.value, aspect, lyrics).dp, "canvas-area")
+            Row(Modifier.fillMaxSize()) {
+                if (canvas != null) {
+                    // The Canvas fills its column edge to edge (never whole on a dark field), its end dissolving into the colours.
+                    Box(Modifier.width(area).fillMaxHeight().featherEnd().testTag("full-canvas-area")) {
+                        FilledCanvas(canvas, state.isPlaying, CoverSources.track(track), Modifier.fillMaxSize(),
+                            frame = com.ketvoice.app.data.MediaOverrides.playerFrame(track), onAspect = onAspect)
                     }
+                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        FullPlayerControls(track, lyrics, backdrop, if (lyrics) Modifier.fillMaxSize() else Modifier.width(480.dp).fillMaxHeight())
+                    }
+                } else {
+                    // The cover, large and centred in its half.
+                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(start = 72.dp, end = 40.dp, top = 72.dp, bottom = 72.dp),
+                            contentAlignment = Alignment.Center) {
+                            val side = minOf(maxWidth, maxHeight, 520.dp)
+                            Artwork(CoverSources.track(track), side, Modifier.shared("np:cover", scope), radius = Ket27Desk.Radius.card, shadow = 48.dp)
+                        }
+                    }
+                    FullPlayerControls(track, lyrics, backdrop, (if (lyrics) Modifier.weight(1f) else Modifier.width(480.dp)).fillMaxHeight())
                 }
             }
         }
@@ -245,6 +249,24 @@ fun FullPlayer(onClose: () -> Unit) {
                 size = 36.dp, glyph = 18.dp, tint = Color.White.copy(alpha = .75f))
             KetIconButton(KetIcons.Lyrics, "Paroles", { lyrics = !lyrics }, Modifier.testTag("full-lyrics"),
                 size = 36.dp, glyph = 18.dp, tint = if (lyrics) Color.White else Color.White.copy(alpha = .75f))
+        }
+    }
+}
+
+/** The full player's title, controls, the features' slots and, when shown, the lyrics. */
+@Composable
+private fun FullPlayerControls(track: Track, lyrics: Boolean, backdrop: com.ketvoice.desktop.ui.glass.GlassBackdrop, modifier: Modifier) {
+    Column(modifier.padding(start = 28.dp, end = 64.dp, top = 64.dp, bottom = 48.dp),
+        verticalArrangement = if (lyrics) Arrangement.Top else Arrangement.Center) {
+        PlayerControlsBlock(track, compact = lyrics, backdrop = backdrop)
+        // What other features show here (the live mix view while Ketmix crosses two titles).
+        FullPlayerSlots.all.forEach { androidx.compose.runtime.key(it.id) { it.content(backdrop, lyrics) } }
+        if (lyrics) {
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth().weight(1f)) {
+                CascadeLyrics(track, LyricsLook.Full, Modifier.weight(1f).fillMaxHeight())
+                Box(Modifier.fillMaxHeight().padding(start = 12.dp), contentAlignment = Alignment.Center) { DeskVoiceSlider(track, onDark = true) }
+            }
         }
     }
 }

@@ -254,7 +254,7 @@ private fun DragChip() {
     val p = drag.pointer
     Row(Modifier.offset { IntOffset(p.x.toInt() + 12, p.y.toInt() + 8) }.shadow(10.dp, RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp))
         .background(ket.raised).padding(6.dp).testTag("drag-chip"), verticalAlignment = Alignment.CenterVertically) {
-        Artwork(t.coverUrl, 28.dp, radius = 6.dp)
+        Artwork(CoverSources.track(t), 28.dp, radius = 6.dp)
         Spacer(Modifier.width(8.dp))
         KText(t.title, Ket27Desk.Type.footnote, Modifier.width(160.dp), weight = FontWeight.Medium, translate = false)
     }

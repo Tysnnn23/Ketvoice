@@ -280,7 +280,7 @@ private fun FixPanel(flow: ImportFlow, importer: PcPlaylistImporter) {
         flow.results.forEachIndexed { k, t ->
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { flow.pick(t) }.padding(vertical = 6.dp).testTag("import-fix-result:$k"),
                 verticalAlignment = Alignment.CenterVertically) {
-                Artwork(t.coverUrl, 32.dp, radius = 6.dp)
+                Artwork(CoverSources.track(t), 32.dp, radius = 6.dp)
                 Spacer(Modifier.width(10.dp))
                 KText("${t.title} — ${t.artist}", Ket27Desk.Type.footnote, Modifier.weight(1f), translate = false)
             }

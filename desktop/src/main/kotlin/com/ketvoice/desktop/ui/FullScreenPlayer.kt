@@ -61,7 +61,7 @@ fun FullScreenPlayer(onExit: () -> Unit) {
     val player = LocalPlayer.current
     val state by player.state.collectAsState()
     val track = state.current ?: run { LaunchedEffect(Unit) { onExit() }; return }
-    val colors = rememberCoverColors(track.coverUrl)
+    val colors = rememberCoverColors(CoverSources.track(track))
     val ground = lerp(colors?.first ?: Color(0xFF2C2C2E), Color.Black, .5f)
     val canvas = rememberPlayerCanvas(track, state.queue, state.index)
     val actions = LocalTrackActions.current
@@ -80,11 +80,12 @@ fun FullScreenPlayer(onExit: () -> Unit) {
         }
         .pointerHoverIcon(if (idle) HiddenCursor.icon else PointerIcon.Default)
         .testTag("fullscreen-player")) {
-        CoverFlowBackground(track.coverUrl, state.isPlaying)
+        CoverFlowBackground(CoverSources.track(track), state.isPlaying)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .34f)))
         val (aspect, onAspect) = rememberCanvasAspect(canvas)
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // As tall as the screen, as wide as the media's shape (a cover is square), at most a little over half its width.
+            val tall = maxHeight
             val side by rememberGlide(ArtworkFormat.sideDp(maxHeight.value, if (canvas != null) aspect else 1f, maxWidth.value * .54f).dp, "fs-side")
             Row(Modifier.fillMaxSize()) {
                 Box(Modifier.width(side).fillMaxHeight().testTag("fullscreen-art")) {
@@ -95,14 +96,11 @@ fun FullScreenPlayer(onExit: () -> Unit) {
                             // Its right edge dissolves into the colours behind it.
                             drawRect(Brush.horizontalGradient(.84f to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
                         }) {
-                        val cover = rememberCover(track.coverUrl)
-                        val poster = rememberCanvasPoster(canvas)
-                        when {
-                            canvas != null -> {
-                                (poster ?: cover)?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                                CanvasVideo(canvas, state.isPlaying && canvasMoves(), Modifier.fillMaxSize().testTag("fullscreen-canvas"), onAspect = onAspect)
-                            }
-                            cover != null -> Image(cover, null, Modifier.fillMaxSize().testTag("fullscreen-cover"), contentScale = ContentScale.Crop)
+                        if (canvas != null) FilledCanvas(canvas, state.isPlaying, CoverSources.track(track), Modifier.fillMaxSize().testTag("fullscreen-canvas"),
+                            frame = com.ketvoice.app.data.MediaOverrides.playerFrame(track), onAspect = onAspect)
+                        else rememberCover(CoverSources.track(track), pixelsOf(maxOf(side, tall)))?.let {
+                            Image(it, null, Modifier.fillMaxSize().testTag("fullscreen-cover"), contentScale = ContentScale.Crop,
+                                filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
                         }
                     }
                     // Title and transport over the foot of the cover, on a shade that keeps white words legible.

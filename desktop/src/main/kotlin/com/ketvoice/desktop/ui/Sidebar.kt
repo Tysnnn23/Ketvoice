@@ -311,7 +311,7 @@ private fun PlaylistItem(p: UserPlaylist, icons: Boolean, lens: SideLens) {
     val route = Route.Playlist(p.id)
     SideRow(null, p.name, sideKey(route), "playlist:${p.id}", lens, icons, nav.section == route, translate = false,
         dropHover = drag.hoveredTarget == p.id, modifier = Modifier.dropTarget(p.id, drag),
-        leading = { Mosaic(p.tracks, if (icons) 26.dp else 22.dp) }) { nav.root(route) }
+        leading = { Mosaic(p.tracks, if (icons) 26.dp else 22.dp, p.cover, p.name) }) { nav.root(route) }
 }
 
 /**
