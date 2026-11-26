@@ -73,6 +73,8 @@ fun TvApp(actions: TvActions, tier: TvTier, onExit: () -> Unit) {
                     TvRail(nav)
                 }
                 TvTrackMenu(actions)
+                // Updates come from the tv-v releases (Edition.Tv); the offer is the shared dialog, reached with the remote.
+                com.ketvoice.app.ui.update.UpdateHost()
             }
             TvRequests(actions)
         }

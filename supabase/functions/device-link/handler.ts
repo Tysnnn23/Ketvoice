@@ -12,7 +12,7 @@ export const TTL_S = 300;
 export const POLL_S = 3;
 const CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/;
 const SECRET = /^[A-Za-z0-9_-]{43}$/;
-const KINDS = new Set(["phone", "tablet", "quest", "pc", "web"]);
+const KINDS = new Set(["phone", "tablet", "quest", "pc", "web", "tv"]);
 
 export interface LinkDeps extends ConnectDeps {
   random?: (bytes: Uint8Array) => Uint8Array;

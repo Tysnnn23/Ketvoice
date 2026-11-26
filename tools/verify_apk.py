@@ -18,7 +18,7 @@ EDITIONS = {
     'lite': {'sdk': ('30', '36'), 'label': 'Ketvoice Lite', 'abis': {'arm64-v8a'}},
     # Ketvoice TV (1.0.0): its own package and version line (tv-v<version> releases), the same signing key.
     # Android TV 8+ / Google TV, 32- and 64-bit ARM, started from the leanback launcher with the remote.
-    'tv': {'sdk': ('26', '36'), 'label': 'Ketvoice TV', 'abis': {'arm64-v8a', 'armeabi-v7a'},
+    'tv': {'sdk': ('28', '36'), 'label': 'Ketvoice TV', 'abis': {'arm64-v8a', 'armeabi-v7a'},
            'package': 'com.ketvoice.tv'},
 }
 PACKAGE = 'com.ketvoice.app'

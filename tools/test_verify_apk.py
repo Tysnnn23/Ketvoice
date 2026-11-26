@@ -124,7 +124,7 @@ class ApkGateTest(unittest.TestCase):
                    "  uses-feature-not-required: name='android.hardware.touchscreen'\n"
                    "  uses-feature: name='android.software.leanback'\n")
 
-    def tv_tools(self, package='com.ketvoice.tv', features=TV_FEATURES, label='Ketvoice TV', min_sdk=26,
+    def tv_tools(self, package='com.ketvoice.tv', features=TV_FEATURES, label='Ketvoice TV', min_sdk=28,
                  certificate=CERTIFICATE):
         def run(path, *args):
             if 'apksigner' in path.name:
