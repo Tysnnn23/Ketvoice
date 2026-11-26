@@ -21,3 +21,4 @@ automix/Waveform.kt
 automix/TransitionPlanner.kt
 automix/AnalysisStore.kt
 automix/MixStudio.kt
+automix/KetmixTaste.kt

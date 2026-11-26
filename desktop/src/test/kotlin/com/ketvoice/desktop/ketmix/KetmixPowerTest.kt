@@ -1,5 +1,6 @@
 package com.ketvoice.desktop.ketmix
 
+import com.ketvoice.app.automix.KetmixTaste
 import com.ketvoice.app.stems.OrtAccel
 import com.ketvoice.app.stems.StemModel
 import org.junit.Test
