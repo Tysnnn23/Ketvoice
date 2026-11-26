@@ -63,15 +63,39 @@ class KetmixRenderQualityTest {
             assertTrue("${row.name}: no click nor zipper noise (${row.clickDb} dBFS above 4 kHz)", row.clickDb <= -55.0)
             assertTrue("${row.name}: the sum stays under full scale where both play (${row.peakDb} dBTP)", row.peakDb <= -.3)
             assertTrue("${row.name}: never over full scale", row.overMs == 0.0)
-            assertTrue("${row.name}: the bass changes hands, never two at once for long (${row.clashMs} ms)", row.clashMs <= 250)
-            // A cut is a step from one title to the other by nature; a crossing into a fade starts from its faded level.
-            if (!row.plan.cut && row.plan.kind != MixKind.Crossfade)
+            // An echo rings its last beat, bass and all, over the first beats of the next title: that is the effect.
+            if (row.plan.kind != MixKind.Echo)
+                assertTrue("${row.name}: the bass changes hands, never two at once for long (${row.clashMs} ms)", row.clashMs <= 250)
+            // A cut or an echo is a step from one title to the other by nature; the radio change of two titles far apart too.
+            if (!row.plan.cut && row.plan.kind != MixKind.Echo && row.plan.reason != "far apart")
                 assertTrue("${row.name}: no hole nor bulge past 2.8 LU (${row.loudness})", row.loudness <= 2.8)
         }
+        // 9.1.1: the styles asked for at 124 into 126 BPM are played, not a crossing « too far apart ».
+        assertEquals(MixKind.Echo, rows.first { it.name == "echo 124>126" }.plan.kind)
+        assertEquals(MixKind.Rise, rows.first { it.name == "rise 124>126" }.plan.kind)
+        assertTrue(rows.none { it.plan.reason == "tempos too far apart" && it.name.endsWith("124>126") })
         // 7.7: both titles of a long blend meet at 0.86 where the bass changes hands, not 0.72
         // (3.44 LU before), and the outgoing side of a crossing of spectra keeps its power (2.70 LU before).
         for (name in listOf("hard end 120>120", "beatless>groove", "far 128>96"))
             rows.first { it.name == name }.let { assertTrue("$name: no hole past 2.6 LU (${it.loudness})", it.loudness <= 2.6) }
+    }
+
+    @Test fun twoBassLinesOnTheSameNoteDoNotCancelAtTheSwap() {
+        // 9.1.1: both titles on a 55 Hz bass, every phase between them; the bass changes hands on the downbeat in a quarter
+        // beat (one beat before: 5.5 dB at worst, now 4.4 dB; a sixteenth of a beat gave 4.9 dB).
+        var dip = 0.0; var peak = -99.0
+        for (k in 0 until 8) {
+            val a = out(124f, bass = 55.0)
+            val b = MixBench.groove(124f, 0L, 50f, firstBeatAt = .12f, bassHz = 55.0, seed = 11, bassPhase = k * Math.PI / 4)
+            val p = plan(a, b)
+            assertTrue("a blend in time with a bass swap: $p", p.kind == MixKind.Beatmatch && p.swapMs >= 0)
+            val r = MixBench.render(p, a, b)
+            dip = maxOf(dip, MixBench.bassDipDb(r, p))
+            peak = maxOf(peak, MixBench.truePeakDb(r.sum.copyOfRange(r.frameAt(p.outMs - 200.0), r.frameAt(p.outMs + p.overlapMs + 200.0) + 16)))
+        }
+        println("same-note bass swap: deepest dip $dip dB, true peak $peak dBTP")
+        assertTrue("no deeper cancellation at the swap ($dip dB)", dip <= 5.0)
+        assertTrue("true peak under -0.5 dBTP ($peak)", peak <= -.5)
     }
 
     @Test fun twoDecksInTimeDoNotDriftApartOverALongBlend() {

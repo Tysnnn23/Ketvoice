@@ -256,9 +256,15 @@ internal class DeckAutomation(
 
         private fun plainIn(plan: MixPlan, start: Long, end: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
             val swap = ((plan.inMs + (plan.swapMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
-            return DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it, plan.shape.volume) }, settle),
+            // 9.1.1: into a title already fading by itself ([MixPlan.hold]) the next one comes up gently, half way over the
+            // crossing and the rest over its settling: brought to full within the short fade it rose 4.2 LU over the line.
+            val reach = if (plan.kind == MixKind.Crossfade && plan.hold > 0f) GENTLE_REACH else 1f
+            val after = if (reach >= 1f) settle else Curve.shaped(end, end + SETTLE_US, 8) { plan.gain * reach + (1f - plan.gain * reach) * ease(it) }
+            return DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * reach * fadeIn(it, plan.shape.volume) }, after),
                 crossBass(plan, start, end, swap, end, false))
         }
+        /** Where a plain fade into a fading title leaves the next one at the end of the crossing (−6 dB). */
+        private const val GENTLE_REACH = .5f
 
         /**
          * A plain crossing the listener gave a bass swap (DJ editor, 6.9): the outgoing bass goes and the incoming
@@ -278,7 +284,7 @@ internal class DeckAutomation(
          */
         private fun blendOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val swap = (plan.swapMs * 1000L).coerceIn(start + 1, end - 1)
-            val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
+            val half = MixShaping.bassHalfUs(plan, swapHalfUs(plan.beatMs), minOf(swap - start, end - swap) / 2)
             val curve = plan.shape.volume
             // Led down a little further when the incoming title is the quieter one, so that the two meet level.
             val meeting = MEETING * plan.outGain
@@ -298,6 +304,16 @@ internal class DeckAutomation(
         }
 
         /**
+         * 9.1.1: half the time the bass takes to change hands, around the downbeat of the swap: an eighth of a beat (60 ms at
+         * 124 BPM; it was half a beat, up to 400 ms). Two bass lines on the same note cancel each other where both are half
+         * up: the deepest dip of the sum, in 50 ms windows, went from 5.5 to 4.4 dB (a sixteenth of a beat gave 4.9 dB).
+         */
+        internal fun swapHalfUs(beatMs: Float): Long = (beatMs * SWAP_SHARE * 1000f).toLong().coerceIn(SWAP_MIN_US, SWAP_MAX_US)
+        private const val SWAP_SHARE = .125f
+        private const val SWAP_MIN_US = 40_000L
+        private const val SWAP_MAX_US = 100_000L
+
+        /**
          * 7.6: once it carries the bass the incoming title is the music: it reaches its full level within the first
          * [TAKE_OVER] of the rest of the blend (it rose over the whole of it before, a 2–3 LU hole while the outgoing
          * title, thinned, was already going). A curve the listener chose keeps its own course.
@@ -309,7 +325,7 @@ internal class DeckAutomation(
 
         private fun blendIn(plan: MixPlan, start: Long, end: Long, swapAt: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
             val swap = swapAt.coerceIn(start + 1, end - 1)
-            val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f * plan.rate).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
+            val half = MixShaping.bassHalfUs(plan, swapHalfUs(plan.beatMs * plan.rate), minOf(swap - start, end - swap) / 2)
             val curve = plan.shape.volume
             val gain = Curve.join(
                 Curve.shaped(start, swap, 24) { plan.gain * MEETING * fadeIn(it, curve) },
@@ -340,8 +356,11 @@ internal class DeckAutomation(
             val beat = (plan.beatMs * 1000f).toLong().coerceIn(250_000L, 1_200_000L)
             // The title's own sound is cut here: where the next one starts, or after its last note.
             val cut = if (plan.cutMs >= 0) (plan.cutMs * 1000L).coerceIn(start, end - 1) else start
-            val send = Curve.join(point(cut - beat, 0f), point(cut - beat * 3 / 4, 1f), point(cut, 1f), point(cut + 8_000L, 0f))
-            val dry = Curve.join(point(cut, 1f), point(cut + 28_000L, 0f))
+            // 9.1.1: the send and the title close over an eased 60 ms (8 and 28 ms straight cuts clicked when the cut fell inside
+            // the music, -44 dBFS above 4 kHz, each repeat carrying the edge).
+            val send = Curve.join(point(cut - beat, 0f), point(cut - beat * 3 / 4, 1f), point(cut, 1f),
+                Curve.shaped(cut + 1, cut + ECHO_CUT_US, 8) { 1f - ease(it) })
+            val dry = Curve.join(point(cut, 1f), Curve.shaped(cut + 1, cut + ECHO_CUT_US, 8) { 1f - ease(it) })
             val fadeFrom = cut + (end - cut) * 2 / 5
             val gain = Curve.join(point(fadeFrom, 1f), Curve.shaped(fadeFrom + 1, end, 16) { fadeOut(it) })
             return DeckAutomation(gain, Curve.flat(0f), dry = dry, echo = send, echoDelayUs = beat / 2, echoFeedback = .6f)
@@ -378,6 +397,7 @@ internal class DeckAutomation(
             return DeckAutomation(gain, Curve.flat(0f), dry = dry, reverb = send)
         }
         private const val CUT_US = 12_000L
+        private const val ECHO_CUT_US = 60_000L
         private const val CUT_ATTACK_US = 6_000L
         private const val RISE_TOP_HZ = 2_200f
         private const val RISE_Q = 1.6f

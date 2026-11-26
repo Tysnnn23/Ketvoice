@@ -17,9 +17,10 @@ class TransitionPlannerTest {
         SegmentAnalysis(0, 40_000, bpm, 500.0, confidence, bar, loudness, start, 40_000, rise, 40_000, key = key,
             keyStrength = if (key >= 0) .8f else 0f)
     private fun plan(a: SegmentAnalysis?, b: SegmentAnalysis?, context: MixContext = MixContext(), intensity: Int = 1,
-                     sungUntil: Long? = null, sungFrom: Long? = null, outDuration: Long = duration, inDuration: Long = duration) =
+                     sungUntil: Long? = null, sungFrom: Long? = null, outDuration: Long = duration, inDuration: Long = duration,
+                     style: MixStyle = MixStyle.Auto) =
         TransitionPlanner.plan(MixFacts(outDuration, a, vocalEndMs = sungUntil), MixFacts(inDuration, b, vocalStartMs = sungFrom),
-            context, MixSettings(intensity))
+            context, MixSettings(intensity, style))
     private fun onBeat(position: Long, origin: Double, bpm: Float): Boolean {
         val beats = (position - origin) / (60_000.0 / bpm)
         return abs(beats - Math.round(beats)) * (60_000.0 / bpm) < 2.0
@@ -70,7 +71,8 @@ class TransitionPlannerTest {
         assertEquals("4 % apart: in time, even discreet", MixKind.Beatmatch, plan(outro(120f), intro(124.8f), intensity = 0, sungUntil = 170_000).kind)
         assertEquals("6 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(127.2f), sungUntil = 170_000).kind)
         assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(127.2f), intensity = 0, sungUntil = 170_000).kind)
-        assertEquals("8 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(129.6f), sungUntil = 170_000).kind)
+        // 9.1.1: balanced no longer leaves on an echo there (the owner heard echoes instead of mixes).
+        plan(outro(120f), intro(129.6f), sungUntil = 170_000).kind.let { assertTrue("8 % apart: only DJ plays it in time ($it)", it != MixKind.Beatmatch && it != MixKind.Echo) }
         assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(129.6f), intensity = 2, sungUntil = 170_000).kind)
         // 138 into 122 BPM (13 % apart) is never stretched.
         assertNotEquals(MixKind.Beatmatch, plan(outro(138f), intro(122f), intensity = 2, sungUntil = 170_000).kind)
@@ -104,8 +106,10 @@ class TransitionPlannerTest {
     }
 
     @Test fun titlesThatCannotShareATempoPartOnAnEcho() {
-        // 120 and 150 BPM, an ending that winds down from 185 s: the cut is on the last beat of the body.
-        val plan = plan(outro(120f), intro(150f), sungUntil = 170_000)
+        // 9.1.1: left to Ketmix, two titles that cannot share a tempo do not part on an echo any more.
+        assertNotEquals(MixKind.Echo, plan(outro(120f), intro(150f), sungUntil = 170_000).kind)
+        // The echo style: 120 and 150 BPM, an ending that winds down from 185 s: the cut is on the last beat of the body.
+        val plan = plan(outro(120f), intro(150f), sungUntil = 170_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, plan.kind)
         assertTrue("on a beat of the outgoing title", onBeat(plan.outMs, 155_000.0, 120f))
         assertEquals("where the body ends", 185_000L, plan.outMs)
@@ -115,19 +119,21 @@ class TransitionPlannerTest {
         assertEquals(500f, plan.beatMs, 0f)
         assertTrue(plan.beatTied)
         // Bars known: the cut is on a first beat (beats 1, 5, 9… of the grid here).
-        val barred = plan(outro(120f, bar = 1), intro(150f), sungUntil = 170_000)
+        val barred = plan(outro(120f, bar = 1), intro(150f), sungUntil = 170_000, style = MixStyle.Echo)
         assertEquals(1L, Math.floorMod(Math.round((barred.outMs - 155_000.0) / 500.0), 4L))
         assertTrue(barred.outMs in 183_250..185_250)
         // Never while somebody still sings, never over a fade, and not when it would leave out more than the setting allows.
-        assertNotEquals(MixKind.Echo, plan(outro(120f), intro(150f), sungUntil = 198_000).kind)
+        assertNotEquals(MixKind.Echo, plan(outro(120f), intro(150f), sungUntil = 198_000, style = MixStyle.Echo).kind)
         assertEquals(MixKind.Filter, plan(outro(120f, fall = 187_000, fade = true), intro(150f)).kind)
         assertEquals("A 40 s quiet ending is played, then crossed", MixKind.Filter,
             plan(outro(120f, fall = 159_000), intro(150f)).kind)
         // A title that ends at full level keeps its last note, which rings on past the end; the DJ setting cuts on the bar.
-        val rung = plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000)
+        val rung = plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, rung.kind); assertTrue(rung.tail); assertTrue(rung.cutMs >= 199_000L)
         assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), intensity = 0, sungUntil = 180_000).kind)
-        val dj = plan(outro(120f, hard = true), intro(150f), intensity = 2, sungUntil = 180_000)
+        // Left to Ketmix, a voice that stopped 19 s before the last note is no hard vocal ending: the next title starts on the beat.
+        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000).kind)
+        val dj = plan(outro(120f, hard = true), intro(150f), intensity = 2, sungUntil = 180_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, dj.kind)
         assertEquals("the echo takes the place of the last four beats", 197_000L, dj.outMs)
     }
@@ -144,7 +150,7 @@ class TransitionPlannerTest {
         val tooLate = plan(outro(120f, bar = 0, phrase = 187_000.0), intro(120f, bar = 0), sungUntil = 165_000)
         assertTrue(tooLate.outMs + tooLate.overlapMs <= 199_000); assertTrue(tooLate.outMs >= 165_300 - 4_000)
         // An echo leaves on the phrase boundary just before the end of the body.
-        val echo = plan(outro(120f, bar = 0, phrase = 167_000.0), intro(150f), sungUntil = 165_000)
+        val echo = plan(outro(120f, bar = 0, phrase = 167_000.0), intro(150f), sungUntil = 165_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, echo.kind); assertEquals(183_000L, echo.outMs); assertTrue(echo.onPhrase)
         // The incoming title enters on its downbeat when that is its next beat.
         assertEquals(500L, plan(outro(120f, bar = 0), intro(120f, bar = 0), sungUntil = 165_000).inMs)
@@ -245,8 +251,8 @@ class TransitionPlannerTest {
         val early = plan(outro(120f, fall = 181_000), intro(120f), sungFrom = 5_000)
         assertEquals(MixKind.Beatmatch, early.kind)
         assertEquals("8 beats: the voice arrives when the other title is nearly gone", 4_000L, early.overlapMs)
-        // One that sings at once is not blended at all: the outgoing title leaves on an echo, on the beat.
-        assertEquals(MixKind.Echo, plan(outro(120f, fall = 181_000), intro(120f), sungFrom = 1_200).kind)
+        // One that sings at once is not blended in time: the two cross by their filters (9.1.1: no echo in its place).
+        assertEquals(MixKind.Filter, plan(outro(120f, fall = 181_000), intro(120f), sungFrom = 1_200).kind)
         assertEquals(MixKind.Filter, plan(outro(120f, fall = 181_000), intro(120f), intensity = 0, sungFrom = 1_200).kind)
     }
 
@@ -261,9 +267,10 @@ class TransitionPlannerTest {
         assertEquals("the next title on its first beat", 500L, built.inMs)
         assertEquals("no change of speed", 1f, built.rate, 0f); assertTrue(built.beatTied)
         assertEquals("montée", MixWords.label(built)); assertEquals(0f, MixWords.swapShare(built), 0f)
-        // Left to Ketmix, a build and an echo take turns.
-        val echoed = TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)), MixContext(lastExit = 2), MixSettings(1))
-        assertEquals(MixKind.Echo, echoed.kind)
+        // 9.1.1: left to Ketmix, no echo takes the build's turn; while a build is among the last transitions the two cross.
+        val crossed = TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
+            MixContext(lastExit = 2, recentKinds = listOf(MixKind.Rise)), MixSettings(1))
+        assertEquals(MixKind.Filter, crossed.kind)
         // The DJ setting builds for 16 beats; the style asks for it whatever came before; discreet never does.
         assertEquals(8_000L, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
             MixContext(lastExit = 1), MixSettings(2)).buildMs)
@@ -284,16 +291,18 @@ class TransitionPlannerTest {
     @Test fun aLastNoteAtFullLevelRingsOnPastTheEnd() {
         // Not discreet: the next title starts where a trim starts it, the last note plays whole and its echo
         // rings for four beats past the end of the title.
-        val rung = plan(outro(120f, hard = true), intro(150f))
+        // 9.1.1: only with the echo style, or a voice sung to the last note into a far tempo (see KetmixMixShareTest).
+        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f)).kind)
+        val rung = plan(outro(120f, hard = true), intro(150f), style = MixStyle.Echo)
         assertEquals(MixKind.Echo, rung.kind)
         assertTrue(rung.tail && rung.onBeat)
         assertEquals("the title's own sound is cut after its last note", maxOf(199_000L, rung.outMs), rung.cutMs)
         assertTrue("the next title starts within a beat of the last note (${rung.outMs})", rung.outMs in 198_500..199_300)
         assertEquals("four beats of echo after the cut", rung.cutMs + 2_000L, rung.outMs + rung.overlapMs)
         // A beat read without full confidence (41 %) still gives the echo its length; none at all, 120 BPM.
-        val unsure = plan(outro(130f, hard = true, confidence = .41f), intro(148f, confidence = .21f))
+        val unsure = plan(outro(130f, hard = true, confidence = .41f), intro(148f, confidence = .21f), style = MixStyle.Echo)
         assertEquals(MixKind.Echo, unsure.kind); assertEquals(60_000f / 130f, unsure.beatMs, .5f)
-        val none = plan(outro(0f, hard = true, confidence = 0f), intro(0f, confidence = 0f))
+        val none = plan(outro(0f, hard = true, confidence = 0f), intro(0f, confidence = 0f), style = MixStyle.Echo)
         assertEquals(MixKind.Echo, none.kind); assertEquals(500f, none.beatMs, 0f)
         // The echo is played out on silence by the outgoing deck: within what it may ring past the end.
         assertTrue(rung.outMs + rung.overlapMs <= duration + 6_000L)
@@ -316,7 +325,8 @@ class TransitionPlannerTest {
         assertTrue("within a beat of the last note (${timed.outMs})", timed.outMs in 198_500..199_300)
         // Same tempo but singing until a hard ending: still no mix over it.
         assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(120f), intensity = 0, sungUntil = 198_500).kind)
-        assertEquals("rung out otherwise", MixKind.Echo, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).kind)
+        assertEquals("left to Ketmix, the same tempo starts it on the beat", MixKind.Trim, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).kind)
+        assertEquals("the echo style rings it out", MixKind.Echo, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500, style = MixStyle.Echo).kind)
     }
 
     @Test fun aNextTitleThatDoesNotSingYetRisesUnderTheLastSungWords() {

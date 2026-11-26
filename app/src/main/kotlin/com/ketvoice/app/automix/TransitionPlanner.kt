@@ -308,17 +308,21 @@ internal object TransitionPlanner {
         fun dropTurn() = if (settings.style == MixStyle.Auto && settings.echo && beats && !context.loop && !a.fadeOut && context.lastExit != 2 &&
             !(context.energyStep <= -ENERGY_STEP) && MixKind.Rise !in context.avoid &&
             !MixVariety.tired(context.recentKinds, MixKind.Rise) && StyleCuts.dropAt(b, incoming) != null) cutOn(drop = true)?.takeIf { it.reason == "drop" } else null
-        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo && MixKind.Echo !in context.avoid)
-        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo && MixKind.Rise !in context.avoid)
+        // 9.1.1: left to Ketmix an echo is rare (see echoSuits) and a build takes a turn at most once in a while.
+        val autoEcho = settings.style == MixStyle.Auto && settings.echo && MixKind.Echo !in context.avoid && echoSuits(a, b, end, sungUntil, context)
+        val echoAllowed = settings.style == MixStyle.Echo || autoEcho
+        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo && MixKind.Rise !in context.avoid &&
+            MixKind.Rise !in context.recentKinds && a.confidence >= BlendFit.STEADY_GRID)
         fun onTheBeat() = beatExit(a, b, context, settings, end, start, sungUntil, gain, variant, beats, echoAllowed, riseAllowed, ::measured)
         // 7.1: two titles too far apart change over as on the radio; a last note at full level still rings out whole.
         if (settings.style == MixStyle.Auto && !context.loop && !(a.hardEnding && !a.fadeOut))
             PairFit.radio(a, b, end, gain)?.let { p -> measured(p).takeIf { it.mixes }?.let { return it } }
         // Windows 2.0 energy matching: a clearly more intense next title drops in on its beat when it has a drop.
         if (settings.style == MixStyle.Auto && context.energyStep >= ENERGY_STEP && !(a.hardEnding && !a.fadeOut)) dropTurn()?.let { return it }
-        // 0. Variety (6.9): after two blends in time running, a way out on the beat takes a turn when this pair has one.
+        // 0. Variety (6.9): after two blends in time running, a drop takes a turn when the next title has one. 9.1.1: never
+        // an echo or a build in place of a blend that fits (the owner heard echoes « 70 % du temps » instead of mixes).
         if (settings.style == MixStyle.Auto && MixVariety.tired(context.recentKinds, MixKind.Beatmatch) && !(a.hardEnding && !a.fadeOut))
-            (dropTurn() ?: onTheBeat())?.let { return it }
+            dropTurn()?.let { return it }
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
         if (beats && BlendFit.steady(a, b) && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise &&
             !StyleCuts.cuts(settings.style) && !(settings.style == MixStyle.Auto && MixKind.Beatmatch in context.avoid)) {
@@ -339,8 +343,8 @@ internal object TransitionPlanner {
         // 2. A last note at full level is never covered: the next title starts right after it, on the beat
         // when there is one, and (unless discreet) the last note rings on in an echo over that start.
         val fullEnding = a.hardEnding && !a.fadeOut
-        // Ringing out leaves the whole title heard: only the plain styles do without it.
-        val ringAllowed = echoAllowed || (settings.style == MixStyle.Tempo && settings.echo)
+        // Ringing out leaves the whole title heard; 9.1.1: left to Ketmix or « Calé sur le tempo », only where an echo suits.
+        val ringAllowed = echoAllowed || (settings.style == MixStyle.Tempo && settings.echo && echoSuits(a, b, end, sungUntil, context))
         fun ending(): MixPlan {
             val trim = trim(a, b, out, end, start, gain, beats)
             if (!ringAllowed || !context.effects || !context.beats || context.loop) return measured(trim)
@@ -384,16 +388,41 @@ internal object TransitionPlanner {
                 if (longer >= MIN_CROSSFADE_MS && !voices && (sungUntil == null || phrase >= sungUntil - settings.vocalLeadMs)) { fade = longer; onPhrase = true }
             }
         }
-        val reason = if (a.hasBeat && b.hasBeat) "tempos too far apart" else "no steady beat"
+        val reason = crossingReason(a, b, context, settings)
         val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         // Windows 2.0 « Ketmix apprend »: a kind the listener keeps turning down becomes a plain fade (only when left to Ketmix).
         val avoided = settings.style == MixStyle.Auto && kind in context.avoid
-        if (!context.effects || avoided) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason, onPhrase = onPhrase))
         // While the title dies away by itself its level is left alone; ours only closes the end.
         val hold = if (end - fade >= a.fallMs - 400L) .55f else .2f
+        // 9.1.1: a plain fade into a title already fading by itself carries that hold too: the next title then rises gently (DeckDsp).
+        if (!context.effects || avoided) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain,
+            reason = reason, onPhrase = onPhrase, hold = if (a.fadeOut && hold > .5f) hold else 0f))
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
     }
+
+    /** Why a pair is crossed rather than played in time (shown in the journal and the editor). */
+    private fun crossingReason(a: SegmentAnalysis, b: SegmentAnalysis, context: MixContext, settings: MixSettings): String = when {
+        !a.hasBeat || !b.hasBeat -> "no steady beat"
+        // 9.1.1: 124 into 126 BPM is not « too far apart »: a style asked for that could not be placed in this ending is.
+        abs(context.speed * BeatAnalysis.foldedRatio(a.bpm, b.bpm) - 1f) > settings.tempoRange -> "tempos too far apart"
+        !BlendFit.steady(a, b) -> "unsteady beat"
+        else -> "crossing"
+    }
+
+    /** Below this an echo of the last word is not a hard vocal ending: the voice stopped well before the last note. */
+    private const val ECHO_VOICE_MS = 4_000L
+
+    /**
+     * 9.1.1 (owner: « 70 % du temps les musiques au lieu de faire de l'automix elles font juste un écho »): left to Ketmix
+     * an echo is the exception, played only where it clearly suits: a title that stops at full level on its last sung
+     * words, into a title whose tempo is far from it (12 % or more, or one without a steady beat), and never while an
+     * echo is among the last transitions. Everywhere else a blend, a crossing of filters or a plain fade is played. A
+     * style the listener chose (« Écho », a pair's style, the editor) is not held to this.
+     */
+    private fun echoSuits(a: SegmentAnalysis, b: SegmentAnalysis, end: Long, sungUntil: Long?, context: MixContext): Boolean =
+        a.hardEnding && !a.fadeOut && sungUntil != null && end - sungUntil <= ECHO_VOICE_MS && PairFit.tempo(a, b) >= 1f &&
+            MixKind.Echo !in context.recentKinds
 
     /** 8.4 « Pont en boucle » ([LoopBridge]) for this pair, as Ketmix may play it; null when it cannot. */
     private fun bridge(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings,
@@ -406,7 +435,8 @@ internal object TransitionPlanner {
     private fun beatExit(a: SegmentAnalysis, b: SegmentAnalysis, context: MixContext, settings: MixSettings, end: Long, start: Long,
                          sungUntil: Long?, gain: Float, variant: Int, beats: Boolean, echoAllowed: Boolean, riseAllowed: Boolean,
                          measured: (MixPlan) -> MixPlan): MixPlan? {
-        if (!beats || !(echoAllowed || riseAllowed) || !a.hasBeat || a.fadeOut) return null
+        // A fading ending is crossed when left to Ketmix; 9.1.1: an echo or a build the listener asked for leaves inside the fade.
+        if (!beats || !(echoAllowed || riseAllowed) || !a.hasBeat || (a.fadeOut && settings.style == MixStyle.Auto)) return null
         fun tryRise() = if (riseAllowed) rise(a, b, settings, end, start, sungUntil, gain, variant)?.let(measured)?.takeIf { it.mixes } else null
         fun tryEcho() = if (echoAllowed || settings.style == MixStyle.Rise) echo(a, b, settings, end, start, sungUntil, gain)?.let(measured)?.takeIf { it.mixes } else null
         val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastExit == 1)
@@ -474,7 +504,7 @@ internal object TransitionPlanner {
         // A drop needs something to drop into: the next title must start on a beat, and not well under the
         // level of the one that built up to it.
         if (!b.hasBeat || !BlendFit.carriesADrop(a, b)) return null
-        val bodyEnd = if (a.hardEnding) end else a.fallMs
+        val bodyEnd = if (a.hardEnding || a.fadeOut) end else a.fallMs
         // At most half of the build over the last sung words.
         val earliest = max(a.startMs + build, sungUntil?.plus(build / 2) ?: a.startMs).toDouble()
         val latest = min(bodyEnd + (beat / 2).toLong(), end - beat.toLong()).toDouble()
@@ -497,8 +527,8 @@ internal object TransitionPlanner {
     private fun echo(a: SegmentAnalysis, b: SegmentAnalysis, settings: MixSettings, end: Long, start: Long, sungUntil: Long?, gain: Float): MixPlan? {
         val beat = pulse(a)
         val ring = (ECHO_BEATS * beat).roundToLong()
-        // The cut comes where the body of the title ends, so that its last beat is the one that rings.
-        val bodyEnd = if (a.hardEnding) end else a.fallMs
+        // The cut comes where the body of the title ends, so that its last beat is the one that rings (within a fade: before it is gone).
+        val bodyEnd = if (a.hardEnding || a.fadeOut) end else a.fallMs
         val earliest = max(a.startMs + beat.toLong(), sungUntil ?: a.startMs)
         val latest = min(bodyEnd + (beat / 2).toLong(), end - ring)
         if (latest < earliest) return null
