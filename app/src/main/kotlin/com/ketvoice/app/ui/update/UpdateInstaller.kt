@@ -64,11 +64,46 @@ internal object UpdateInstaller {
         throw IOException("Too many update redirects")
     }
 
-    suspend fun download(context: Context, info: UpdateInfo, onProgress: (Float) -> Unit,
+    /**
+     * The SHA-256 the APK must have when its release lists it in SHA256SUMS.txt (Ketvoice TV): the list must name
+     * the APK, and agree with GitHub's own asset digest when there is one. Anything else stops the update.
+     */
+    fun listedSha256(sums: String, apkName: String, digest: String?): String {
+        val listed = UpdateFeed.sumFor(sums, apkName) ?: throw IOException("$apkName is not listed in SHA256SUMS.txt")
+        if (digest != null && !digest.equals(listed, ignoreCase = true)) throw IOException("SHA256SUMS.txt and the asset digest disagree")
+        return listed
+    }
+
+    private fun readSums(url: String, connectionFactory: (String) -> HttpURLConnection): String {
+        val connection = connectionFactory(url)
+        try {
+            return connection.inputStream.bufferedReader().use { reader ->
+                val buffer = CharArray(SUMS_LIMIT + 1)
+                var length = 0
+                while (length <= SUMS_LIMIT) {
+                    val read = reader.read(buffer, length, buffer.size - length)
+                    if (read < 0) break
+                    length += read
+                }
+                if (length > SUMS_LIMIT) throw IOException("SHA256SUMS.txt too large")
+                String(buffer, 0, length)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private const val SUMS_LIMIT = 64 * 1024
+
+    suspend fun download(context: Context, update: UpdateInfo, onProgress: (Float) -> Unit,
         connectionFactory: (String) -> HttpURLConnection = ::open,
         validate: (Context, File, UpdateInfo) -> Unit = ::verifyArchive): File =
         withContext(Dispatchers.IO) { downloadLock.withLock {
-            require(UpdateFeed.validTag(info.tag) && info.sizeBytes > 0) { "Invalid release metadata" }
+            require(UpdateFeed.validTag(update.tag) && update.sizeBytes > 0) { "Invalid release metadata" }
+            val info = update.sumsUrl?.let { sums ->
+                require(sums.startsWith(UpdateFeed.DOWNLOAD_PREFIX + update.tag + "/")) { "Invalid checksum URL" }
+                update.copy(sha256 = listedSha256(readSums(sums, connectionFactory), update.apkName(), update.sha256))
+            } ?: update
             val directory = File(context.cacheDir, "updates").apply { check(mkdirs() || isDirectory) }
             val target = File(directory, "ketvoice-${info.versionLabel()}.apk")
             // Keep an .apk suffix for Android's archive parser, but never expose

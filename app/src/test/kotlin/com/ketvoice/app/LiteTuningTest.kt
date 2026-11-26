@@ -62,8 +62,9 @@ class LiteTuningTest {
         assertEquals(BuildConfig.IS_LITE, LiteTuning.defaultPerformanceMode())
         assertEquals(if (BuildConfig.IS_LITE) 2 else 0, LiteTuning.defaultStemsQuality())
         assertFalse(BuildConfig.IS_LITE && BuildConfig.IS_QUEST)
-        assertEquals(if (BuildConfig.IS_LITE) Edition.Lite else if (BuildConfig.IS_QUEST) Edition.Quest else Edition.Mobile,
-            Edition.current)
+        assertFalse(BuildConfig.IS_TV && (BuildConfig.IS_LITE || BuildConfig.IS_QUEST))
+        assertEquals(if (BuildConfig.IS_TV) Edition.Tv else if (BuildConfig.IS_LITE) Edition.Lite
+            else if (BuildConfig.IS_QUEST) Edition.Quest else Edition.Mobile, Edition.current)
     }
 
     // ---------------------------------------------------------------- 6.5: modest phones and tablets, Android 11

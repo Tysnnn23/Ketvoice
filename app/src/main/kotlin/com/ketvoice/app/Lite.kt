@@ -1,22 +1,29 @@
 package com.ketvoice.app
 
 /**
- * The three Ketvoice APKs published side by side. Each one updates itself to its own asset of a release
- * (`Ketvoice-<version>.apk`, `-Quest.apk`, `-Lite.apk`), never to another edition's.
+ * The Ketvoice APKs. Each one updates itself to its own asset, never to another edition's: mobile, Quest and Lite
+ * share the `v<version>` releases (`Ketvoice-<version>.apk`, `-Quest.apk`, `-Lite.apk`); Ketvoice TV has its own
+ * package (`com.ketvoice.tv`), version line and `tv-v<version>` releases (`Ketvoice-TV-<version>.apk`).
  */
-enum class Edition(val assetSuffix: String) {
-    Mobile(""), Quest("-Quest"), Lite("-Lite");
+enum class Edition(private val assetPrefix: String, val assetSuffix: String, val tagPrefix: String) {
+    Mobile("Ketvoice-", "", "v"), Quest("Ketvoice-", "-Quest", "v"), Lite("Ketvoice-", "-Lite", "v"),
+    Tv("Ketvoice-TV-", "", "tv-v");
 
-    /** The asset of [version] this edition installs, e.g. `Ketvoice-6.1.0-Lite.apk`. */
-    fun assetName(version: String): String = "Ketvoice-$version$assetSuffix.apk"
+    /** The asset of [version] this edition installs, e.g. `Ketvoice-6.1.0-Lite.apk` or `Ketvoice-TV-1.0.0.apk`. */
+    fun assetName(version: String): String = "$assetPrefix$version$assetSuffix.apk"
 
-    /** Shown after the version in Settings and in a shared report: nothing for mobile, " · Quest", " · Lite". */
-    val label: String get() = if (this == Mobile) "" else " · $name"
+    /** Shown after the version in Settings and in a shared report: nothing for mobile, " · Quest", " · Lite", " · TV". */
+    val label: String get() = when (this) {
+        Mobile -> ""
+        Tv -> " · TV"
+        else -> " · $name"
+    }
 
     companion object {
-        val current: Edition = of(BuildConfig.IS_QUEST, BuildConfig.IS_LITE)
+        val current: Edition = of(BuildConfig.IS_QUEST, BuildConfig.IS_LITE, BuildConfig.IS_TV)
 
-        fun of(quest: Boolean, lite: Boolean): Edition = when {
+        fun of(quest: Boolean, lite: Boolean, tv: Boolean = false): Edition = when {
+            tv -> Tv
             quest -> Quest
             lite -> Lite
             else -> Mobile

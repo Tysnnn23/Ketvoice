@@ -83,9 +83,15 @@ data class UpdateInfo(
     val pageUrl: String,
     val publishedAt: String,
     val sizeBytes: Long,
-    val sha256: String? = null
+    val sha256: String? = null,
+    /** The release's SHA256SUMS.txt (Ketvoice TV): the APK must match the hash it lists before it is installed. */
+    val sumsUrl: String? = null
 ) {
-    fun versionLabel(): String = tag.removePrefix("v").removePrefix("V")
+    /** "9.1.1" for `v9.1.1`, "1.0.0" for Ketvoice TV's `tv-v1.0.0`: the APK's own versionName. */
+    fun versionLabel(): String = tag.removePrefix(UpdateFeed.TV_TAG_PREFIX).removePrefix("v").removePrefix("V")
+
+    /** The published file name, e.g. `Ketvoice-TV-1.0.0.apk`. */
+    fun apkName(): String = apkUrl.substringAfterLast('/')
     fun bannerUrl(): String? = UpdateChecker.releaseBanner(notes.joinToString("\n"))
 }
 
@@ -114,16 +120,20 @@ object UpdateChecker {
     /** Dernier auto-check persisté (0 = jamais). */
     fun lastCheckMs(): Long = repository.lastCheckMs()
 
+    /** A version or a tag without its line prefix: "v3.5.0" and Ketvoice TV's "tv-v1.0.0" -> "3.5.0", "1.0.0". */
+    private fun bare(version: String): String =
+        version.trim().removePrefix(UpdateFeed.TV_TAG_PREFIX).removePrefix("v").removePrefix("V")
+
     /** Numeric core of a version: "v3.5.0-BETA+7" -> [3, 5, 0]. */
     private fun core(version: String): List<Int> =
-        version.trim().removePrefix("v").removePrefix("V")
+        bare(version)
             .substringBefore('+').substringBefore('-')
             .split('.')
             .map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
 
     /** Pre-release label ("BETA" in "3.5.0-BETA"), or null for a stable version. */
     private fun preRelease(version: String): String? =
-        version.trim().substringBefore('+').substringAfter('-', "").ifBlank { null }
+        bare(version).substringBefore('+').substringAfter('-', "").ifBlank { null }
 
     /**
      * True when [remote] should replace [current]. The numeric core decides first;

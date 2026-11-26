@@ -90,6 +90,7 @@ val generateBuildConfig by tasks.registering {
             |    const val FLAVOR = "desktop"
             |    const val IS_LITE = false
             |    const val IS_QUEST = false
+            |    const val IS_TV = false
             |    const val VERSION_CODE = $code
             |    const val VERSION_NAME = "$name"
             |}

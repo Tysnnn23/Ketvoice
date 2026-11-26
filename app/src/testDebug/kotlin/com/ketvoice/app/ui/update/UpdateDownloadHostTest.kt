@@ -70,6 +70,32 @@ class UpdateDownloadHostTest {
         }
     }
 
+    /** Ketvoice TV: the APK must match the hash its release lists in SHA256SUMS.txt, read before the download. */
+    @Test fun tvDownloadFollowsTheReleaseChecksumList() = runTest {
+        val tag = "tv-v99.0.0"
+        val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+        fun tv(digest: String?) = UpdateInfo(tag, "Ketvoice TV 99.0.0", emptyList(),
+            UpdateFeed.DOWNLOAD_PREFIX + "$tag/Ketvoice-TV-99.0.0.apk", "", "", bytes.size.toLong(), digest,
+            UpdateFeed.DOWNLOAD_PREFIX + "$tag/SHA256SUMS.txt")
+        fun serve(sums: String): (String) -> HttpURLConnection = { url ->
+            Connection(if (url.endsWith("/SHA256SUMS.txt")) sums.toByteArray() else bytes)
+        }
+        var seen: String? = null
+        val result = UpdateInstaller.download(context, tv(null), {}, serve("$hash  Ketvoice-TV-99.0.0.apk\n${"c".repeat(64)}  RELEASE-NOTES.md\n"),
+            { _, _, checked -> seen = checked.sha256 })
+        assertEquals(hash, seen)
+        assertEquals("ketvoice-99.0.0.apk", result.name)
+        // A list that does not name the APK, names it with another hash, or disagrees with GitHub's digest stops it.
+        for ((digest, sums) in listOf(null to "$hash  Ketvoice-99.0.0.apk", null to "${"0".repeat(64)}  Ketvoice-TV-99.0.0.apk",
+                "1".repeat(64) to "$hash  Ketvoice-TV-99.0.0.apk")) {
+            var failed = false
+            try {
+                UpdateInstaller.download(context, tv(digest), {}, serve(sums), { _, _, _ -> fail("must not validate") })
+            } catch (_: java.io.IOException) { failed = true }
+            assertTrue(sums, failed)
+        }
+    }
+
     @Test fun failedArchiveValidationCannotPublishADownloadedApk() = runTest {
         val connection = Connection(bytes)
         var rejected = false

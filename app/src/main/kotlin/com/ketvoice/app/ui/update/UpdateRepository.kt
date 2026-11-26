@@ -29,7 +29,7 @@ internal class UpdateRepository(
         prefs.getLong("last_check", 0L) else 0L
 
     private fun visible(info: UpdateInfo?, force: Boolean): UpdateInfo? = info?.takeIf {
-        UpdateChecker.isNewer(it.tag, version) && (force ||
+        UpdateChecker.isNewer(it.versionLabel(), version) && (force ||
             (it.tag != prefs.getString("skipped_tag", null) && it.tag != prefs.getString("dismissed_tag", null)))
     }
 
@@ -59,7 +59,29 @@ internal object UpdateFeed {
     private val digestPattern = Regex("^sha256:([a-fA-F0-9]{64})$")
     const val DOWNLOAD_PREFIX = "https://github.com/Tysnnn23/Ketvoice/releases/download/"
 
-    fun validTag(tag: String): Boolean = versionPattern.matches(tag)
+    /** Ketvoice TV's own release line (`tv-v1.0.0`), never the latest release of the repository. */
+    const val TV_TAG_PREFIX = "tv-v"
+    const val SUMS_ASSET = "SHA256SUMS.txt"
+    private val sumLine = Regex("^([a-fA-F0-9]{64})\\s+\\*?(.+)$")
+
+    /** A release tag of the phone line (`v9.1.1`) or of Ketvoice TV (`tv-v1.0.0`). */
+    fun validTag(tag: String): Boolean = Edition.entries.any { versionOf(tag, it) != null }
+
+    /**
+     * The version [tag] carries for [edition], or null when the tag is not of that edition's line: mobile, Quest and
+     * Lite read `v<version>` only (never `tv-v*`, `windows-v*` or the model tags), Ketvoice TV reads `tv-v<version>` only.
+     */
+    fun versionOf(tag: String, edition: Edition): String? {
+        val rest = if (edition == Edition.Tv) {
+            if (!tag.startsWith(TV_TAG_PREFIX)) return null
+            tag.removePrefix(TV_TAG_PREFIX).takeIf { it.firstOrNull()?.isDigit() == true } ?: return null
+        } else tag
+        return if (versionPattern.matches(rest)) rest.removePrefix("v").removePrefix("V") else null
+    }
+
+    /** The SHA-256 listed for [file] in a `sha256sum` list (`<hash>  <name>` or `<hash> *<name>`), lower case. */
+    fun sumFor(sums: String, file: String): String? = sums.lineSequence().mapNotNull { sumLine.matchEntire(it.trim()) }
+        .firstOrNull { it.groupValues[2].trim() == file }?.groupValues?.get(1)?.lowercase()
 
     fun select(feed: JSONArray, current: String, quest: Boolean): UpdateInfo? =
         select(feed, current, if (quest) Edition.Quest else Edition.Mobile)
@@ -67,31 +89,42 @@ internal object UpdateFeed {
     /**
      * The newest release newer than [current] that carries this [edition]'s own APK. A release without it
      * (for Lite, every release published before Ketvoice Lite existed) is skipped, never answered with
-     * another edition's APK.
+     * another edition's APK. Ketvoice TV also needs the release's SHA256SUMS.txt, read before the download.
      */
     fun select(feed: JSONArray, current: String, edition: Edition): UpdateInfo? {
         var newest: UpdateInfo? = null
+        var newestVersion = ""
         for (index in 0 until feed.length()) {
             val release = feed.optJSONObject(index) ?: continue
             val tag = release.optString("tag_name")
-            if (release.optBoolean("draft") || !validTag(tag) || !UpdateChecker.isNewer(tag, current)) continue
+            val version = versionOf(tag, edition) ?: continue
+            if (release.optBoolean("draft") || !UpdateChecker.isNewer(version, current)) continue
             if (!current.substringBefore('+').contains('-') &&
-                (release.optBoolean("prerelease") || tag.substringBefore('+').contains('-'))) continue
-            val version = tag.removePrefix("v").removePrefix("V")
+                (release.optBoolean("prerelease") || version.substringBefore('+').contains('-'))) continue
             val expected = edition.assetName(version)
             val assets = release.optJSONArray("assets") ?: continue
-            val asset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }.firstOrNull {
-                it.optString("name").equals(expected, ignoreCase = true) &&
-                    it.optString("state", "uploaded") == "uploaded" && it.optLong("size") > 0 &&
-                    (it.optString("digest").isBlank() || digestPattern.matches(it.optString("digest"))) &&
+            val listed = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }.filter {
+                it.optString("state", "uploaded") == "uploaded" && it.optLong("size") > 0 &&
                     it.optString("browser_download_url").startsWith(DOWNLOAD_PREFIX)
+            }
+            val asset = listed.firstOrNull {
+                it.optString("name").equals(expected, ignoreCase = true) &&
+                    (it.optString("digest").isBlank() || digestPattern.matches(it.optString("digest")))
             } ?: continue
+            val sums = if (edition == Edition.Tv) {
+                listed.firstOrNull { it.optString("name") == SUMS_ASSET &&
+                    it.optString("browser_download_url").startsWith("$DOWNLOAD_PREFIX$tag/") }
+                    ?.optString("browser_download_url") ?: continue
+            } else null
             val info = UpdateInfo(tag, release.optString("name").ifBlank { "Ketvoice $tag" },
                 release.optString("body").lines(), asset.optString("browser_download_url"),
                 "https://github.com/Tysnnn23/Ketvoice/releases/tag/$tag",
                 release.optString("published_at").take(10), asset.optLong("size"),
-                digestPattern.matchEntire(asset.optString("digest"))?.groupValues?.get(1)?.lowercase())
-            if (newest == null || UpdateChecker.isNewer(tag, newest.tag)) newest = info
+                digestPattern.matchEntire(asset.optString("digest"))?.groupValues?.get(1)?.lowercase(), sums)
+            if (newest == null || UpdateChecker.isNewer(version, newestVersion)) {
+                newest = info
+                newestVersion = version
+            }
         }
         return newest
     }
