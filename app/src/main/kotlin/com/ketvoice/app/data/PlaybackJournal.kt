@@ -53,6 +53,8 @@ object PlaybackJournal {
 
     /** Why Android ended the previous process of the app, once per ending. */
     private fun recordExit(context: Context) {
+        // Android keeps exit reasons since Android 11 (Ketvoice TV runs from Android 9).
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return
         runCatching {
             val am = context.getSystemService(ActivityManager::class.java) ?: return
             val prefs = context.getSharedPreferences("playback-journal", Context.MODE_PRIVATE)

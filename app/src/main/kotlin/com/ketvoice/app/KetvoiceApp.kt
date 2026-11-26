@@ -77,7 +77,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         // 8.2: on Wi-Fi, the pages and covers likely to be opened next (bounded, cancelled when the title changes).
         if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.SmartPrefetch.start(this) }
         // Keeps the placed home-screen widgets in step with playback (7.4: no drawing while none is placed).
-        if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.Widgets) { com.ketvoice.app.widget.NowPlayingWidgets.start(this) }
+        // (Quest and TV have no home-screen widgets.)
+        if (!BuildConfig.IS_QUEST && !BuildConfig.IS_TV) start(LiteTuning.StartWork.Widgets) { com.ketvoice.app.widget.NowPlayingWidgets.start(this) }
         // Bound the re-fetchable caches once per process, off the main thread and after startup.
         Thread({
             runCatching { Thread.sleep(20_000); com.ketvoice.app.data.DiskBudget.trimAll(this) }

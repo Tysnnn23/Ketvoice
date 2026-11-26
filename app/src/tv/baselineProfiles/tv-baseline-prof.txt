@@ -1,0 +1,11 @@
+# Ketvoice TV's startup profile (hand-written, like the phone's src/main/baseline-prof.txt; not captured on a device).
+# The TV activity, its interface and the shared code its first screen goes through are compiled ahead of time.
+HSPLcom/ketvoice/app/tv/**;->**(**)**
+HSPLcom/ketvoice/app/data/AppSettings;->**(**)**
+HSPLcom/ketvoice/app/data/SettingsStore;->**(**)**
+HSPLcom/ketvoice/app/data/ListeningHistory;->**(**)**
+HSPLcom/ketvoice/app/data/PersonalMixes;->**(**)**
+HSPLcom/ketvoice/app/data/ArtworkRepo;->**(**)**
+HSPLcom/ketvoice/app/player/Player;->**(**)**
+HSPLcom/ketvoice/app/account/**;->**(**)**
+HSPLcom/ketvoice/app/sync/**;->**(**)**

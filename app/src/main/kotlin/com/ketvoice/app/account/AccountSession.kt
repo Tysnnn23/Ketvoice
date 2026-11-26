@@ -96,6 +96,20 @@ object AccountSession {
         accept(AuthApi.exchangeCode(code, verifier, System::currentTimeMillis), null)
     }
 
+    /**
+     * Sign-in by QR code (Ketvoice TV, as Windows 2.0): the website approved this device and the `device-link` function
+     * gave a one-time token hash, exchanged here for this device's own session (`/auth/v1/verify`).
+     */
+    suspend fun signInWithLink(tokenHash: String) = withContext(Dispatchers.IO) {
+        require(tokenHash.matches(Regex("[A-Za-z0-9_-]{16,200}"))) { "Lien invalide" }
+        val body = JSONObject().put("type", "magiclink").put("token_hash", tokenHash).toString().toByteArray()
+        val response = SupabaseHttp.request("POST", "/auth/v1/verify", body)
+        val json = runCatching { JSONObject(response.text) }.getOrNull()
+        if (!response.ok || json == null) throw SupabaseHttp.HttpError(response.status, json?.optString("error_code").orEmpty(),
+            AuthApi.message(response.status, json))
+        accept(AuthApi.parseSession(json, System.currentTimeMillis()), null)
+    }
+
     private fun accept(session: AuthSession, displayName: String?) {
         tokens.set(session)
         _state.value = AccountState(session.userId, session.email)

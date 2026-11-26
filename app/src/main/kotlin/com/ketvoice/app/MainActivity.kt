@@ -51,6 +51,8 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private companion object {
         const val STATE_NAVIGATION = "ketvoice.navigation"
+        /** The TV flavour's activity (src/tv), named here because the shared code cannot see that source set. */
+        const val TV_ACTIVITY = "com.ketvoice.app.tv.TvActivity"
     }
 
     override fun attachBaseContext(newBase: android.content.Context) {
@@ -58,6 +60,13 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Ketvoice TV has its own activity: the media session, notifications and links that open this one land there.
+        if (BuildConfig.IS_TV) {
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(intent).setClassName(this, TV_ACTIVITY))
+            finish()
+            return
+        }
 
         Crash.install(this)
         // 6.1.1: two launches in a row closed by a crash → a plain screen with the report instead of the app.

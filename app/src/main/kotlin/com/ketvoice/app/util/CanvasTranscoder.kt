@@ -45,7 +45,8 @@ object CanvasTranscoder {
 
     fun hasHevcEncoder(): Boolean = runCatching {
         MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
-            info.isEncoder && info.isHardwareAccelerated && info.supportedTypes.any { it.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, true) }
+            // Android 9 cannot tell a hardware encoder apart: no HEVC there (H.264 is used, as without one).
+            info.isEncoder && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && info.isHardwareAccelerated && info.supportedTypes.any { it.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, true) }
         }
     }.getOrDefault(false)
 

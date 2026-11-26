@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The product's name, the same in every language. -->
+    <string name="tv_app_name" translatable="false">Ketvoice TV</string>
+</resources>

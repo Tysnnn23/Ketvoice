@@ -208,12 +208,21 @@ internal object PlaybackRevival {
         runCatching { context.getSystemService(AlarmManager::class.java)?.cancel(alarmIntent(context)) }
     }
 
-    /** Why and when the app's playing process last ended, after [since] (wall clock); null when Android kept nothing. */
-    private fun lastEnd(context: Context, since: Long): ApplicationExitInfo? = runCatching {
-        context.getSystemService(ActivityManager::class.java).getHistoricalProcessExitReasons(context.packageName, 0, 8)
-            .filter { it.processName == context.packageName && it.timestamp >= since }
-            .maxByOrNull { it.timestamp }
-    }.getOrNull()
+    /** When and why the process ended ([ApplicationExitInfo]'s time and reason). */
+    private class Ended(val timestamp: Long, val reason: Int)
+
+    /**
+     * Why and when the app's playing process last ended, after [since] (wall clock); null when Android kept nothing.
+     * Android keeps these reasons since Android 11; earlier (Ketvoice TV runs from Android 9) there is none.
+     */
+    private fun lastEnd(context: Context, since: Long): Ended? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null
+        return runCatching {
+            context.getSystemService(ActivityManager::class.java).getHistoricalProcessExitReasons(context.packageName, 0, 8)
+                .filter { it.processName == context.packageName && it.timestamp >= since }
+                .maxByOrNull { it.timestamp }?.let { Ended(it.timestamp, it.reason) }
+        }.getOrNull()
+    }
 
     /**
      * Looks whether playback was ended by Android and brings it back when [ResumeDecision] says so. [way] says

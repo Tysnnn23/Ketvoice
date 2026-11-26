@@ -22,7 +22,7 @@ internal object LocalFileWriter {
     /** Files of the whole device need Android's confirmation first: one request for all of them. */
     fun writeRequest(context: Context, uris: List<Uri>): PendingIntent? {
         val media = uris.filter { it.authority == MediaStore.AUTHORITY }
-        if (media.isEmpty()) return null
+        if (media.isEmpty() || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null
         return runCatching { MediaStore.createWriteRequest(context.contentResolver, media) }.getOrNull()
     }
 
