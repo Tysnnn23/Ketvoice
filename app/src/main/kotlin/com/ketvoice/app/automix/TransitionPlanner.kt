@@ -314,6 +314,12 @@ internal object TransitionPlanner {
         val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo && MixKind.Rise !in context.avoid &&
             MixKind.Rise !in context.recentKinds && a.confidence >= BlendFit.STEADY_GRID)
         fun onTheBeat() = beatExit(a, b, context, settings, end, start, sungUntil, gain, variant, beats, echoAllowed, riseAllowed, ::measured)
+        // 9.1.1: left to Ketmix, a title that stops at full level is mixed out before its last hit, not followed by the next
+        // one; the DJ setting, which cuts such endings, still drops into a next title that has a drop first.
+        if (settings.style == MixStyle.Auto && a.hardEnding && !a.fadeOut) {
+            if (settings.cutsFullEndings) dropTurn()?.let { return it }
+            earlyExit(out, incoming, context, settings, listener, end, sungUntil)?.let { return it }
+        }
         // 7.1: two titles too far apart change over as on the radio; a last note at full level still rings out whole.
         if (settings.style == MixStyle.Auto && !context.loop && !(a.hardEnding && !a.fadeOut))
             PairFit.radio(a, b, end, gain)?.let { p -> measured(p).takeIf { it.mixes }?.let { return it } }
@@ -399,6 +405,32 @@ internal object TransitionPlanner {
             reason = reason, onPhrase = onPhrase, hold = if (a.fadeOut && hold > .5f) hold else 0f))
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
+    }
+
+    /**
+     * 9.1.1 (coordinator, after the owner's « au lieu de faire de l'automix »): left to Ketmix, a title that stops at full
+     * level is left earlier, from the start of its last phrase (else of the bar 8 bars before its last note), and blended
+     * there (in time, or by their filters) so that the blend is over when the last hit would come: the hard ending is
+     * never reached and never covered. The next title on the beat after the last note stays for discreet, without a beat
+     * grid or the decks' effects, when it is too late for the beats, on repeat, and where an echo suits ([echoSuits]).
+     */
+    private fun earlyExit(out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings, listener: Boolean,
+                          end: Long, sungUntil: Long?): MixPlan? {
+        val a = out.analysis ?: return null
+        val b = incoming.analysis ?: return null
+        if (settings.style != MixStyle.Auto || !a.hardEnding || a.fadeOut || !a.hasBeat || a.gapUntilMs >= 0 || context.loop) return null
+        if (!context.effects || !context.beats || context.skipSilence || settings.skippableOutroMs <= 0L) return null
+        if (settings.echo && MixKind.Echo !in context.avoid && echoSuits(a, b, end, sungUntil, context)) return null
+        val bar = CutBudget.barMs(a)
+        val phrase = a.phraseStarts(end - 16 * bar, end - 4 * bar).lastOrNull()
+        val from = phrase ?: a.barAtOrAfter(end - 8 * bar - a.beatMs / 2.0)
+        if (from < a.startMs + bar) return null
+        val early = a.copy(hardEnding = false, fallMs = from.roundToLong())
+        // A blend there: no build, cut or echo before the last hit (they would only move the step earlier).
+        val blending = context.copy(avoid = context.avoid + MixKind.Rise + MixKind.Echo)
+        return automatic(out.copy(analysis = early), incoming, blending, settings, listener)
+            .takeIf { it.mixes && it.kind != MixKind.Trim && it.kind != MixKind.Echo && it.kind != MixKind.Rise }
+            ?.let { it.copy(reason = it.reason + " · before the last hit") }
     }
 
     /** Why a pair is crossed rather than played in time (shown in the journal and the editor). */

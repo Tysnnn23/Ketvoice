@@ -131,8 +131,8 @@ class TransitionPlannerTest {
         val rung = plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, rung.kind); assertTrue(rung.tail); assertTrue(rung.cutMs >= 199_000L)
         assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), intensity = 0, sungUntil = 180_000).kind)
-        // Left to Ketmix, a voice that stopped 19 s before the last note is no hard vocal ending: the next title starts on the beat.
-        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000).kind)
+        // Left to Ketmix, a voice that stopped 19 s before the last note is no hard vocal ending: the title is mixed out before it.
+        plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000).let { assertTrue("$it", it.kind == MixKind.Filter && it.outMs + it.overlapMs <= 199_000) }
         val dj = plan(outro(120f, hard = true), intro(150f), intensity = 2, sungUntil = 180_000, style = MixStyle.Echo)
         assertEquals(MixKind.Echo, dj.kind)
         assertEquals("the echo takes the place of the last four beats", 197_000L, dj.outMs)
@@ -291,8 +291,9 @@ class TransitionPlannerTest {
     @Test fun aLastNoteAtFullLevelRingsOnPastTheEnd() {
         // Not discreet: the next title starts where a trim starts it, the last note plays whole and its echo
         // rings for four beats past the end of the title.
-        // 9.1.1: only with the echo style, or a voice sung to the last note into a far tempo (see KetmixMixShareTest).
-        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f)).kind)
+        // 9.1.1: only with the echo style, or a voice sung to the last note into a far tempo (see KetmixMixShareTest);
+        // left to Ketmix the title is mixed out before its last note.
+        assertNotEquals(MixKind.Echo, plan(outro(120f, hard = true), intro(150f)).kind)
         val rung = plan(outro(120f, hard = true), intro(150f), style = MixStyle.Echo)
         assertEquals(MixKind.Echo, rung.kind)
         assertTrue(rung.tail && rung.onBeat)
@@ -325,7 +326,8 @@ class TransitionPlannerTest {
         assertTrue("within a beat of the last note (${timed.outMs})", timed.outMs in 198_500..199_300)
         // Same tempo but singing until a hard ending: still no mix over it.
         assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(120f), intensity = 0, sungUntil = 198_500).kind)
-        assertEquals("left to Ketmix, the same tempo starts it on the beat", MixKind.Trim, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).kind)
+        // 9.1.1: left to Ketmix, the same tempo is blended in time and over by the last note.
+        plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).let { assertTrue("$it", it.kind == MixKind.Beatmatch && it.outMs + it.overlapMs <= 199_000) }
         assertEquals("the echo style rings it out", MixKind.Echo, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500, style = MixStyle.Echo).kind)
     }
 

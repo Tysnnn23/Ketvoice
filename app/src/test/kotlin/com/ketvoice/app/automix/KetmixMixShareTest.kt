@@ -112,11 +112,11 @@ class KetmixMixShareTest {
             val echo = s.getValue(MixKind.Echo)
             assertTrue("$name: echo is rare ($echo %)", echo <= 10.0)
             assertEquals("$name: never two echoes running", 0, echoesRunning(plans))
-            // The real blends (in time with the bass swap, crossings of spectra or reverberation, plain fades) and, after a
-            // last note at full level, the next title on the beat that follows it (a last note is never covered).
+            // The real blends: in time with the bass swap, crossings of spectra or reverberation, plain fades. A title that stops
+            // at full level is mixed out before its last hit; the next title on the beat after it (no mix) stays rare.
             val blends = s.getValue(MixKind.Beatmatch) + s.getValue(MixKind.Filter) + s.getValue(MixKind.Wash) + s.getValue(MixKind.Crossfade)
-            assertTrue("$name: most transitions are real blends ($blends %)", blends >= 60.0)
-            assertTrue("$name: blends or an on-beat start after a hard ending (${blends + s.getValue(MixKind.Trim)} %)", blends + s.getValue(MixKind.Trim) >= 80.0)
+            assertTrue("$name: most transitions are real blends ($blends %)", blends >= 80.0)
+            assertTrue("$name: few titles simply follow each other (${s.getValue(MixKind.Trim)} %)", s.getValue(MixKind.Trim) <= 5.0)
             assertTrue("$name: effects stay exceptions", echo + s.getValue(MixKind.Rise) <= 15.0)
         }
     }
@@ -128,9 +128,14 @@ class KetmixMixShareTest {
         fun plan(sungUntil: Long?, recent: List<MixKind> = emptyList(), into: SegmentAnalysis = far) = TransitionPlanner.plan(
             MixFacts(duration, hard, vocalEndMs = sungUntil), MixFacts(duration, into, vocalStartMs = 12_000), MixContext(recentKinds = recent), MixSettings())
         assertEquals("sung to the last note, into a far tempo", MixKind.Echo, plan(duration - 1_500).kind)
-        assertEquals("never twice running", MixKind.Trim, plan(duration - 1_500, listOf(MixKind.Echo)).kind)
-        assertEquals("an instrumental ending starts the next title on the beat", MixKind.Trim, plan(null).kind)
-        assertEquals("a close tempo starts it on the beat too", MixKind.Trim, plan(duration - 1_500, into = far.copy(bpm = 126f)).kind)
+        // Otherwise the title is mixed out before its last hit, which is never reached nor covered.
+        fun mixedOutEarly(p: MixPlan) = p.kind in setOf(MixKind.Beatmatch, MixKind.Filter, MixKind.Wash, MixKind.Crossfade) &&
+            p.outMs + p.overlapMs <= hard.soundEndMs && p.reason.endsWith("before the last hit")
+        plan(duration - 1_500, listOf(MixKind.Echo)).let { assertTrue("never two echoes running: $it", mixedOutEarly(it)) }
+        plan(null).let { assertTrue("an instrumental ending: $it", mixedOutEarly(it)) }
+        plan(duration - 1_500, into = far.copy(bpm = 126f)).let { assertTrue("a close tempo, in time: $it", mixedOutEarly(it) && it.kind == MixKind.Beatmatch) }
+        // The discreet setting leaves nothing out: the next title still starts on the beat after the last note.
+        assertEquals(MixKind.Trim, TransitionPlanner.plan(MixFacts(duration, hard), MixFacts(duration, far), MixContext(), MixSettings(0)).kind)
     }
 
     @Test fun anEchoTheListenerChoseIsStillPlayed() {
