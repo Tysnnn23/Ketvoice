@@ -45,6 +45,8 @@ import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.common.collectPick
 import com.ketvoice.app.ui.common.pick
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 /**
@@ -67,7 +69,8 @@ fun TvHomePage() {
         releases = runCatching { HomeReleases.load(library.known, library.counts, library.favoriteIds) }.getOrDefault(emptyList())
     }
     LaunchedEffect(Unit) { chart = runCatching { CatalogRepo.chart() }.getOrNull() }
-    val shelves by produceState(emptyList<TvShelf>(), library, feed, feedAlbums, releases, chart, blocked) {
+    val pictures by rememberArtistPictures(library)
+    val shelves by produceState(emptyList<TvShelf>(), library, feed, feedAlbums, releases, chart, blocked, pictures) {
         value = withContext(Dispatchers.Default) {
             val allowed = { t: Track -> ArtistPrefs.allows(t) }
             val known = library.known.filter(allowed)
@@ -80,6 +83,7 @@ fun TvHomePage() {
                 mixes = PersonalMixes.propose(known, recent, library.counts, library.favoriteIds),
                 releases = releases.filter { ArtistPrefs.allows(it.artist) },
                 artists = PersonalMixes.topArtists(known, library.counts, library.favoriteIds),
+                artistPictures = pictures,
                 feed = feed.map { s -> s.copy(tracks = s.tracks.filter(allowed)) },
                 feedAlbums = feedAlbums.filter { ArtistPrefs.allows(it.artist) },
                 chart = chart,
@@ -88,15 +92,17 @@ fun TvHomePage() {
         }
     }
     val current by remember { Player.state.pick { it.current } }.collectPick()
+    val playing by remember { Player.state.pick { it.playWhenReady } }.collectPick()
     val lead = current ?: library.recent.firstOrNull()
     val state = rememberLazyListState()
-    TvPivot(pivot = .16f, slack = .15f) {
+    TvPivot(pivot = .16f, slack = .25f) {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().testTag("tv-home"),
             contentPadding = PaddingValues(top = TvDesign.Safe.vertical, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(TvDesign.Size.rowSpacing)) {
             item(key = "hero", contentType = "hero") {
-                TvHomeHero(lead, playing = current != null, cover = lead?.let(library::cover)) {
-                    if (current != null) actions.nav.open(TvRoute.NowPlaying)
+                TvHomeHero(lead, playing = current != null && playing, cover = lead?.let(library::cover)) {
+                    // The queue of the last session is still loaded: it resumes where it stopped.
+                    if (current != null) { if (!playing) Player.toggle(); actions.nav.open(TvRoute.NowPlaying) }
                     else lead?.let { actions.play(library.recent.ifEmpty { listOf(it) }, 0) }
                 }
             }
@@ -110,13 +116,34 @@ fun TvHomePage() {
     }
 }
 
+/** The photos of the artists played most (the catalogue's, a dozen at most, four asked at a time); names in lower case. */
+@Composable
+private fun rememberArtistPictures(library: TvLibrary) = produceState(emptyMap<String, String>(), library.known.size / 10, library.counts.size / 10) {
+    val artists = PersonalMixes.topArtists(library.known, library.counts, library.favoriteIds).take(12)
+    val permits = kotlinx.coroutines.sync.Semaphore(4)
+    value = kotlinx.coroutines.coroutineScope {
+        artists.map { a ->
+            async { permits.withPermit { runCatching { CatalogRepo.artistPicture(a.name, a.catalogId) }.getOrNull()?.let { a.name.lowercase() to it } } }
+        }.mapNotNull { it.await() }.toMap()
+    }
+}
+
 /** The first thing Home shows: the title playing (or played last), large, with one button to go on. */
 @Composable
 private fun TvHomeHero(track: Track?, playing: Boolean, cover: String?, onPlay: () -> Unit) {
     val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
     Column(Modifier.fillMaxWidth().padding(horizontal = TvDesign.Safe.horizontal)) {
-        Text(com.ketvoice.app.ui.home.homeGreeting(hour), style = TvDesign.Type.display, color = TvDesign.Ink.primary,
-            modifier = Modifier.testTag("tv-greeting"))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(com.ketvoice.app.ui.home.homeGreeting(hour), style = TvDesign.Type.display, color = TvDesign.Ink.primary,
+                modifier = Modifier.weight(1f).testTag("tv-greeting"))
+            // Not signed in yet: the one step that brings the phone's library here, beside the greeting.
+            val account by com.ketvoice.app.account.AccountSession.state.collectAsState()
+            if (!account.signedIn) {
+                val actions = LocalTvActions.current
+                TvButton("Se connecter avec le téléphone", null, { actions.nav.open(TvRoute.SignIn) },
+                    Modifier.pageItem("hero", "sign-in", first = track == null), primary = track == null, tag = "hero-sign-in")
+            }
+        }
         if (track == null) return@Column
         Spacer(Modifier.height(18.dp))
         Row(Modifier.clip(RoundedCornerShape(TvDesign.Radius.panel)).background(TvDesign.Ink.glass).padding(18.dp),
