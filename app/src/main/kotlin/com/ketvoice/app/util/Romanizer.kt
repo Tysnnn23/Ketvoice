@@ -81,7 +81,7 @@ object Romanizer {
 
         fun apply(text: String, ids: List<String>): String? {
             if (ids.isEmpty()) return text
-            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return null
+            if (android.os.Build.VERSION.SDK_INT < 29) return null // ICU transliteration: API 29 (Q); the desktop shim has no VERSION_CODES
             for (id in ids) {
                 val t = synchronized(cache) {
                     cache.getOrPut(id) { runCatching { android.icu.text.Transliterator.getInstance(id) }.getOrNull() }

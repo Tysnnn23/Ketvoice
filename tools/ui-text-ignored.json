@@ -205,5 +205,10 @@
  "ketmixAnalysis": "settings key written by TvDefaults",
  "localAlbum": "Ketvoice TV collection kind",
  "tv-tiny-blur-{0}-{1}": "Coil transformation cache key",
- "{0} · TV": "version line « 1.0.0 · TV » (version number and the product name)"
+ "{0} · TV": "version line « 1.0.0 · TV » (version number and the product name)",
+ "Invalid checksum URL": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
+ "SHA256SUMS.txt": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
+ "SHA256SUMS.txt and the asset digest disagree": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
+ "SHA256SUMS.txt too large": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
+ "{0} is not listed in SHA256SUMS.txt": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy"
 }
