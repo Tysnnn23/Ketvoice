@@ -547,6 +547,7 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Audio, "Vibrer à l'échange des basses",
                     "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran.",
                     AppSettings.ketmixHaptics.value) { AppSettings.ketmixHaptics.value = it; SettingsStore.save() }
+                KetmixLearningRows()
                 SToggle(KetIcons.Audio, "Séparer les voix",
                     "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.",
                     AppSettings.ketmixStems.value) { AppSettings.ketmixStems.value = it; SettingsStore.save() }

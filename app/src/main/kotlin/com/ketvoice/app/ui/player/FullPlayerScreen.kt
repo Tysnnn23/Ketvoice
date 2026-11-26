@@ -621,6 +621,8 @@ fun FullPlayerScreen(
                         alpha = rise
                         translationY = (1f - rise) * 28.dp.toPx()
                     })) {
+                    // In the chrome's own lambda, not in FullPlayerScreen's body (6.1.2: keep that method's registers low).
+                    val rateAsk = rememberKetmixAsk()
                     Column(Modifier
                         .height(lowerHeight).width(controlsWidth).padding(horizontal = if (wide) 20.dp else margin)) {
                         Box(Modifier.height(34.dp).fillMaxWidth().then(lateRise), contentAlignment = Alignment.CenterStart) {
@@ -631,6 +633,9 @@ fun FullPlayerScreen(
                             } else if (mixing) {
                                 // While two titles play together, the mix itself takes this line.
                                 MixStrip(Modifier.fillMaxWidth())
+                            } else if (rateAsk.value != null) {
+                                // « Ketmix apprend »: just after a transition, the same line asks whether it was liked.
+                                rateAsk.value?.let { KetmixRateLine(it, Modifier.fillMaxWidth()) }
                             } else if (page == PlayerPage.QUEUE && AppSettings.automix.value) {
                                 // On the queue this line says what Ketmix prepares; it never covers the list.
                                 AutomixStatusLine(Modifier.fillMaxWidth(), fontSize = 12.sp, glyph = true)
