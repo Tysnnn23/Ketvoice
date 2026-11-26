@@ -7,6 +7,18 @@
 
 ---
 
+# Ketvoice 9.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 154** — Ketmix on the phone: song sections in planning, a fuller meeting level at the bass swap and exact deck speed for blends in time, and optional learning from 👍/👎.
+
+- Song sections (`automix/SongStructure.kt`, now shared with Windows, `automix/SongSections.kt`, `OnsetTracker.kt`, `AnalysisStore.kt`, `MixPoints.kt`, `StyleCuts.kt`): 16 band energies (~21 frames a second) kept from the spectra the analysis already computes, or the beat model's log-mel frames when they cover the stretch, run through the self-similarity structure finder on the bar grid; Balanced and Maximum only, never Light or Lite, never an extra read; `SegmentAnalysis.sections` stored with a version (old records read as none). Exits use section starts in reach but never a chorus's own start, phrase starts on a chorus's first bar are dropped, drops land at the end of the next intro or on its first chorus; editor points override. `SongSectionsTest`.
+- Render quality (`automix/DeckDsp.kt`): meeting level at the bass swap 0.72 → 0.86 for both decks, equal-power fade on the outgoing side of a filter crossing, incoming deck speed no longer rounded to a 0.002 step. Measured on MixBench: dip before the swap 3.44 → 2.28 LU (64-beat blend), 2.11 → 0.84 LU (quieter incoming); beat drift over a 64-beat blend 29.1 → 0.0 ms; worst true peak -0.75 dBTP. `KetmixRenderQualityTest` limits tightened to 2.8 LU, new `twoDecksInTimeDoNotDriftApartOverALongBlend`.
+- Ketmix learns from ratings (`automix/KetmixTaste.kt`, now shared with Windows, `automix/KetmixLearning.kt`, `ui/player/KetmixRate.kt`, Ketmix settings): optional, off by default; keys `ketmixLearns`, `ketmixTaste` (on the phone only, not synced, not in the personal backup); `MixContext.avoid` filled from the weights while on, automatic style only; 👍/👎 on the player's mix line for 9 s after a transition, last transition rateable in Settings, reset row. `KetmixLearningTest`, `KetmixRateHostTest`.
+
+---
+
 # Ketvoice 9.0.0
 
 ![Ketvoice](ketvoice-banner.png)
