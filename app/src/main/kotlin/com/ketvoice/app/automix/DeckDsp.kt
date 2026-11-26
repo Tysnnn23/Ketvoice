@@ -116,6 +116,12 @@ internal class DeckAutomation(
         private const val TOP_HZ = 18_000f
         /** Both decks at this level where the bass changes hands: full enough, without summing past full scale. */
         private const val MEETING = .72f
+        /**
+         * 7.7: the outgoing title, alone with its bass until the swap, is only led this far down there: the incoming
+         * one, high-passed and with its mids held back, fills too little to make up for more (led to [MEETING], a long
+         * blend lost 3 LU just before the swap). The sum's peaks are [MixBus]'s to keep under full scale.
+         */
+        private const val OUT_MEETING = .86f
         /** Between a straight and an equal-power crossfade: no hole in the middle, no clipping either. */
         private const val POWER = 1.47f
         private const val SETTLE_US = 8_000_000L
@@ -130,6 +136,13 @@ internal class DeckAutomation(
             if (curve != VolumeCurve.Auto) MixShaping.fall(x, curve) else cos(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
         private fun fadeIn(x: Float, curve: VolumeCurve = VolumeCurve.Auto) =
             if (curve != VolumeCurve.Auto) MixShaping.rise(x, curve) else sin(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
+        /**
+         * 7.7: the outgoing side of a crossing of spectra (« Filtre »), equal power: its body stays longer while the incoming
+         * title, filtered, is still thin (the sum lost up to 2.7 LU in the middle). The incoming side keeps [fadeIn], so that
+         * its bass does not arrive sooner under the outgoing one.
+         */
+        private fun powerOut(x: Float, curve: VolumeCurve) =
+            if (curve != VolumeCurve.Auto) MixShaping.fall(x, curve) else cos(PI / 2 * x.coerceIn(0f, 1f)).toFloat()
         private fun ease(x: Float) = (.5 - .5 * cos(PI * x)).toFloat()
         private fun ease(x: Float, curve: VolumeCurve) = if (curve != VolumeCurve.Auto) MixShaping.rise(x, curve) else ease(x)
         private fun sweep(fromHz: Float, toHz: Float, x: Float) = exp(ln(fromHz) + (ln(toHz) - ln(fromHz)) * ease(x))
@@ -270,7 +283,7 @@ internal class DeckAutomation(
             val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
             val curve = plan.shape.volume
             // Led down a little further when the incoming title is the quieter one, so that the two meet level.
-            val meeting = MEETING * plan.outGain
+            val meeting = OUT_MEETING * plan.outGain
             val gain = Curve.join(
                 Curve.shaped(start, swap, 24) { 1f - (1f - meeting) * beforeSwap(it, curve) },
                 Curve.shaped(swap, end, 24) { meeting * fadeOut(it, curve) })
@@ -386,7 +399,7 @@ internal class DeckAutomation(
          */
         private fun filterOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val held = start + ((end - start) * plan.hold.coerceIn(0f, .85f)).toLong()
-            val gain = Curve.join(point(held, 1f), Curve.shaped(held + 1, end, 24) { fadeOut(it, plan.shape.volume) })
+            val gain = Curve.join(point(held, 1f), Curve.shaped(held + 1, end, 24) { powerOut(it, plan.shape.volume) })
             return if (plan.variant == 1)
                 DeckAutomation(gain, Curve.flat(0f), Curve.join(point(start, 0f), point(start + 1, TOP_HZ),
                     Curve.shaped(start + 2, end, 32) { sweep(TOP_HZ, 260f, it * it) }), resonance = SWEEP_Q)
@@ -816,9 +829,22 @@ internal object DeckSync {
     /**
      * The speed of the incoming deck for [plan] while the outgoing one plays at [outgoing]: in time with it
      * for a blend on the beat, its own otherwise. Set once, before the deck is heard.
+     *
+     * 7.7: exactly in time, not on the grid of [stepped]: nothing corrects a deck once it is heard, and half a step
+     * (0.1 %) left over drifted the two kicks up to 30 ms apart by the end of a 64-beat blend (see [driftMs]).
      */
     fun speedOf(plan: MixPlan, outgoing: Float): Float =
-        if (plan.kind == MixKind.Beatmatch) stepped(outgoing * plan.rate) else 1f
+        if (plan.kind == MixKind.Beatmatch) outgoing * plan.rate else 1f
+
+    /**
+     * How far (ms) the incoming deck's beats drift from the outgoing ones over the part of [plan]'s overlap where it is
+     * heard, when it plays at [speed] while the outgoing deck plays at [outgoing].
+     */
+    fun driftMs(plan: MixPlan, speed: Float, outgoing: Float = 1f): Double {
+        if (plan.kind != MixKind.Beatmatch || plan.rate <= 0f) return 0.0
+        val heardMs = plan.overlapMs * (1.0 - QUIET_SHARE)
+        return heardMs * abs(speed.toDouble() / (outgoing.toDouble() * plan.rate) - 1.0)
+    }
 
     /**
      * The incoming deck is heard once its level means something: at once for a cut (an echo, a build, a

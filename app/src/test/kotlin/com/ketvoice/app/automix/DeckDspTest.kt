@@ -80,7 +80,7 @@ class DeckDspTest {
         // Positions in the incoming title run 0.96 times as fast as the outgoing clock.
         fun inAt(outMs: Long) = ((500 + (outMs - 180_000) * .96) * 1000).toLong()
         assertEquals(1f, out.gain.at(180_000_000), 1e-3f)
-        assertEquals(.72f, out.gain.at(188_000_000), 2e-3f)
+        assertEquals(.86f, out.gain.at(188_000_000), 2e-3f)
         assertEquals(0f, out.gain.at(196_000_000), 1e-3f)
         assertEquals(0f, into.gain.at(inAt(180_000)), 1e-3f)
         assertEquals(.72f * .8f, into.gain.at(inAt(188_000)), 3e-3f)

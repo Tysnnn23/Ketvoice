@@ -66,8 +66,27 @@ class KetmixRenderQualityTest {
             assertTrue("${row.name}: the bass changes hands, never two at once for long (${row.clashMs} ms)", row.clashMs <= 250)
             // A cut is a step from one title to the other by nature; a crossing into a fade starts from its faded level.
             if (!row.plan.cut && row.plan.kind != MixKind.Crossfade)
-                assertTrue("${row.name}: no hole nor bulge past 3.5 LU (${row.loudness})", row.loudness <= 3.5)
+                assertTrue("${row.name}: no hole nor bulge past 3.2 LU (${row.loudness})", row.loudness <= 3.2)
         }
+        // 7.7: the outgoing title of a long blend no longer steps down to meet a thin incoming one before the swap
+        // (3.44 LU before), and the outgoing side of a crossing of spectra keeps its power (2.70 LU before).
+        for (name in listOf("hard end 120>120", "beatless>groove", "far 128>96"))
+            rows.first { it.name == name }.let { assertTrue("$name: no hole past 2.6 LU (${it.loudness})", it.loudness <= 2.6) }
+    }
+
+    @Test fun twoDecksInTimeDoNotDriftApartOverALongBlend() {
+        // Nothing corrects the incoming deck once it is heard: its speed alone keeps the kicks together to the end.
+        var exact = 0.0; var onGrid = 0.0
+        for (bpm in 90..140) for (delta in -6..6) {
+            val plan = MixPlan(MixKind.Beatmatch, outMs = 0, overlapMs = 32_000, rate = bpm.toFloat() / (bpm + delta))
+            exact = maxOf(exact, DeckSync.driftMs(plan, DeckSync.speedOf(plan, 1f)))
+            onGrid = maxOf(onGrid, DeckSync.driftMs(plan, DeckSync.stepped(plan.rate)))
+        }
+        println("drift over a 64-beat blend at 120 BPM: $exact ms (on the 0.002 grid before 7.7: $onGrid ms)")
+        assertTrue("beats stay within 1 ms ($exact)", exact <= 1.0)
+        val fast = MixPlan(MixKind.Beatmatch, outMs = 0, overlapMs = 32_000, rate = .97f)
+        assertTrue("a title left 2 % fast still meets the next one in time",
+            DeckSync.driftMs(fast, DeckSync.speedOf(fast, 1.02f), outgoing = 1.02f) <= 1.0)
     }
 
     @Test fun leftToKetmixADropTakesItsTurnWhenTheNextTitleHasOne() {
