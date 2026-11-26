@@ -114,6 +114,86 @@ class ApkGateTest(unittest.TestCase):
         self.assertEqual('quest', edition_of('Ketvoice-6.1.0-Quest.apk'))
         self.assertEqual('lite', edition_of('Ketvoice-6.1.0-Lite.apk'))
 
+    # ---- Ketvoice TV (1.0.0): com.ketvoice.tv, its own version line, leanback, no touchscreen required.
+
+    # What aapt 36.0.0 prints for a leanback manifest (an APK linked with aapt2 from such a manifest).
+    TV_FEATURES = ("leanback-launchable-activity: name='com.ketvoice.app.tv.TvActivity'  label='Ketvoice TV' icon='' "
+                   "banner='res/drawable-xhdpi-v4/tv_banner.png'\n"
+                   "feature-group: label=''\n"
+                   "  uses-feature-not-required: name='android.hardware.faketouch'\n"
+                   "  uses-feature-not-required: name='android.hardware.touchscreen'\n"
+                   "  uses-feature: name='android.software.leanback'\n")
+
+    def tv_tools(self, package='com.ketvoice.tv', features=TV_FEATURES, label='Ketvoice TV', min_sdk=26,
+                 certificate=CERTIFICATE):
+        def run(path, *args):
+            if 'apksigner' in path.name:
+                return 'Signer #1 certificate SHA-256 digest: ' + certificate
+            if 'zipalign' in path.name:
+                return 'Verification successful'
+            return (f"package: name='{package}' versionCode='1' versionName='1.0.0'\n"
+                    f"sdkVersion:'{min_sdk}'\ntargetSdkVersion:'36'\n" +
+                    (f"application-label:'{label}'\n" if label else '') + features)
+        return patch('verify_apk.run_tool', side_effect=run)
+
+    def check_tv(self, edition='tv'):
+        return verify(self.apk, Path(self.directory.name), '1.0.0', 1, edition=edition)
+
+    def test_tv_release_produces_its_own_record(self):
+        self.add_libs('arm64-v8a', 'armeabi-v7a')
+        with self.tv_tools():
+            report = self.check_tv()
+        self.assertEqual('tv', report['edition'])
+        self.assertEqual('com.ketvoice.tv', report['package'])
+        self.assertEqual(CERTIFICATE, report['certificate_sha256'])
+        self.assertEqual(1, report['versionCode'])
+
+    def test_tv_and_phone_apks_never_pass_as_each_other(self):
+        # A phone APK (com.ketvoice.app) renamed Ketvoice-TV-*.apk, and the TV APK passed off as mobile or Lite.
+        with self.tv_tools(package='com.ketvoice.app'), self.assertRaises(ValueError):
+            self.check_tv()
+        for edition in ('mobile', 'lite', 'quest'):
+            with self.tv_tools(), self.assertRaises(ValueError):
+                self.check_tv(edition)
+
+    def test_tv_needs_the_leanback_launcher_and_feature(self):
+        no_activity = self.TV_FEATURES.split('\n', 1)[1]
+        no_feature = self.TV_FEATURES.replace("  uses-feature: name='android.software.leanback'\n", '')
+        for features in (no_activity, no_feature):
+            with self.tv_tools(features=features), self.assertRaises(ValueError):
+                self.check_tv()
+        # leanback declared as optional still counts as declared.
+        optional = self.TV_FEATURES.replace("uses-feature: name='android.software.leanback'",
+                                            "uses-feature-not-required: name='android.software.leanback'")
+        with self.tv_tools(features=optional):
+            self.assertEqual('tv', self.check_tv()['edition'])
+
+    def test_tv_never_requires_a_touchscreen(self):
+        required = self.TV_FEATURES.replace("uses-feature-not-required: name='android.hardware.touchscreen'",
+                                            "uses-feature: name='android.hardware.touchscreen'")
+        implied = (self.TV_FEATURES.replace("  uses-feature-not-required: name='android.hardware.touchscreen'\n", '') +
+                   "  uses-implied-feature: name='android.hardware.touchscreen' reason='default feature for all apps'\n")
+        faketouch = self.TV_FEATURES.replace("uses-feature-not-required: name='android.hardware.faketouch'",
+                                             "uses-feature: name='android.hardware.faketouch'")
+        undeclared = self.TV_FEATURES.replace("  uses-feature-not-required: name='android.hardware.touchscreen'\n", '')
+        for features in (required, implied, faketouch, undeclared):
+            with self.tv_tools(features=features), self.assertRaises(ValueError):
+                self.check_tv()
+
+    def test_tv_ships_arm_libraries_only(self):
+        self.add_libs('arm64-v8a', 'armeabi-v7a', 'x86')
+        with self.tv_tools(), self.assertRaises(ValueError):
+            self.check_tv()
+
+    def test_tv_sdk_label_and_signature(self):
+        for kwargs in ({'min_sdk': 31}, {'label': 'Ketvoice'}, {'label': None}, {'certificate': '0' * 64}):
+            with self.tv_tools(**kwargs), self.assertRaises(ValueError):
+                self.check_tv()
+
+    def test_tv_file_name_maps_to_the_tv_edition(self):
+        self.assertEqual('tv', edition_of('Ketvoice-TV-1.0.0.apk'))
+        self.assertEqual('mobile', edition_of('Ketvoice-9.1.1.apk'))
+
     def test_truncated_zip_rejected(self):
         self.apk.write_bytes(self.apk.read_bytes()[:50])
         with self.assertRaises(zipfile.BadZipFile):

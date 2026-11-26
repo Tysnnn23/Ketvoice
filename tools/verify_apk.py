@@ -9,14 +9,19 @@ import subprocess
 import zipfile
 
 CERTIFICATE = 'ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9'
-# The three APKs of a release: (minSdk, targetSdk) and the launcher label each must carry.
+# The APKs: (minSdk, targetSdk) and the launcher label each must carry, and their package.
 EDITIONS = {
     'mobile': {'sdk': ('31', '36'), 'label': 'Ketvoice'},
     'quest': {'sdk': ('32', '34'), 'label': 'Ketvoice Quest'},
     # Ketvoice Lite (6.1): the phone app, lighter; same package and signature so it replaces mobile in place.
     # 6.5: Lite also installs on Android 11 (minSdk 30).
     'lite': {'sdk': ('30', '36'), 'label': 'Ketvoice Lite', 'abis': {'arm64-v8a'}},
+    # Ketvoice TV (1.0.0): its own package and version line (tv-v<version> releases), the same signing key.
+    # Android TV 8+ / Google TV, 32- and 64-bit ARM, started from the leanback launcher with the remote.
+    'tv': {'sdk': ('26', '36'), 'label': 'Ketvoice TV', 'abis': {'arm64-v8a', 'armeabi-v7a'},
+           'package': 'com.ketvoice.tv'},
 }
+PACKAGE = 'com.ketvoice.app'
 
 
 def run_tool(path, *args):
@@ -28,7 +33,9 @@ def run_tool(path, *args):
 
 
 def edition_of(name):
-    """The edition a published file name stands for: Ketvoice-<v>.apk, -Quest.apk or -Lite.apk."""
+    """The edition a published file name stands for: Ketvoice-<v>.apk, -Quest.apk, -Lite.apk or Ketvoice-TV-<v>.apk."""
+    if name.startswith('Ketvoice-TV-'):
+        return 'tv'
     if name.endswith('-Quest.apk'):
         return 'quest'
     if name.endswith('-Lite.apk'):
@@ -62,7 +69,7 @@ def verify(path, build_tools, version, version_code, quest=False, certificate=CE
     run_tool(build_tools / ('zipalign.exe' if os.name == 'nt' else 'zipalign'), '-c', '-P', '16', '4', path)
     badging = run_tool(build_tools / ('aapt.exe' if os.name == 'nt' else 'aapt'), 'dump', 'badging', path)
     package = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
-    if not package or package.groups() != ('com.ketvoice.app', str(version_code), version):
+    if not package or package.groups() != (expected.get('package', PACKAGE), str(version_code), version):
         raise ValueError('Wrong package name, versionName or versionCode')
     if 'application-debuggable' in badging:
         raise ValueError('A debug build must not be distributed as a release')
@@ -72,17 +79,32 @@ def verify(path, build_tools, version, version_code, quest=False, certificate=CE
         raise ValueError('Unexpected minimum/target SDK')
     # The default launcher label tells the editions apart (mobile and Lite share package and SDK levels).
     label = re.search(r"^application-label:'([^']*)'", badging, re.M)
-    if (edition == 'lite' or label) and (not label or label[1] != expected['label']):
+    if (edition in ('lite', 'tv') or label) and (not label or label[1] != expected['label']):
         raise ValueError('Wrong launcher label for the ' + edition + ' APK')
+    if edition == 'tv':
+        tv_manifest(badging)
     record = {'name': path.name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
               'bytes': path.stat().st_size, 'certificate_sha256': certificate,
               'package': package[1], 'version': version, 'versionCode': version_code,
               'zip_crc': 'passed', 'signature': 'passed', 'alignment_16kb': 'passed',
               'debuggable': False}
-    if edition == 'lite':
-        # Only the new APK carries the field: mobile and Quest records stay identical to earlier releases'.
-        record['edition'] = 'lite'
+    if edition in ('lite', 'tv'):
+        # Only the newer APKs carry the field: mobile and Quest records stay identical to earlier releases'.
+        record['edition'] = edition
     return record
+
+
+def tv_manifest(badging):
+    """A TV APK starts from the leanback launcher, declares leanback and never requires a touchscreen."""
+    if not re.search(r"^leanback-launchable-activity: name='[^']+'", badging, re.M):
+        raise ValueError('The TV APK has no leanback launcher activity')
+    if not re.search(r"^\s*uses-feature(-not-required)?: name='android\.software\.leanback'", badging, re.M):
+        raise ValueError('The TV APK does not declare android.software.leanback')
+    for feature in ('touchscreen', 'faketouch'):
+        if re.search(r"^\s*uses-(implied-)?feature: name='android\.hardware\." + feature + "'", badging, re.M):
+            raise ValueError('The TV APK requires android.hardware.' + feature)
+    if not re.search(r"^\s*uses-feature-not-required: name='android\.hardware\.touchscreen'", badging, re.M):
+        raise ValueError('The TV APK must declare android.hardware.touchscreen as not required')
 
 
 if __name__ == '__main__':
