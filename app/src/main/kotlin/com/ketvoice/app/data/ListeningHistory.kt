@@ -122,6 +122,10 @@ object ListeningHistory {
         publish(ownChange = false)
     }
 
+    /** Tests: derive the public flows again after a test set this device's own ones directly. */
+    @androidx.annotation.VisibleForTesting
+    @Synchronized internal fun republishForTests() = publish(ownChange = false)
+
     /** The public flows again: this device's own listening plus the others'. Called after every change. */
     private fun publish(refreshStats: Boolean = true, ownChange: Boolean = true) {
         if (ownChange) _ownChanges.value = _ownChanges.value + 1

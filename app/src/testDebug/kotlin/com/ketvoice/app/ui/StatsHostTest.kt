@@ -35,7 +35,7 @@ import java.time.LocalDate
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StatsHostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    @Suppress("UNCHECKED_CAST") private fun <T> flow(f: kotlinx.coroutines.flow.StateFlow<T>) = f as MutableStateFlow<T>
+    private fun <T> flow(f: kotlinx.coroutines.flow.StateFlow<T>) = ListeningSeam.ownOf(f)
     private val today = LocalDate.now()
 
     @Before fun setup() {
@@ -53,6 +53,7 @@ class StatsHostTest {
         flow(ListeningHistory.knownTracks).value = emptyList(); flow(ListeningHistory.playCounts).value = emptyMap()
         flow(ListeningHistory.months).value = emptyMap(); flow(ListeningHistory.days).value = emptyMap()
         flow(ListeningHistory.years).value = emptyMap(); flow(ListeningHistory.listenedMs).value = 0L
+        ListeningSeam.publish()
         AppUi.closeOverlays(); AppUi.selectTab(AppUi.HOME)
     }
 
@@ -128,6 +129,7 @@ class StatsHostTest {
         flow(ListeningHistory.listenedMs).value = months.values.sumOf { it.ms } + 3_000 * 60_000L
         flow(ListeningHistory.knownTracks).value = tracks
         flow(ListeningHistory.playCounts).value = tracks.associate { it.id to 12 }
+        ListeningSeam.publish()
         return tracks
     }
 
@@ -187,6 +189,7 @@ class StatsHostTest {
         val previous = today.minusMonths(2)
         flow(ListeningHistory.months).value = ListeningMonths.addTime(emptyMap(), previous, 20, 90 * 60_000L)
         flow(ListeningHistory.listenedMs).value = 90 * 60_000L
+        ListeningSeam.publish()
         show(dark = true)
         compose.onNodeWithTag("stats-empty").assertExists()
         image("stats-week-silent-dark")

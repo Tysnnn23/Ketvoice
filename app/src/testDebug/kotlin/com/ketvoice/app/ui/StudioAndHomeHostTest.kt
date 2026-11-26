@@ -52,8 +52,8 @@ class StudioAndHomeHostTest {
         flow<Boolean>(PublisherSession, "_allowed").value = false
         flow<Boolean>(PublisherSession, "_restoring").value = false
         player.value = PlayerUiState(); position.value = 0L
-        flow<Map<String, DayStat>>(ListeningHistory, "_days").value = emptyMap()
-        (ListeningHistory.knownTracks as MutableStateFlow<List<Track>>).value = emptyList()
+        ListeningSeam.liveField<Map<String, DayStat>>("_days").value = emptyMap()
+        ListeningSeam.live(ListeningHistory.knownTracks).value = emptyList()
         AppUi.editImportedSong.value = false
         MediaOverrides.replaceForTest(emptyList())
         playerField("controller").set(Player, oldController)
@@ -146,11 +146,11 @@ class StudioAndHomeHostTest {
 
     @Test fun theWeekCardAppearsOnceThereIsAWeekToTell() {
         val a = Track("fixture:week-a", "Favori", "Nova", "Album")
-        (ListeningHistory.knownTracks as MutableStateFlow<List<Track>>).value = listOf(a)
+        ListeningSeam.live(ListeningHistory.knownTracks).value = listOf(a)
         val today = java.time.LocalDate.now()
         var days = ListeningWeek.addTime(emptyMap(), today, 2 * 3_600_000L)
         repeat(4) { days = ListeningWeek.addPlay(days, today, a.id) }
-        flow<Map<String, DayStat>>(ListeningHistory, "_days").value = days
+        ListeningSeam.liveField<Map<String, DayStat>>("_days").value = days
         compose.setContent { KetvoiceTheme(useDark = true) { HomeWeekCard() } }
         image("home-week")
         compose.onNodeWithTag("home-week").assertIsDisplayed()

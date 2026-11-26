@@ -72,7 +72,7 @@ class Look73HostTest {
     @After fun reset() {
         AppSettings.albumHeader.value = 0
         field<Map<String, String>>(CanvasRepo::class.java, "_paths").value = emptyMap()
-        field<List<Track>>(ListeningHistory::class.java, "_tracks").value = emptyList()
+        ListeningSeam.liveField<List<Track>>("_tracks").value = emptyList()
     }
 
     @Test fun headerStylesFallBackToTheCover() {
@@ -106,7 +106,7 @@ class Look73HostTest {
     }
 
     @Test fun searchStartPlayedFirstThenCategories() {
-        field<List<Track>>(ListeningHistory::class.java, "_tracks").value = tracks + tracks.first()
+        ListeningSeam.liveField<List<Track>>("_tracks").value = tracks + tracks.first()
         val genres = listOf("Rap/Hip Hop", "Pop", "Électro", "R&B", "Rock", "Jazz", "Chill", "Années 2000").mapIndexed { i, g ->
             CatalogGenre("$i", g, "fixture:cover:$i")
         }

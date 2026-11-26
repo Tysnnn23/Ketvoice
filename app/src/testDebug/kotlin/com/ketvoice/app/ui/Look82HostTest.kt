@@ -56,7 +56,7 @@ class Look82HostTest {
     @Suppress("UNCHECKED_CAST") private val player get() = Player.state as MutableStateFlow<PlayerUiState>
     @Suppress("UNCHECKED_CAST") private val position get() = Player.positionMs as MutableStateFlow<Long>
     @Suppress("UNCHECKED_CAST") private val lyrics get() = LyricsRepo.state as MutableStateFlow<LyricsRepo.State>
-    @Suppress("UNCHECKED_CAST") private val recent get() = ListeningHistory.tracks as MutableStateFlow<List<Track>>
+    @Suppress("UNCHECKED_CAST") private val recent get() = ListeningSeam.live(ListeningHistory.tracks)
     @Suppress("UNCHECKED_CAST") private fun <T> field(owner: Class<*>, name: String) = ReflectionHelpers.getStaticField<MutableStateFlow<T>>(owner, name)
 
     private val tracks = listOf("Lucid Dreams", "Robbery", "Wishing Well", "Righteous", "Bandit").mapIndexed { i, t ->

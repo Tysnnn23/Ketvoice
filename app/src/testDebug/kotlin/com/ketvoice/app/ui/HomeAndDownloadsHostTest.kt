@@ -29,9 +29,9 @@ class HomeAndDownloadsHostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val saved get() = Downloader.items as MutableStateFlow<List<Downloader.Item>>
     private val active get() = Downloader.activeTracks as MutableStateFlow<Map<String, Track>>
-    private val known get() = ListeningHistory.knownTracks as MutableStateFlow<List<Track>>
-    private val recent get() = ListeningHistory.tracks as MutableStateFlow<List<Track>>
-    private val counts get() = ListeningHistory.playCounts as MutableStateFlow<Map<String, Int>>
+    private val known get() = ListeningSeam.live(ListeningHistory.knownTracks)
+    private val recent get() = ListeningSeam.live(ListeningHistory.tracks)
+    private val counts get() = ListeningSeam.live(ListeningHistory.playCounts)
 
     @Before fun setup() {
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
@@ -166,7 +166,7 @@ class HomeAndDownloadsHostTest {
         recent.value = known.value.take(9)
         AppSettings.favoriteIds.value = setOf(known.value.first().id)
         @Suppress("UNCHECKED_CAST")
-        val days = ListeningHistory::class.java.getDeclaredField("_days").apply { isAccessible = true }.get(ListeningHistory) as MutableStateFlow<Map<String, DayStat>>
+        val days = ListeningSeam.liveField<Map<String, DayStat>>("_days")
         val before = days.value
         val today = java.time.LocalDate.now()
         var week = ListeningWeek.addTime(emptyMap(), today, 50 * 60_000L)

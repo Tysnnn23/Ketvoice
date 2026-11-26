@@ -36,9 +36,9 @@ import java.io.File
 class Pages74HostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val saved get() = Downloader.items as MutableStateFlow<List<Downloader.Item>>
-    private val known get() = ListeningHistory.knownTracks as MutableStateFlow<List<Track>>
-    private val recent get() = ListeningHistory.tracks as MutableStateFlow<List<Track>>
-    private val counts get() = ListeningHistory.playCounts as MutableStateFlow<Map<String, Int>>
+    private val known get() = ListeningSeam.live(ListeningHistory.knownTracks)
+    private val recent get() = ListeningSeam.live(ListeningHistory.tracks)
+    private val counts get() = ListeningSeam.live(ListeningHistory.playCounts)
     private val colours = listOf(0xFFB8473A, 0xFF2F6F8F, 0xFFD9A441, 0xFF4F7A4A, 0xFF6B4C9A, 0xFF1F1F24).map { it.toInt() }
 
     @Before fun setup() {
