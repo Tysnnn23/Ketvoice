@@ -105,8 +105,8 @@ fun main(args: Array<String>) {
     }
     // Windows 2.0 social: « Ensemble », « Activité des amis », the profile page, « Partager », ketvoice:// links.
     com.ketvoice.desktop.social.SocialFeature.register()
-    // Windows 2.0: the live mix view (« Ketmix » tab, full player) and « Ketmix apprend »'s 👍/👎 after each transition.
-    com.ketvoice.desktop.ui.KetmixLive.register()
+    // Windows 2.0: « Ketmix apprend »'s 👍/👎 after each transition (the « Ketmix » tab and a toast above the island).
+    com.ketvoice.desktop.ui.KetmixRating.register()
     DesktopPlatform.open(InstanceMessage.openable(argList))
     val autostarted = Autostart.FLAG in argList
     val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
@@ -342,8 +342,8 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     com.ketvoice.app.automix.WaveStore.init(context)
     // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
     com.ketvoice.app.stems.StemLibrary.start()
-    // Windows 2.0 « Puissance de Ketmix »: large models, GPU, idle preparation, live mix view, « Ketmix apprend ».
-    com.ketvoice.desktop.ketmix.KetmixPc.start(context, engine, scope)
+    // Windows 2.0 « Puissance de Ketmix »: large models, GPU, idle preparation, « Ketmix apprend ».
+    com.ketvoice.desktop.ketmix.KetmixPc.start(context, scope)
     // Audio files opened with Ketvoice (file associations), from this launch and later ones.
     com.ketvoice.desktop.library.OpenFiles.start(scope, java.io.File(context.cacheDir, "local-covers")) { Player.playQueue(it, 0) }
     // Updates from the windows-v* releases (at most once per 6 h; Settings › À propos checks now).

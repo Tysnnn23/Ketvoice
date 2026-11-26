@@ -119,32 +119,23 @@ class Win2Screenshots {
         assertTrue(File(out, "win2-nowplaying-canvas-lyrics-1440p-dark.png").length() > 10_000)
     }
 
-    /** The live mix view (« Ketmix » tab, full player) and « Ketmix apprend »'s toast above the island. */
-    @Test fun rendersTheLiveMix() {
-        KetmixLive.register()
+    /** « Ketmix apprend »: the last transition's 👍/👎 in the « Ketmix » tab and the toast above the island. */
+    @Test fun rendersKetmixRatings() {
+        KetmixRating.register()
         com.ketvoice.desktop.ketmix.KetmixPcSettings.learns.value = true
         try {
-            com.ketvoice.desktop.ketmix.KetmixFeedback.planned(LiveMixFixtures.plan, LiveMixFixtures.from, LiveMixFixtures.to)
-            com.ketvoice.desktop.ketmix.LiveMix.showForTest(LiveMixFixtures.frame())
-            for (dark in listOf(true, false)) {
-                val look = if (dark) "dark" else "light"
-                shoot("ketmix-live-$look") { Shell(Route.Home, dark, Panel.KETMIX) }
-                shoot("nowplaying-live-$look") { Shell(Route.Home, dark, full = true) }
-            }
-            FullPlayerLyrics.shown.value = true
-            shoot("nowplaying-live-lyrics-dark") { Shell(Route.Home, true, full = true) }
-            FullPlayerLyrics.shown.value = false
-            com.ketvoice.desktop.ketmix.LiveMix.showForTest(null)
+            val plan = com.ketvoice.app.automix.MixPlan(com.ketvoice.app.automix.MixKind.Beatmatch, outMs = 160_000, inMs = 500, overlapMs = 16_000, swapMs = 168_000)
+            com.ketvoice.desktop.ketmix.KetmixFeedback.planned(plan, com.ketvoice.app.data.Track("live-a", "Nuit claire", "Nora Vale", "", durationMs = 200_000L),
+                com.ketvoice.app.data.Track("live-b", "Sous la jetée", "Nora Vale", "", durationMs = 200_000L))
             for (dark in listOf(true, false)) shoot("ketmix-toast-${if (dark) "dark" else "light"}", steps = listOf(
                 { com.ketvoice.desktop.ketmix.KetmixFeedback.playing(true) }, { com.ketvoice.desktop.ketmix.KetmixFeedback.playing(false) })) {
                 Shell(Route.Albums, dark)
             }
+            shoot("ketmix-last-dark") { Shell(Route.Home, true, Panel.KETMIX) }
         } finally {
-            com.ketvoice.desktop.ketmix.LiveMix.showForTest(null)
             com.ketvoice.desktop.ketmix.KetmixFeedback.resetForTest()
             com.ketvoice.desktop.ketmix.KetmixPcSettings.learns.value = false
-            FullPlayerLyrics.shown.value = false
         }
-        assertTrue(File(out, "win2-ketmix-live-dark.png").length() > 10_000)
+        assertTrue(File(out, "win2-ketmix-last-dark.png").length() > 10_000)
     }
 }

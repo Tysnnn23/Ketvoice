@@ -45,7 +45,7 @@ object PageRegistry {
 
 /**
  * The tabs of the right glass panel: « Paroles », « File d'attente », « Artiste » and « Ketmix » are built in; a
- * feature adds its own with [register] (a live mix view, a room's chat…). The island's lyrics and queue buttons open
+ * feature adds its own with [register] (« Ketmix apprend »'s last transition, a room's chat…). The island's lyrics and queue buttons open
  * their tab; [ShellState.open] opens any of them.
  */
 object PanelTabs {
@@ -127,8 +127,8 @@ object IslandMarks {
 }
 
 /**
- * Blocks a feature shows in the unfolded full player, under the transport (Windows 2.0): the live mix view while
- * Ketmix crosses two titles. Each draws nothing when it has nothing to say. [Slot.content] gets the full player's
+ * Blocks a feature shows in the unfolded full player, under the transport (Windows 2.0; none is registered since the
+ * live mix view was removed). Each draws nothing when it has nothing to say. [Slot.content] gets the full player's
  * glass backdrop (its cover colours) and whether the player is compact (the lyrics are open beside it).
  */
 object FullPlayerSlots {

@@ -2,13 +2,12 @@ package com.ketvoice.desktop.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -32,16 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.ketvoice.app.data.AppText
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.desktop.ketmix.KetmixFeedback
-import com.ketvoice.desktop.ketmix.LiveMix
 import com.ketvoice.desktop.ui.glass.GlassBackdrop
 import com.ketvoice.desktop.ui.glass.GlassStyle
 import com.ketvoice.desktop.ui.glass.glass
@@ -52,18 +52,17 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * Where the live mix view and « Ketmix apprend » show (Windows 2.0), all through the shell's registries: the « Ketmix »
- * tab of the right panel (the live view above the tab's switch, style and Studio; the last transition's 👍/👎 when no
- * transition plays), the full player while a transition plays ([FullPlayerSlots]), and a small glass toast above the
- * island after each transition asking for 👍/👎, only while « Ketmix apprend de vos avis » is on.
+ * « Ketmix apprend de vos avis » on Windows (2.0), through the shell's registries only: the « Ketmix » tab of the right
+ * panel opens with the last transition's 👍/👎 (« Dernière transition »), and a small glass toast above the island asks
+ * for one after each transition, both only while learning is on. The live mix view of Windows 2.0 was removed in
+ * 2.0.1 (owner: « retire le truc mix en direct »).
  */
-object KetmixLive {
+object KetmixRating {
     const val TOAST_MS = 9_000L
     const val THANKS_MS = 1_600L
 
     fun register() {
         PanelTabs.register(PanelTabs.Tab("ketmix", "Ketmix", DeskGlyphs.Ketmix, 40) { KetmixTab() })
-        FullPlayerSlots.register(FullPlayerSlots.Slot("ketmix-live", order = 10) { backdrop, compact -> FullPlayerLiveMix(backdrop, compact) })
         ShellOverlays.register(ShellOverlays.Overlay("ketmix-rate", order = 30) { backdrop -> RateToast(backdrop) })
     }
 
@@ -73,17 +72,16 @@ object KetmixLive {
      */
     internal fun ended(t: KetmixFeedback.Transition?, last: Long?): Long? =
         if (t != null && !t.playing && t.id == last && t.rating == null) t.id else null
+
+    /** « calé sur le tempo » → « Calé sur le tempo », in the listener's language. */
+    fun title(label: String): String = AppText.t(label).replaceFirstChar { it.uppercaseChar() }
 }
 
-/** The « Ketmix » tab: the transition playing, then the tab's usual content. */
+/** The « Ketmix » tab: the last transition's 👍/👎 while learning, then the tab's usual content. */
 @Composable
 private fun KetmixTab() {
-    val frame by LiveMix.frame.collectAsState()
     Column(Modifier.fillMaxSize()) {
-        AnimatedVisibility(frame != null, enter = appear(), exit = disappear()) {
-            LiveMixView(Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 8.dp))
-        }
-        if (frame == null && KetmixFeedback.enabled) LastTransition()
+        if (KetmixFeedback.enabled) LastTransition()
         Box(Modifier.weight(1f)) { KetmixPanel() }
     }
 }
@@ -99,18 +97,9 @@ private fun LastTransition() {
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             KText("Dernière transition", Ket27Desk.Type.caption, color = ket.secondary)
-            KText(LiveMixWords.title(last.label), Ket27Desk.Type.subheadline, color = ket.label, weight = FontWeight.SemiBold, translate = false)
+            KText(KetmixRating.title(last.label), Ket27Desk.Type.subheadline, color = ket.label, weight = FontWeight.SemiBold, translate = false)
         }
-        RateButtons(last.rating, LiveInk.of(false, ket.label, ket.secondary, ket.accent, ket.hairline), "ketmix-last")
-    }
-}
-
-/** The full player's live mix view, under the transport, while Ketmix crosses two titles. */
-@Composable
-private fun FullPlayerLiveMix(backdrop: GlassBackdrop?, compact: Boolean) {
-    val frame by LiveMix.frame.collectAsState()
-    AnimatedVisibility(frame != null, enter = appear(), exit = disappear()) {
-        LiveMixView(Modifier.padding(top = if (compact) 10.dp else 26.dp), onDark = true, compact = compact, backdrop = backdrop)
+        RateButtons(last.rating, ket.label, "ketmix-last")
     }
 }
 
@@ -124,11 +113,11 @@ private fun BoxScope.RateToast(backdrop: GlassBackdrop?) {
     var asking by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(t?.id, t?.playing) {
         val now = t ?: return@LaunchedEffect
-        KetmixLive.ended(now, playingId)?.let { asking = it }
+        KetmixRating.ended(now, playingId)?.let { asking = it }
         playingId = if (now.playing) now.id else null
     }
-    LaunchedEffect(asking) { if (asking != null) { delay(KetmixLive.TOAST_MS); asking = null } }
-    LaunchedEffect(t?.rating) { if (t?.rating != null && asking == t?.id) { delay(KetmixLive.THANKS_MS); asking = null } }
+    LaunchedEffect(asking) { if (asking != null) { delay(KetmixRating.TOAST_MS); asking = null } }
+    LaunchedEffect(t?.rating) { if (t?.rating != null && asking == t?.id) { delay(KetmixRating.THANKS_MS); asking = null } }
     val shown = asking != null && asking == t?.id && KetmixFeedback.enabled && !shell.fullPlayer
     var size by remember { mutableStateOf(IntSize.Zero) }
     val island = shell.islandBounds
@@ -144,14 +133,22 @@ private fun BoxScope.RateToast(backdrop: GlassBackdrop?) {
                 Column(Modifier.padding(start = 10.dp, end = 8.dp).weight(1f, fill = false)) {
                     KText(if (rating == null) "Cette transition vous a plu ?" else "Merci, Ketmix s'en souviendra", Ket27Desk.Type.footnote,
                         color = ket.label, weight = FontWeight.SemiBold)
-                    t?.label?.let { KText(LiveMixWords.title(it), Ket27Desk.Type.caption, color = ket.secondary, translate = false) }
+                    t?.label?.let { KText(KetmixRating.title(it), Ket27Desk.Type.caption, color = ket.secondary, translate = false) }
                 }
                 Spacer(Modifier.height(1.dp))
-                RateButtons(rating, LiveInk.of(false, ket.label, ket.secondary, ket.accent, ket.hairline), "ketmix-rate")
+                RateButtons(rating, ket.label, "ketmix-rate")
             }
         }
     }
 }
 
-private fun appear() = if (Motion.reduced) fadeIn(snap()) else fadeIn() + expandVertically(expandFrom = Alignment.Top)
-private fun disappear() = if (Motion.reduced) fadeOut(snap()) else fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+/** 👍/👎 on a transition, as « Ketmix apprend de vos avis » counts them. */
+@Composable
+private fun RateButtons(rating: Boolean?, ink: Color, tagPrefix: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        KetIconButton(DeskGlyphs.ThumbUp, "Elle m'a plu", { KetmixFeedback.rate(true) }, Modifier.testTag("$tagPrefix-up"),
+            size = 30.dp, glyph = 16.dp, active = rating == true, tint = ink.copy(alpha = .8f))
+        KetIconButton(DeskGlyphs.ThumbDown, "Elle ne m'a pas plu", { KetmixFeedback.rate(false) }, Modifier.testTag("$tagPrefix-down"),
+            size = 30.dp, glyph = 16.dp, active = rating == false, tint = ink.copy(alpha = .8f))
+    }
+}

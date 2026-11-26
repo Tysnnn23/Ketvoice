@@ -206,7 +206,6 @@ object DesktopAutomix {
         e.mixIntoNext(plan, preRoll(plan), stems?.let { it.out to it.incoming }) { ok -> if (!ok) { _ui.value = Ui() } }
         remember(plan)
         KetmixFeedback.planned(plan, current, next)
-        LiveMix.planned(plan, current, next, outSource, inSource, out.analysis, incoming.analysis, scope)
         AppLog.i("ketmix", "mix planned: ${plan.kind} at ${plan.outMs} ms into ${plan.inMs} ms, ${plan.overlapMs} ms, speed ${plan.rate}")
     }
 

@@ -127,8 +127,9 @@ class DeckDspTest {
         assertEquals("Repeats every half beat", 250_000L, out.echoDelayUs)
         assertEquals(0f, out.echo.at(184_400_000), 0f)
         assertEquals("The last beat goes into the echo", 1f, out.echo.at(184_800_000), 1e-3f)
-        assertEquals("Nothing after the cut does", 0f, out.echo.at(185_020_000), 1e-3f)
-        assertEquals(1f, out.dry.at(185_000_000), 1e-3f); assertEquals(0f, out.dry.at(185_030_000), 1e-3f)
+        // 9.1.1: the send and the title close over 60 ms, eased (a cut inside the music clicked before).
+        assertEquals("Nothing after the cut does", 0f, out.echo.at(185_060_000), 1e-3f)
+        assertEquals(1f, out.dry.at(185_000_000), 1e-3f); assertEquals(0f, out.dry.at(185_060_000), 1e-3f)
         assertEquals(1f, out.gain.at(185_700_000), 1e-3f); assertEquals(0f, out.gain.at(187_000_000), 1e-3f)
         // The next title is there at once, at its matched level.
         assertEquals(0f, into.gain.at(500_000), 1e-3f); assertEquals(.9f, into.gain.at(540_000), 1e-3f)

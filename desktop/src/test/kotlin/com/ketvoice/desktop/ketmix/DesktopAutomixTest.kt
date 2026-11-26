@@ -56,6 +56,7 @@ class DesktopAutomixTest {
     @After fun tearDown() {
         DesktopAutomix.resetForTest(); Player.resetForTest(); scope.cancel()
         AppSettings.automix.value = false
+        AppSettings.ketmixStyle.value = 0
     }
 
     @Test fun endsOfTitlesAreMixedAndSkipsBlend() {
@@ -69,6 +70,9 @@ class DesktopAutomixTest {
         AppSettings.automix.value = true
         AppSettings.ketmixAnalysis.value = 0
         AppSettings.ketmixOnSkip.value = true
+        // 9.1.1: left to Ketmix, a groove at full level to its last sample starts the next one on the beat (no overlap);
+        // the echo style asked for here rings it out over the next title, which the decks must play together.
+        AppSettings.ketmixStyle.value = com.ketvoice.app.automix.MixStyle.Echo.ordinal
         val files = mapOf("a" to a, "b" to b, "c" to c)
         try {
             Player.attach(engine, { t -> AudioSource.LocalFile(files.getValue(t.id).path) }, scope)

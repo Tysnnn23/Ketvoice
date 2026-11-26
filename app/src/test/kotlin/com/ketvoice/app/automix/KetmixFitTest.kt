@@ -162,9 +162,9 @@ class KetmixFitTest {
         // Tempos too far apart; the last exit was an echo, so a build is due.
         val due = MixContext(lastExit = 1)
         assertEquals(MixKind.Rise, plan(outro(138f), intro(122f), due, sungUntil = 170_000).kind)
-        // Into a title 8 dB quieter the drop would fall flat: the outgoing title leaves on an echo instead.
+        // Into a title 8 dB quieter the drop would fall flat: the two cross by their filters (9.1.1: an echo is no fallback).
         val flat = plan(outro(138f, loudness = -9f), intro(122f, loudness = -17f), due, sungUntil = 170_000)
-        assertEquals(MixKind.Echo, flat.kind)
+        assertEquals(MixKind.Filter, flat.kind)
         assertEquals("the quieter title is not turned up, nor the other one cut down at once", 1f, flat.gain, 0f)
         assertTrue(BlendFit.carriesADrop(outro(loudness = -12f), intro(loudness = -15f)))
         assertTrue(BlendFit.carriesADrop(outro(loudness = -12f), intro(loudness = -6f)))

@@ -42,7 +42,7 @@ internal object MixBench {
 
     /** A groove at [bpm] (kick, hats, pad from [Synth.groove]) with a held bass at [bassHz] and a layer that changes every 8 bars. */
     fun groove(bpm: Float, startMs: Long, seconds: Float, durationMs: Long = 200_000L, firstBeatAt: Float = .25f, bassHz: Double = 55.0,
-               ending: Ending = Ending.Plain, introBars: Int = 0, level: Float = .8f, seed: Int = 7): Title {
+               ending: Ending = Ending.Plain, introBars: Int = 0, level: Float = .8f, seed: Int = 7, bassPhase: Double = 0.0): Title {
         val s = Synth.groove(RATE, seconds, bpm, firstBeatAt, seed = seed, gain = level)
         val beat = 60f / bpm
         val bar = 4 * beat
@@ -51,7 +51,7 @@ internal object MixBench {
             val phrase = floor((t - firstBeatAt) / (8 * bar)).toInt()
             val intro = t < firstBeatAt + introBars * bar
             if (intro) { s[i] *= .32f; continue }
-            s[i] += level * (.16f * sin(2 * PI * bassHz * t).toFloat() + (if (phrase % 2 == 0) .05f * sin(2 * PI * 440.0 * t).toFloat() else 0f))
+            s[i] += level * (.16f * sin(2 * PI * bassHz * t + bassPhase).toFloat() + (if (phrase % 2 == 0) .05f * sin(2 * PI * 440.0 * t).toFloat() else 0f))
         }
         shapeEnding(s, ending, firstBeatAt, bar, seconds)
         return Title(s, startMs, durationMs, bpm, startMs + firstBeatAt * 1000.0)
@@ -237,6 +237,33 @@ internal object MixBench {
         var i = 0
         while (i + win <= la.size) { if (rms(la, i, win) > refA * .5 && rms(lb, i, win) > refB * .5) clash++; i += win }
         return clash * 50
+    }
+
+    /**
+     * 9.1.1: the deepest dip of the summed bass (under 120 Hz, 50 ms windows) within a beat of the bass swap, in dB under
+     * the quieter of the two bass lines heard alone (two beats before the swap, the outgoing; two after, the incoming).
+     * Two bass lines on the same note cancel each other where both are half up.
+     */
+    fun bassDipDb(r: Render, plan: MixPlan): Double {
+        val low = butter(120.0, false).run(butter(120.0, false).run(r.sum))
+        val win = RATE / 20
+        val beat = plan.beatMs.toDouble()
+        fun rms(fromMs: Double): Double {
+            val from = r.frameAt(fromMs); var s = 0.0
+            for (i in from until min(low.size, from + win)) s += low[i].toDouble() * low[i]
+            return sqrt(s / win)
+        }
+        fun mean(fromMs: Double, toMs: Double): Double {
+            var at = fromMs; var s = 0.0; var n = 0
+            while (at + 50.0 <= toMs) { s += rms(at); n++; at += 50.0 }
+            return s / max(1, n)
+        }
+        val swap = plan.swapMs.toDouble()
+        val ref = min(mean(swap - 3 * beat, swap - 1.5 * beat), mean(swap + 1.5 * beat, swap + 3 * beat))
+        var worst = Double.MAX_VALUE
+        var at = swap - beat
+        while (at + 50.0 <= swap + beat) { worst = min(worst, rms(at)); at += 10.0 }
+        return 20 * log10(ref / max(worst, 1e-9))
     }
 
     /** 4x oversampled peak of the sum, dBTP. */
