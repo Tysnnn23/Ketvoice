@@ -107,7 +107,7 @@ private fun TableRow(t: Track, list: List<Track>, index: Int, striped: Boolean, 
     val fg2 = if (selected) Color.White.copy(alpha = .85f) else ket.secondary
     Row(Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(6.dp)).background(bg).hoverable(source)
         .trackInteractions(t, list, index, onSelect).padding(horizontal = 8.dp).testTag("row:${t.id}"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(44.dp)) { Artwork(t.coverUrl, 30.dp, radius = 4.dp) }
+        Box(Modifier.width(44.dp)) { Artwork(CoverSources.track(t), 30.dp, radius = 4.dp) }
         Cell(t.title, Modifier.weight(3f), if (playing && !selected) ket.accent else fg, FontWeight.Medium)
         Cell(t.artist, Modifier.weight(2f), fg2)
         Cell(t.album, Modifier.weight(2f), fg2)
@@ -149,7 +149,7 @@ fun AlbumsPage() {
     val sort = DeskLayout.librarySort("albums")
     val albums = remember(songs, sort, added) { LibraryViews.albums(songs, sort, added) }
     Grid("Albums", "albums", albums, 180.dp, "Les albums de vos titres apparaissent ici.", DeskLayout.libraryGrid("albums"),
-        line = { a -> LibraryLine(a.title, a.artist, a.cover, round = false, "album-line:${a.title}", { nav.push(Route.Album(a)) }) {
+        line = { a -> LibraryLine(a.title, a.artist, CoverSources.album(a), round = false, "album-line:${a.title}", { nav.push(Route.Album(a)) }) {
             actions.collectionMenu { songs.filter { it.album.equals(a.title, true) } }
         } }) { a ->
         val list = { songs.filter { it.album.equals(a.title, true) } }
@@ -182,7 +182,7 @@ fun ArtistsPage() {
     Grid("Artistes", "artists", artists, 160.dp, "Les artistes de vos titres apparaissent ici.", DeskLayout.libraryGrid("artists"),
         line = { a ->
             val theirs = songs.filter { it.artist.substringBefore(',').trim() == a.name }
-            LibraryLine(a.name, com.ketvoice.app.data.AppText.t(if (theirs.size == 1) "1 titre" else "${theirs.size} titres"), a.picture ?: theirs.firstOrNull()?.coverUrl,
+            LibraryLine(a.name, com.ketvoice.app.data.AppText.t(if (theirs.size == 1) "1 titre" else "${theirs.size} titres"), CoverSources.artistPhoto(a.name, a.picture) ?: CoverSources.track(theirs.firstOrNull()),
                 round = true, "artist-line:${a.name}", { nav.push(Route.Artist(a)) })
         }) { a ->
         androidx.compose.foundation.layout.BoxWithConstraints { ArtistCard(a, maxWidth) { nav.push(Route.Artist(a)) } }

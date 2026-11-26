@@ -131,7 +131,7 @@ fun CompactTrackRow(track: Track, list: List<Track>, index: Int, modifier: Modif
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Artwork(track.coverUrl, 42.dp, radius = 6.dp)
+            Artwork(CoverSources.track(track), 42.dp, radius = 6.dp)
             if (hovered) Box(Modifier.size(42.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .35f))
                 .androidxClickable { actions.play(list, index) }, contentAlignment = Alignment.Center) {
                 Icon(KetIcons.Play, null, Modifier.size(16.dp), tint = Color.White)
@@ -168,7 +168,7 @@ fun TrackColumns(tracks: List<Track>, columns: Int = 3, rows: Int = 4) {
 /** A cover with its title and artist; Play appears on hover. */
 @Composable
 fun AlbumCard(album: AlbumRef, width: Dp, onOpen: () -> Unit, onPlay: (() -> Unit)? = null, subtitle: String = album.artist,
-              menu: (() -> List<MenuItem>)? = null, shared: Boolean = true) {
+              menu: (() -> List<MenuItem>)? = null, shared: Boolean = true, art: (@Composable () -> Unit)? = null) {
     val ket = LocalKet.current
     val (source, hovered) = rememberHover()
     val lift by animateFloatAsState(if (hovered) 1.03f else 1f,
@@ -176,7 +176,7 @@ fun AlbumCard(album: AlbumRef, width: Dp, onOpen: () -> Unit, onPlay: (() -> Uni
     val menuState = LocalMenu.current
     Column(Modifier.width(width).hoverable(source).then(if (menu != null) Modifier.contextMenu(menuState, menu) else Modifier).testTag("album:${album.title}")) {
         Box(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.androidxClickable(onOpen)) {
-            Artwork(album.cover, width, if (shared) Modifier.sharedCover(SharedMotion.albumKey(album)) else Modifier, radius = Ket27Desk.Radius.artwork,
+            if (art != null) art() else Artwork(CoverSources.album(album), width, if (shared) Modifier.sharedCover(SharedMotion.albumKey(album)) else Modifier, radius = Ket27Desk.Radius.artwork,
                 shadow = if (hovered) 18.dp else 4.dp)
             if (hovered && onPlay != null) Box(Modifier.align(Alignment.BottomStart).padding(10.dp).size(34.dp)
                 .shadow(4.dp, CircleShape).clip(CircleShape).background(ket.accent).androidxClickable(onPlay), contentAlignment = Alignment.Center) {
@@ -195,8 +195,9 @@ fun ArtistCard(artist: ArtistRef, width: Dp, onOpen: () -> Unit) {
     val (source, hovered) = rememberHover()
     Column(Modifier.width(width).hoverable(source).androidxClickable(onOpen).testTag("artist:${artist.name}"), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.Center) {
-            Artwork(artist.picture, width, circle = true, shadow = if (hovered) 8.dp else 0.dp)
-            if (artist.picture == null || Covers.cached(artist.picture) == null)
+            val picture = CoverSources.artistPhoto(artist.name, artist.picture)
+            Artwork(picture, width, circle = true, shadow = if (hovered) 8.dp else 0.dp)
+            if (picture == null || Covers.cached(picture) == null)
                 KText(artist.name.take(1).uppercase(), Ket27Desk.Type.largeTitle, color = ket.secondary, translate = false)
         }
         Spacer(Modifier.height(8.dp))
@@ -227,7 +228,7 @@ fun TrackShelf(tracks: List<Track>, width: Dp = 176.dp, contentPadding: androidx
     LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, t ->
             Box(Modifier.trackInteractions(t, tracks, i)) {
-                AlbumCard(AlbumRef(t.albumId, t.title, t.artist, t.coverUrl), width,
+                AlbumCard(AlbumRef(t.albumId, t.title, t.artist, CoverSources.track(t)), width,
                     onOpen = { actions.play(tracks, i) }, onPlay = { actions.play(tracks, i) }, shared = false)
             }
         }

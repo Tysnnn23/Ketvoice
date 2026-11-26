@@ -9,6 +9,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.Density
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.data.CanvasRepo
+import com.ketvoice.app.data.Frame
+import com.ketvoice.app.data.KetvoiceApi
+import com.ketvoice.app.data.MediaOverride
+import com.ketvoice.app.data.MediaOverrides
+import kotlinx.coroutines.runBlocking
 import com.ketvoice.desktop.ui.glass.GlassMode
 import org.jetbrains.skia.EncodedImageFormat
 import java.io.File
@@ -25,10 +31,10 @@ class Win2Screenshots {
     private val out = File("build/desktop-ui-preview").apply { mkdirs() }
 
     private fun shoot(name: String, w: Int = 1440, h: Int = 900, hover: Offset? = null, steps: List<() -> Unit> = emptyList(),
-                      content: @Composable () -> Unit) {
+                      density: Float = 1f, content: @Composable () -> Unit) {
         Fixtures.installCovers()
         AppSettings.reduceAnimations.value = false
-        val scene = ImageComposeScene(w, h, Density(1f), content = content)
+        val scene = ImageComposeScene(w, h, Density(density), content = content)
         try {
             var t = 0L
             repeat(40) { scene.render(t); t += 50_000_000L }
@@ -79,6 +85,38 @@ class Win2Screenshots {
             }
         }
         assertTrue(File(out, "win2-home-dark.png").length() > 10_000)
+    }
+
+    /**
+     * The full player with a Canvas on a 27" 1440p screen: filling its column edge to edge, with and without the lyrics,
+     * at 100 % and at Windows' 150 % (the same 2560 × 1440 pixels), and with the owner's player framing.
+     */
+    @Test fun rendersTheCanvasPlayer() {
+        CanvasRepo.reset(android.content.Context(File("build/test-data/canvas-win2-${System.nanoTime()}")))
+        CanvasRepo.lookup = { KetvoiceApi.CanvasResult("https://canvas.example/${it.id}.mp4", "win2-${it.albumId}") }
+        CanvasRepo.fetchFile = { _, dest, _ -> com.ketvoice.desktop.canvas.CanvasFixtures.video().copyTo(dest, overwrite = true) }
+        AppSettings.animatedArtwork.value = true
+        val decode = listOf({ Thread.sleep(700) })
+        try {
+            val t = Fixtures.albumTracks(0)[3]
+            runBlocking { CanvasRepo.resolve(t); CanvasRepo.ensurePoster(CanvasRepo.localPath(t.id)!!) }
+            for (lyrics in listOf(true, false)) {
+                FullPlayerLyrics.shown.value = lyrics
+                shoot("nowplaying-canvas${if (lyrics) "-lyrics" else ""}-1440p-dark", 2560, 1440, steps = decode) { Shell(Route.Home, true, full = true) }
+            }
+            FullPlayerLyrics.shown.value = true
+            shoot("nowplaying-canvas-lyrics-1440p-150-dark", 2560, 1440, density = 1.5f, steps = decode) { Shell(Route.Home, true, full = true) }
+            val key = MediaOverrides.albumKey(t.album, t.artist)!!
+            MediaOverrides.replaceForTest(listOf(MediaOverride(MediaOverrides.ALBUM, key, playerFrame = Frame(cx = 0f, cy = .25f, w = .6f, h = .6f))))
+            shoot("nowplaying-canvas-framed-1440p-dark", 2560, 1440, steps = decode) { Shell(Route.Home, true, full = true) }
+        } finally {
+            FullPlayerLyrics.shown.value = false
+            MediaOverrides.replaceForTest(emptyList())
+            val until = System.currentTimeMillis() + 5_000
+            while (CanvasRepo.loading.value.isNotEmpty() && System.currentTimeMillis() < until) Thread.sleep(20)
+            CanvasRepo.reset(null)
+        }
+        assertTrue(File(out, "win2-nowplaying-canvas-lyrics-1440p-dark.png").length() > 10_000)
     }
 
     /** The live mix view (« Ketmix » tab, full player) and « Ketmix apprend »'s toast above the island. */

@@ -128,13 +128,20 @@ fun AlbumPage(ref: AlbumRef) {
     val ket = LocalKet.current
     val loader = rememberLoad(ref, empty = { it.tracks.isEmpty() }) { album(ref) }
     val data = loader.value
-    val cover = data?.ref?.cover ?: ref.cover
+    val cover = CoverSources.album(ref.title, ref.artist, data?.ref?.cover ?: ref.cover)
     val (wash, accent) = coverTint(cover)
     // Apple Music's motion artwork: the album's Canvas edge to edge at the top, the words under it.
+    // As on the phone: the titles shown on this page take what the owner published for this album, in the player too.
+    androidx.compose.runtime.LaunchedEffect(data) {
+        val d = data ?: return@LaunchedEffect
+        com.ketvoice.app.data.MediaOverrides.albumKey(d.ref.title, d.ref.artist)?.let { com.ketvoice.app.data.MediaOverrides.linkAlbum(d.tracks, it) }
+    }
     val motion = rememberHeaderCanvas(data?.tracks?.firstOrNull(), ref.id)
     Box(Modifier.fillMaxSize().background(wash)) {
         Page(null, "album") {
-            if (motion != null) item("motion") { MotionHeader(motion, wash) }
+            if (motion != null) item("motion") {
+                MotionHeader(motion, wash, cover, com.ketvoice.app.data.MediaOverrides.albumFrame((data?.ref ?: ref).title, (data?.ref ?: ref).artist))
+            }
             item("header") {
                 val r = data?.ref ?: ref
                 val tracks = data?.tracks.orEmpty()
@@ -175,8 +182,8 @@ fun ArtistPage(ref: ArtistRef) {
     val ket = LocalKet.current
     val loader = rememberLoad(ref, empty = { it.top.isEmpty() && it.albums.isEmpty() && it.singles.isEmpty() }) { artist(ref) }
     val data = loader.value
-    val photo = data?.ref?.picture ?: ref.picture
-    val image = rememberCover(photo)
+    val photo = CoverSources.artistHero(data?.ref?.name ?: ref.name, data?.ref?.picture ?: ref.picture)
+    val image = rememberCover(photo, CoverUrls.STEPS.last())
     // The play button sits on the photo's dark scrim: legible on black in both themes.
     val accent = rememberCoverColors(photo)?.second?.let { legible(it, Color(0xFF1C1C1E), Color.White) } ?: ket.accent
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -248,25 +255,6 @@ fun ArtistPage(ref: ArtistRef) {
     }
 }
 
-/**
- * A playlist's artwork: its own when it has one, else a mosaic of its first four covers, each read as the phone reads
- * it (the catalogue's override, then the cover found for the title, then the title's own).
- */
-@Composable
-fun Mosaic(tracks: List<Track>, size: androidx.compose.ui.unit.Dp, own: String? = null) {
-    val covers = if (own != null) listOf(own) else mosaicCovers(tracks)
-    if (covers.size < 4) { Artwork(covers.firstOrNull(), size, radius = Ket27Desk.Radius.artwork, shadow = if (size > 100.dp) 24.dp else 0.dp); return }
-    Box(Modifier.size(size).clip(RoundedCornerShape(if (size > 100.dp) Ket27Desk.Radius.artwork else 6.dp))) {
-        Column {
-            for (r in 0..1) Row { for (c in 0..1) Artwork(covers[r * 2 + c], size / 2, radius = 0.dp) }
-        }
-    }
-}
-
-/** The four covers a playlist's mosaic shows. */
-internal fun mosaicCovers(tracks: List<Track>): List<String> =
-    tracks.mapNotNull { com.ketvoice.app.data.ArtworkRepo.coverForTrack(it) ?: it.coverUrl }.distinct().take(4)
-
 @Composable
 fun PlaylistPage(id: String) {
     val library = LocalLibrary.current
@@ -279,7 +267,7 @@ fun PlaylistPage(id: String) {
     if (p == null) { Page(null, "playlist") { item { EmptyMessage("Playlist introuvable", "Cette playlist a été supprimée.") } }; return }
     Page(null, "playlist") {
         item("header") {
-            CollectionHeader({ Mosaic(p.tracks, 240.dp, p.coverUrl) }, "Playlist", p.name, AppText.t("Vous"), null,
+            CollectionHeader({ Mosaic(p.tracks, 240.dp, p.cover, p.name) }, "Playlist", p.name, AppText.t("Vous"), null,
                 if (p.tracks.isEmpty()) AppText.t("Aucun titre") else durationLabel(p.tracks), ket.accent, p.tracks,
                 titleSlot = if (!renaming) null else { { RenameField(p.name) { name -> renaming = false; if (name.isNotBlank() && name != p.name) library.renamePlaylist(p.id, name) } } },
                 extraButtons = {

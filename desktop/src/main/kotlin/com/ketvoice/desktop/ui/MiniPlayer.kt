@@ -152,7 +152,7 @@ fun MiniPlayerContent(onExpand: () -> Unit, onClose: () -> Unit = {}) {
     val player = LocalPlayer.current
     val state by player.state.collectAsState()
     val track = state.current
-    val image = rememberCover(track?.coverUrl)
+    val image = rememberCover(CoverSources.track(track))
     val backdrop = rememberGlassBackdrop()
     val (source, hovered) = rememberHover()
     val radius = 26.dp
@@ -166,7 +166,7 @@ fun MiniPlayerContent(onExpand: () -> Unit, onClose: () -> Unit = {}) {
             }
         }
         Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Artwork(track?.coverUrl, 92.dp, radius = 16.dp, shadow = 10.dp)
+            Artwork(CoverSources.track(track), 92.dp, radius = 16.dp, shadow = 10.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {

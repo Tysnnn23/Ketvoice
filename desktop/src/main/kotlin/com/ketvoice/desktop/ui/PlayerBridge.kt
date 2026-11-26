@@ -52,8 +52,7 @@ interface PlayerControls {
 
 private val NoErrors = kotlinx.coroutines.flow.MutableSharedFlow<String>()
 
-/** [coverUrl]: the playlist's own artwork (an imported playlist's, on https), shown instead of the mosaic. */
-data class UserPlaylist(val id: String, val name: String, val tracks: List<Track> = emptyList(), val coverUrl: String? = null)
+data class UserPlaylist(val id: String, val name: String, val tracks: List<Track> = emptyList(), val cover: String? = null)
 
 /** A download and its progress (0..1; 1 when the file is complete). */
 data class DownloadItem(val track: Track, val progress: Float) { val done: Boolean get() = progress >= 1f }

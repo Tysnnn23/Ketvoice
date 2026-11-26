@@ -4,7 +4,7 @@ import com.ketvoice.app.data.LocalPlaylist
 import com.ketvoice.app.data.PlaylistEntry
 import com.ketvoice.app.data.Track
 import com.ketvoice.desktop.ui.LibraryBridge
-import com.ketvoice.desktop.ui.mosaicCovers
+import com.ketvoice.desktop.ui.PlaylistMosaic
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -18,15 +18,15 @@ class PlaylistCoverTest {
             coverUrl = "https://example.com/own.jpg")
         val ui = LibraryBridge.toUi(playlist)
         assertEquals("🔥", ui.name)
-        assertEquals("https://example.com/own.jpg", ui.coverUrl)
+        assertEquals("https://example.com/own.jpg", ui.cover)
         // Only an address another device can load becomes the playlist's own artwork.
-        assertNull(LibraryBridge.toUi(playlist.copy(coverUrl = "file:///C:/cover.jpg")).coverUrl)
+        assertNull(LibraryBridge.toUi(playlist.copy(coverUrl = "file:///C:/cover.jpg")).cover)
     }
 
-    @Test fun theMosaicTakesTheTitlesCoversAndSkipsTheMissingOnes() {
+    @Test fun theMosaicShowsTheFirstFourTitlesAndAnEmptyPlaylistNone() {
         val tracks = listOf(song("a", "https://example.com/a.jpg"), song("b", null), song("c", "https://example.com/c.jpg"),
-            song("d", "https://example.com/a.jpg"), song("e", "https://example.com/e.jpg"), song("f", "https://example.com/f.jpg"))
-        assertEquals(listOf("https://example.com/a.jpg", "https://example.com/c.jpg", "https://example.com/e.jpg", "https://example.com/f.jpg"),
-            mosaicCovers(tracks))
+            song("d", "https://example.com/a.jpg"), song("e", "https://example.com/e.jpg"))
+        assertEquals(listOf("a", "b", "c", "d"), PlaylistMosaic.tiles(tracks).map { it?.id })
+        assertEquals(emptyList(), PlaylistMosaic.tiles(emptyList()))
     }
 }

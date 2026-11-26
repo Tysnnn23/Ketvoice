@@ -88,6 +88,8 @@ fun main(args: Array<String>) {
     Player.attach(engine, { t -> DesktopStreams.source(t)?.also { com.ketvoice.desktop.stems.DesktopVoice.remember(it, t.id) } }, scope)
     // Near-instant start (Windows 2.0): the last page, the queue where it stood and its cover, before anything else;
     // everything else starts behind the window, which opens at once on that state.
+    // What the owner published from the Studio (covers, Canvas, artist photos), as kept from the last run.
+    com.ketvoice.desktop.library.StudioContent.load(context)
     restoreSession(context)
     com.ketvoice.app.data.SettingsStore.watch(scope)
     Startup.mark("state")
@@ -180,6 +182,7 @@ fun main(args: Array<String>) {
                 window.addWindowFocusListener(object : java.awt.event.WindowAdapter() {
                     override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
                         com.ketvoice.desktop.library.DesktopAccount.foreground()
+                        com.ketvoice.desktop.library.StudioContent.touch()
                         com.ketvoice.desktop.connect.LiveSync.refreshSoon()
                         // Transparency effects or high contrast may have changed while away.
                         if (window.isDisplayable) WindowGlass.apply(window)
@@ -295,7 +298,7 @@ private fun restoreSession(context: android.content.Context) {
     val session = com.ketvoice.desktop.player.Session
     val saved = runCatching { session.load(context) }.getOrNull() ?: return
     runCatching { session.restore(saved) }.onFailure { AppLog.w("start", "session: $it") }
-    val url = saved.tracks.getOrNull(saved.index)?.coverUrl ?: return
+    val url = com.ketvoice.desktop.ui.CoverSources.track(saved.tracks.getOrNull(saved.index)) ?: return
     runCatching { session.coverBytes()?.let { com.ketvoice.desktop.ui.Covers.decode(it) }?.let { com.ketvoice.desktop.ui.Covers.put(url, it) } }
 }
 
@@ -305,6 +308,7 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     runCatching { MusicApi.init(context) }.onFailure { AppLog.w("start", "catalogue: $it") }
     runCatching { com.ketvoice.app.data.CustomSources.init(context) }
     com.ketvoice.app.data.ArtistPrefs.init(context)
+    com.ketvoice.desktop.library.StudioContent.start(context, scope)
     com.ketvoice.desktop.audio.DesktopEqualizer.attach(engine)
     // « Sortie audio » (the device remembered by name) and « Égaliseur par casque » (the correction linked to it).
     com.ketvoice.desktop.audio.DesktopOutput.attach(engine, scope)
@@ -314,7 +318,7 @@ private fun startBehind(context: android.content.Context, engine: FfmpegAudioEng
     // « Mode exclusif » and « Lecture sans blanc » follow their settings; the smart cache warms favourites.
     com.ketvoice.desktop.audio.ExclusiveOutput.attach(engine, scope, sink)
     com.ketvoice.desktop.player.CacheWarmer.start(scope)
-    com.ketvoice.desktop.player.Session.follow(scope) { t -> com.ketvoice.desktop.ui.LastPage.coverBytes(t.coverUrl) }
+    com.ketvoice.desktop.player.Session.follow(scope) { t -> com.ketvoice.desktop.ui.LastPage.coverBytes(com.ketvoice.desktop.ui.CoverSources.track(t)) }
     // « Playlists téléchargées à jour »: new titles of downloaded playlists are offered in the window.
     com.ketvoice.desktop.library.PlaylistWatch.start(context, scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)

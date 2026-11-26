@@ -57,8 +57,8 @@ internal fun HomeHero(hero: HomeHeroPick.Hero) {
     val ket = LocalKet.current
     val track = hero.track
     val canvas = rememberHeaderCanvas(track, track.albumId)
-    val image = rememberCover(track.coverUrl)
-    val colors = rememberCoverColors(track.coverUrl)
+    val image = rememberCover(CoverSources.track(track))
+    val colors = rememberCoverColors(CoverSources.track(track))
     val wash = colors?.first ?: ket.card
     val picture = rememberGlassBackdrop()
     BoxWithConstraints(Modifier.fillMaxWidth().testTag("home-hero")) {
@@ -66,7 +66,7 @@ internal fun HomeHero(hero: HomeHeroPick.Hero) {
         val width = maxWidth
         Box(Modifier.fillMaxWidth().height(height)) {
             Box(Modifier.fillMaxSize().background(wash).glassSource(picture)) {
-                if (canvas != null) CanvasVideo(canvas, playing = canvasMoves(), modifier = Modifier.fillMaxSize())
+                if (canvas != null) FilledCanvas(canvas, playing = true, cover = CoverSources.track(track), modifier = Modifier.fillMaxSize())
                 // Without a Canvas: the cover blurred to fill the frame (its sharp copy stands on the right).
                 else if (image != null) Image(image, null, Modifier.fillMaxSize().blur(56.dp), contentScale = ContentScale.Crop)
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = .5f), .6f to Color.Black.copy(alpha = .14f),
@@ -79,7 +79,7 @@ internal fun HomeHero(hero: HomeHeroPick.Hero) {
             val room = width - insets.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr) - end
             // The sharp cover only where it does not crowd the card (a narrow window or an open panel leave it out).
             if (canvas == null && HomeHeroPick.showCover(room.value, height.value * .58f)) {
-                Artwork(track.coverUrl, height * .58f, Modifier.align(Alignment.CenterEnd).padding(end = end + 72.dp, top = 12.dp).testTag("hero-cover"),
+                Artwork(CoverSources.track(track), height * .58f, Modifier.align(Alignment.CenterEnd).padding(end = end + 72.dp, top = 12.dp).testTag("hero-cover"),
                     radius = Ket27Desk.Radius.card, shadow = 44.dp)
             }
             HeroCard(hero, picture, Modifier.align(Alignment.BottomStart).then(PageEdges.sides()).padding(bottom = 54.dp))

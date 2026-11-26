@@ -176,7 +176,7 @@ private fun TopTracks(r: LiveStats.Result) {
         Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp)).clickable { player.playQueue(tracks, i) }
             .padding(horizontal = 4.dp).testTag("stats-track:$i"), verticalAlignment = Alignment.CenterVertically) {
             KText("${i + 1}", Ket27Desk.Type.subheadline, Modifier.width(24.dp), color = ket.secondary, translate = false)
-            Artwork(row.track.coverUrl, 36.dp, radius = 6.dp)
+            Artwork(CoverSources.track(row.track), 36.dp, radius = 6.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 KText(row.track.title, Ket27Desk.Type.subheadline, weight = FontWeight.Medium, translate = false)
@@ -195,7 +195,7 @@ private fun TopArtists(r: LiveStats.Result) {
         Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp)).clickable { nav.push(Route.Artist(ArtistRef(a.catalogId, a.name, a.cover))) }
             .padding(horizontal = 4.dp).testTag("stats-artist:$i"), verticalAlignment = Alignment.CenterVertically) {
             KText("${i + 1}", Ket27Desk.Type.subheadline, Modifier.width(24.dp), color = ket.secondary, translate = false)
-            Artwork(a.cover, 36.dp, circle = true)
+            Artwork(CoverSources.artistPhoto(a.name, a.cover), 36.dp, circle = true)
             Spacer(Modifier.width(10.dp))
             KText(a.name, Ket27Desk.Type.subheadline, Modifier.weight(1f), weight = FontWeight.Medium, translate = false)
             Plays(a.plays)

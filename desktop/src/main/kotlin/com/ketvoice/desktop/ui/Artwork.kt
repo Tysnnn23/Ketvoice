@@ -3,6 +3,7 @@ package com.ketvoice.desktop.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +20,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -33,6 +36,7 @@ import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.desktop.ui.theme.Ket27Desk
 import com.ketvoice.desktop.ui.theme.LocalKet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -41,31 +45,55 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Covers, decoded once per address and kept with their 7.5 colours. The cache is bounded by pixels, not by count
- * ([BUDGET_BYTES], least recently used first out), and a decode never keeps more than [MAX_SIDE] px on its long side:
- * a 3000 px store cover is 36 MB decoded, 6.5 MB here, which no window of the app shows larger.
+ * ([BUDGET_BYTES], least recently used first out). Each cover is decoded at the size the window shows it (a step of
+ * [CoverUrls.STEPS] at or above the place times the screen's scale, so 1440p and 4K get sharp pictures and a row's
+ * thumbnail stays small), fetched at that size from its service ([CoverUrls]), kept on disk ([CoverDisk]), and a
+ * failed load falls back to the address as given and is tried again a few times ([rememberCover]).
  */
 object Covers {
+    /** What a decode keeps on its long side when no size is asked. */
     const val MAX_SIDE = 1280
-    const val BUDGET_BYTES = 160L shl 20
+    const val BUDGET_BYTES = 192L shl 20
     private var bytes = 0L
+    /** A decoded cover and the step it was asked at ([Int.MAX_VALUE]: as large as it will ever be). */
+    private class Entry(val image: ImageBitmap, val step: Int)
     // Access order; several may have to go at once when a big one comes in, so put trims, not removeEldestEntry.
-    private val images = LinkedHashMap<String, ImageBitmap>(64, .75f, true)
+    private val images = LinkedHashMap<String, Entry>(64, .75f, true)
     private val colors = object : LinkedHashMap<String, CoverColors.Result>(64, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CoverColors.Result>?) = size > 2000
     }
-    private val client by lazy { OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).build() }
+    /** Sized addresses a service answered « not found » for, and when: the next load goes straight to the fallback. */
+    private val missing = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val MISSING_FOR_MS = 30 * 60_000L
+    private val client by lazy {
+        OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(20, TimeUnit.SECONDS).build()
+    }
+    /** The network, replaced by the tests: the bytes at an address, or null; [NotFound] for a definite miss. */
+    internal var fetchBytes: (String) -> ByteArray? = ::download
 
-    fun cached(url: String?): ImageBitmap? = url?.let { synchronized(images) { images[it] } }
-    /** Tests and the decoder put images here. */
-    fun put(url: String, image: ImageBitmap) {
+    internal class NotFound : Exception()
+
+    /** The cover at [url] as decoded so far, whatever its size. */
+    fun cached(url: String?): ImageBitmap? = url?.let { synchronized(images) { images[it]?.image } }
+
+    /** The cover at [url] when it was decoded at least for [px]. */
+    fun cachedFor(url: String?, px: Int): ImageBitmap? {
+        val step = CoverUrls.step(px)
+        return url?.let { synchronized(images) { images[it]?.takeIf { e -> e.step >= step }?.image } }
+    }
+
+    /** Tests and the decoder put images here; without a step, the image is as large as it will be. */
+    fun put(url: String, image: ImageBitmap, step: Int = Int.MAX_VALUE) {
         synchronized(images) {
-            images.put(url, image)?.let { bytes -= sizeOf(it) }
+            // A smaller decode finishing late never replaces a larger one.
+            images[url]?.let { held -> if (held.step > step && held.image !== image) return }
+            images.put(url, Entry(image, step))?.let { bytes -= sizeOf(it.image) }
             bytes += sizeOf(image)
             val it = images.entries.iterator()
             while (bytes > BUDGET_BYTES && images.size > 1 && it.hasNext()) {
                 val e = it.next()
                 if (e.key == url) continue
-                val n = sizeOf(e.value); bytes -= n; it.remove(); evictedBytes(n)
+                val n = sizeOf(e.value.image); bytes -= n; it.remove(); evictedBytes(n)
             }
         }
     }
@@ -74,6 +102,7 @@ object Covers {
     fun count(): Int = synchronized(images) { images.size }
     /** Everything dropped (the window went to the tray): a cover decodes again the next time it is shown. */
     fun trim() { synchronized(images) { images.clear(); bytes = 0 } }
+    internal fun forgetMisses() = missing.clear()
 
     private fun sizeOf(image: ImageBitmap) = image.width.toLong() * image.height * 4
 
@@ -88,18 +117,41 @@ object Covers {
         Thread({ System.gc() }, "covers-release").apply { isDaemon = true }.start()
     }
 
-    suspend fun load(url: String?): ImageBitmap? {
+    /** The cover at [url] for a place of [px] pixels: from memory, else from disk or its service, or null. */
+    suspend fun load(url: String?, px: Int = CoverUrls.DEFAULT_PX): ImageBitmap? {
         if (url.isNullOrBlank()) return null
-        cached(url)?.let { return it }
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                val bytes = when {
-                    url.startsWith("http") -> client.newCall(Request.Builder().url(url).build()).execute().use { r -> if (r.isSuccessful) r.body?.bytes() else null }
-                    url.startsWith("file:") -> File(java.net.URI(url)).readBytes()
-                    else -> File(url).takeIf { it.isFile }?.readBytes()
-                } ?: return@runCatching null
-                decode(bytes)?.also { put(url, it) }
-            }.getOrNull()
+        val step = CoverUrls.step(px)
+        cachedFor(url, step)?.let { return it }
+        return withContext(Dispatchers.IO) { fetch(url, step) }
+    }
+
+    /** Each candidate in turn: the sized address first, the given one last. */
+    private fun fetch(url: String, step: Int): ImageBitmap? {
+        val now = System.currentTimeMillis()
+        for (candidate in CoverUrls.candidates(url, step)) {
+            if (candidate != url && missing[candidate]?.let { now - it < MISSING_FOR_MS } == true) continue
+            val data = try { bytesOf(candidate) } catch (_: NotFound) { missing[candidate] = now; null } ?: continue
+            val image = runCatching { decode(data, step) }.getOrNull()
+            if (image == null) { CoverDisk.drop(candidate); continue }
+            put(url, image, step)
+            return image
+        }
+        return null
+    }
+
+    private fun bytesOf(address: String): ByteArray? = when {
+        address.startsWith("http") -> CoverDisk.read(address) ?: fetchBytes(address)?.also { CoverDisk.write(address, it) }
+        address.startsWith("file:") -> runCatching { File(java.net.URI(address)).readBytes() }.getOrNull()
+        else -> File(address).takeIf { it.isFile }?.readBytes()
+    }
+
+    private fun download(url: String): ByteArray? {
+        val request = Request.Builder().url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Ketvoice")
+            .header("Accept", "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8").build()
+        return runCatching { client.newCall(request).execute() }.getOrNull()?.use { r ->
+            if (r.code == 404 || r.code == 410 || r.code == 403) throw NotFound()
+            if (r.isSuccessful) r.body?.bytes()?.takeIf { it.size > 64 } else null
         }
     }
 
@@ -133,16 +185,35 @@ object Covers {
     }
 }
 
+/** How long a cover that could not load waits before each new try (the network back, a slow service). */
+internal val COVER_RETRY_MS = longArrayOf(0L, 2_000L, 6_000L, 20_000L, 60_000L)
+
+/**
+ * The cover at [url] for a place of [px] pixels (the place's size times the screen's scale): what is decoded already
+ * shows at once, at any size, and the sharp one replaces it; a failed load is tried again ([COVER_RETRY_MS]).
+ */
 @Composable
-fun rememberCover(url: String?): ImageBitmap? {
-    val image by produceState(Covers.cached(url), url) { value = Covers.load(url) }
+fun rememberCover(url: String?, px: Int = CoverUrls.DEFAULT_PX): ImageBitmap? {
+    val step = CoverUrls.step(px)
+    val image by produceState(Covers.cached(url), url, step) {
+        value = Covers.cached(url)
+        if (url.isNullOrBlank()) return@produceState
+        for (wait in COVER_RETRY_MS) {
+            if (wait > 0) delay(wait)
+            Covers.load(url, step)?.let { value = it; return@produceState }
+        }
+    }
     return image
 }
+
+/** The pixels a place of [side] takes on this screen (Windows' scale included). */
+@Composable
+internal fun pixelsOf(side: Dp): Int = with(LocalDensity.current) { side.roundToPx() }
 
 /** The page and accent colours of a cover, or null while it loads. */
 @Composable
 fun rememberCoverColors(url: String?): Pair<Color, Color>? {
-    val image = rememberCover(url)
+    val image = rememberCover(url, 256)
     val result = Covers.colorsOf(url, image) ?: return null
     return Color(result.background) to Color(result.base)
 }
@@ -153,16 +224,15 @@ fun Artwork(url: String?, size: Dp?, modifier: Modifier = Modifier, radius: Dp =
             circle: Boolean = false, shadow: Dp = 0.dp) {
     val ket = LocalKet.current
     val shape: Shape = if (circle) CircleShape else RoundedCornerShape(radius)
-    val image = rememberCover(url)
     val sized = if (size != null) modifier.size(size) else modifier.fillMaxWidth().aspectRatio(1f)
-    Box(
+    BoxWithConstraints(
         (if (shadow > 0.dp) sized.shadow(shadow, shape, ambientColor = Color.Black.copy(alpha = .25f), spotColor = Color.Black.copy(alpha = .3f)) else sized)
             .clip(shape).background(ket.card),
         contentAlignment = Alignment.Center,
     ) {
-        if (image != null) Image(image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        val image = rememberCover(url, pixelsOf(size ?: maxOf(maxWidth, maxHeight)))
+        if (image != null) Image(image, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
         else com.ketvoice.app.ui.common.Icon(KetIcons.Music, null, tint = ket.tertiary,
             modifier = Modifier.size(((size ?: 120.dp) * .34f).coerceIn(14.dp, 64.dp)))
     }
 }
-

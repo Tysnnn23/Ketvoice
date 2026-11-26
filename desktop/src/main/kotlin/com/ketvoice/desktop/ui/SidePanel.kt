@@ -167,7 +167,7 @@ internal fun ArtistPanel() {
     val loader = rememberLoad(ref, empty = { false }) { artist(ref) }
     val data = loader.value
     val photo = data?.ref?.picture ?: ref.picture
-    val image = rememberCover(photo ?: track.coverUrl)
+    val image = rememberCover(CoverSources.artistHero(ref.name, photo) ?: CoverSources.track(track), pixelsOf(420.dp))
     LazyColumn(Modifier.fillMaxSize().testTag("panel:artist"), contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 24.dp)) {
         item("photo") {
             Box(Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(20.dp)).background(ket.card)) {
@@ -242,10 +242,10 @@ internal fun KetmixPanel() {
 private fun TransitionLine(from: com.ketvoice.app.data.Track?, to: com.ketvoice.app.data.Track?) {
     val ket = LocalKet.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Artwork(from?.coverUrl, 44.dp, radius = 10.dp)
+        Artwork(CoverSources.track(from), 44.dp, radius = 10.dp)
         Box(Modifier.padding(horizontal = 8.dp).width(28.dp).height(2.dp).clip(RoundedCornerShape(1.dp))
             .background(Brush.horizontalGradient(listOf(ket.accent.copy(alpha = .2f), ket.accent))))
-        Artwork(to?.coverUrl, 44.dp, radius = 10.dp)
+        Artwork(CoverSources.track(to), 44.dp, radius = 10.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             KText(to?.title ?: AppText.t("Rien à suivre"), Ket27Desk.Type.subheadline, weight = FontWeight.SemiBold, translate = false)
