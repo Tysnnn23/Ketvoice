@@ -37,11 +37,14 @@ object TvFocusOrder {
     /**
      * Where a row scrolls so that the focused card stays at the same place on screen (Google TV's « pivot »):
      * [pivot] of the row's width from its start, never before the row's start nor past its end. Returns the scroll
-     * offset (px) to apply from the item's current [itemOffset] (its leading edge, relative to the viewport).
+     * offset (px) to apply from the item's current [itemOffset] (its leading edge, relative to the viewport). An element
+     * already in view before the pivot (or within [slack] of the viewport after it) does not move anything.
      */
-    fun pivotScroll(itemOffset: Float, itemSize: Float, viewport: Float, pivot: Float = PIVOT, leading: Float = 0f): Float {
+    fun pivotScroll(itemOffset: Float, itemSize: Float, viewport: Float, pivot: Float = PIVOT, leading: Float = 0f, slack: Float = 0f): Float {
         if (viewport <= 0f) return 0f
         val wanted = (viewport * pivot).coerceAtLeast(leading)
+        // Already in view and no further than [slack] past the pivot: nothing moves (the top of a page stays put).
+        if (itemOffset >= leading && itemOffset + itemSize <= viewport && itemOffset <= wanted + slack * viewport) return 0f
         // A card wider than the room left after the pivot is placed so that it fits whole.
         val target = if (wanted + itemSize > viewport) (viewport - itemSize).coerceAtLeast(leading) else wanted
         return itemOffset - target

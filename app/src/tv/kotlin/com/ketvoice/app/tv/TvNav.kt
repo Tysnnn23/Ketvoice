@@ -32,8 +32,11 @@ sealed interface TvRoute {
     val isRoot: Boolean get() = this in ROOTS
 
     companion object {
-        /** The side menu's sections, top to bottom. */
-        val ROOTS: List<TvRoute> = listOf(Search, Home, Library, Settings)
+        /**
+         * The side menu's sections, top to bottom. Lazy: the routes are objects of this same interface, which the JVM
+         * may still be initialising when the companion is.
+         */
+        val ROOTS: List<TvRoute> by lazy { listOf(Search, Home, Library, Settings) }
     }
 }
 

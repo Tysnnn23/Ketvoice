@@ -19,6 +19,13 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
 
+    <!-- Voice search: the TV's own speech recognizer, found through its intent (Android 11+ package visibility). -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:banner="@drawable/tv_banner"
         android:icon="@mipmap/ic_launcher_vicecity"

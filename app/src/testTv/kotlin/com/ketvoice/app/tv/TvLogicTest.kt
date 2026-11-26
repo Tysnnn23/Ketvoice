@@ -119,5 +119,10 @@ class TvLogicTest {
         // A leading margin larger than the pivot wins (the overscan-safe margin).
         assertEquals(400f - 160f, TvFocusOrder.pivotScroll(400f, 300f, 1600f, leading = 160f), .5f)
         assertEquals(0f, TvFocusOrder.pivotScroll(400f, 300f, 0f), 0f)
+        // Already in view before the pivot: nothing moves (a row's first card, the top of a page).
+        assertEquals(0f, TvFocusOrder.pivotScroll(60f, 300f, 1600f), 0f)
+        // A page's pivot with slack: an element a little past the pivot stays put, one further down scrolls up to it.
+        assertEquals(0f, TvFocusOrder.pivotScroll(220f, 100f, 1080f, pivot = .16f, slack = .15f), 0f)
+        assertEquals(700f - 172.8f, TvFocusOrder.pivotScroll(700f, 300f, 1080f, pivot = .16f, slack = .15f), .5f)
     }
 }
