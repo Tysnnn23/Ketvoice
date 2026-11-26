@@ -171,7 +171,7 @@ private fun NowPlayingBackground(track: Track, cover: String?, canvas: String?, 
         TvBackdrop(cover, Modifier.fillMaxSize(), veil = .5f)
         if (canvas != null && !failed) {
             com.ketvoice.app.ui.player.CanvasVideo(canvas, playing, cover = null, modifier = Modifier.fillMaxSize().testTag("np-canvas"),
-                resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM, onFailure = { failed = true })
+                onFailure = { failed = true }) // zoomed to fill (the phone's Canvas resize mode)
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
                 0f to Color.Black.copy(alpha = .78f), .45f to Color.Black.copy(alpha = .35f), 1f to Color.Black.copy(alpha = .72f))))
         }

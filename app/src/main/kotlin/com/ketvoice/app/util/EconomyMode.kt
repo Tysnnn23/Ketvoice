@@ -89,6 +89,8 @@ object EconomyMode {
     }
 
     private fun watchHeat(app: Context) {
+        // The thermal status exists since Android 10 (Ketvoice TV runs from Android 9).
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
         val pm = app.getSystemService(PowerManager::class.java) ?: return
         val l = PowerManager.OnThermalStatusChangedListener { thermal = it; apply(causeOf(level, scale, plugged, thermal)) }
         thermalListener = l
@@ -99,7 +101,8 @@ object EconomyMode {
         val app = activity.applicationContext
         receiver?.let { r -> runCatching { app.unregisterReceiver(r) } }
         receiver = null
-        thermalListener?.let { l -> runCatching { app.getSystemService(PowerManager::class.java)?.removeThermalStatusListener(l) } }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q)
+            thermalListener?.let { l -> runCatching { app.getSystemService(PowerManager::class.java)?.removeThermalStatusListener(l) } }
         thermalListener = null
     }
 

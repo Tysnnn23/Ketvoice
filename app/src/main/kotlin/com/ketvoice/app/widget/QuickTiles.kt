@@ -112,7 +112,7 @@ abstract class KetvoiceTileService : TileService() {
         val tile = qsTile ?: return
         tile.state = state
         tile.label = label
-        tile.subtitle = subtitle
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) tile.subtitle = subtitle
         tile.icon = Icon.createWithResource(this, icon)
         tile.contentDescription = description
         tile.updateTile()

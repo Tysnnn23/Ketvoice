@@ -222,6 +222,9 @@ private fun TvTrackMenu(actions: TvActions) {
             MenuButton("Ajouter à la file d'attente") { Player.enqueue(listOf(track)); close() }
             MenuButton(if (favorite) "Retirer des favoris" else "Ajouter aux favoris") { com.ketvoice.app.ui.player.toggleFavorite(track); close() }
             MenuButton("Lancer la radio") { Player.startRadio(track); close(); actions.nav.open(TvRoute.NowPlaying) }
+            // Offline on the TV too (a weak Wi-Fi in the living room): the phone's downloader, its files kept on this TV.
+            if (com.ketvoice.app.data.Downloader.itemFor(track.id) == null && !track.id.startsWith("local:"))
+                MenuButton("Télécharger") { com.ketvoice.app.data.Downloader.download(track); close() }
             if (track.artist.isNotBlank()) MenuButton("Aller à l'artiste") {
                 close(); actions.nav.open(TvRoute.Artist(track.artistId?.takeIf { it.startsWith("UC") }.orEmpty(),
                     com.ketvoice.app.data.PersonalMixes.primaryArtist(track)))

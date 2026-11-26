@@ -75,12 +75,13 @@ object Romanizer {
         .replace("̱", "")
         .replace(Regex("\\s+"), " ").trim()
 
-    /** android.icu (API 29+, every flavour's minimum is above it). Instances are cached; a missing id is skipped. */
+    /** android.icu's transliterators (API 29+; Ketvoice TV runs from 28, where there is none). Instances are cached; a missing id is skipped. */
     internal object Icu {
         private val cache = HashMap<String, android.icu.text.Transliterator?>()
 
         fun apply(text: String, ids: List<String>): String? {
             if (ids.isEmpty()) return text
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return null
             for (id in ids) {
                 val t = synchronized(cache) {
                     cache.getOrPut(id) { runCatching { android.icu.text.Transliterator.getInstance(id) }.getOrNull() }

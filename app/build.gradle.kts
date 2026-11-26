@@ -95,7 +95,11 @@ android {
             applicationId = "com.ketvoice.tv"
             versionCode = 1
             versionName = "1.0.0"
-            minSdk = 26
+            // Android 9 (API 28), Android TV's oldest version still common on boxes and TVs. The shared code really
+            // needs 28: the equalizer (DynamicsProcessing), avatar decoding (ImageDecoder), the updater's signature check
+            // (SigningInfo) and the process name of the work process have no older equivalent. Its API 29-30 calls are
+            // guarded (lint NewApi is clean on this flavour).
+            minSdk = 28
             buildConfigField("boolean", "IS_QUEST", "false")
             buildConfigField("boolean", "IS_LITE", "false")
             buildConfigField("boolean", "IS_TV", "true")

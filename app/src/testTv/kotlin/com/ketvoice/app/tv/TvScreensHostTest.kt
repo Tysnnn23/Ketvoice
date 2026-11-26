@@ -302,6 +302,26 @@ class TvScreensHostTest {
         image("10-sign-in")
     }
 
+    @Test fun artistPageAndATitlesOptionsFromTheMenuKey() {
+        actions.nav.open(TvRoute.Artist("", "Nova Lane"))
+        show()
+        compose.onNodeWithTag("artist-name").assertExists()
+        assertEquals("artist-play", focusedTag())
+        press(Key.DirectionDown)
+        assertTrue(focusedTag().orEmpty().startsWith("card-t:qa:tv0"))
+        image("12-artist")
+        // The menu key opens the title's options over the page; Back closes them.
+        press(Key.Menu)
+        compose.onNodeWithTag("track-menu").assertExists()
+        settle(600)
+        assertEquals("menu-Lire ensuite", focusedTag())
+        image("13-track-menu")
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle(600)
+        compose.onNodeWithTag("track-menu").assertDoesNotExist()
+        assertEquals(TvRoute.Artist("", "Nova Lane"), actions.nav.current)
+    }
+
     @Test fun lightTvsDrawTheSameScreens() {
         show(TvTier.Light)
         compose.onNodeWithTag("tv-home").assertExists()

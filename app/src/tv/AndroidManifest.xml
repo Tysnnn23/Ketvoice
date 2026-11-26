@@ -39,7 +39,6 @@
             android:launchMode="singleTask"
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
-            android:label="@string/tv_app_name"
             android:theme="@style/Theme.Ketvoice.Tv">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
