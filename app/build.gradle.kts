@@ -52,10 +52,6 @@ android {
         }
     }
 
-    if (discordSdkAvailable) {
-        sourceSets["main"].java.srcDir("src/discord/kotlin")
-    }
-
     // The Cast SDK (7.5) brings AppCompat and its lint checks; widget layouts are RemoteViews, where only
     // android:tint works (app:tint needs AppCompat views, which Ketvoice does not use).
     lint { disable += "UseAppTint" }
@@ -65,6 +61,7 @@ android {
             dimension = "device"
             buildConfigField("boolean", "IS_QUEST", "false")
             buildConfigField("boolean", "IS_LITE", "false")
+            buildConfigField("boolean", "IS_TV", "false")
         }
         create("quest") {
             dimension = "device"
@@ -72,6 +69,7 @@ android {
             targetSdk = 34
             buildConfigField("boolean", "IS_QUEST", "true")
             buildConfigField("boolean", "IS_LITE", "false")
+            buildConfigField("boolean", "IS_TV", "false")
             // Quest uses arm64; x86_64 permits the same panel build to be
             // exercised on an Android emulator without shipping 32-bit ABIs.
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
@@ -83,13 +81,32 @@ android {
             dimension = "device"
             buildConfigField("boolean", "IS_QUEST", "false")
             buildConfigField("boolean", "IS_LITE", "true")
+            buildConfigField("boolean", "IS_TV", "false")
             // Android 11 too (owner, 2026-11-18: « compatible Android 11 »): every API 31+ call is guarded and has
             // a fallback that looks the same (glass blur in software, see glass/SoftBlur.kt). Mobile stays at 31.
             minSdk = 30
             // 64-bit ARM only, with or without the Discord SDK (LiteRT alone ships ~20 MB for the other three ABIs).
             ndk { abiFilters += listOf("arm64-v8a") }
         }
+        // Ketvoice TV (1.0.0): Android TV and Google TV, a separate app beside the phone's (its own application id,
+        // version and updates, the same account). The shared code runs as it is; the TV interface lives in src/tv.
+        create("tv") {
+            dimension = "device"
+            applicationId = "com.ketvoice.tv"
+            versionCode = 1
+            versionName = "1.0.0"
+            minSdk = 26
+            buildConfigField("boolean", "IS_QUEST", "false")
+            buildConfigField("boolean", "IS_LITE", "false")
+            buildConfigField("boolean", "IS_TV", "true")
+            // Many TVs and boxes run a 32-bit ARM system, even on a 64-bit chip.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            // A TV has no Discord app to connect to: the Discord bridge is left out of the TV APK.
+            externalNativeBuild { cmake { arguments += "-DKETVOICE_WITHOUT_DISCORD=ON" } }
+        }
     }
+    // The optional Discord SDK's Kotlin side, for every edition but TV.
+    if (discordSdkAvailable) listOf("mobile", "quest", "lite").forEach { sourceSets[it].java.srcDir("src/discord/kotlin") }
     // Lite is a phone edition: it takes the mobile source set too (Android Auto manifest, car resources, any
     // mobile-only code added later), then its own src/lite.
     sourceSets["lite"].apply {
@@ -103,6 +120,7 @@ android {
     // (tools/lite/make_lite_resources.py).
     sourceSets["mobile"].assets.srcDirs("src/standard/assets")
     sourceSets["quest"].assets.srcDirs("src/standard/assets")
+    sourceSets["tv"].assets.srcDirs("src/standard/assets")
 
     signingConfigs {
         create("sideload") {
@@ -310,7 +328,8 @@ val liteIcons = tasks.register<LiteIconsJar>("liteIconsJar") {
 }
 
 androidComponents {
-    onVariants(selector().withFlavor("device" to "lite")) { variant ->
+    onVariants { variant ->
+        if (variant.productFlavors.none { it.second == "lite" || it.second == "tv" }) return@onVariants
         val name = variant.name.replaceFirstChar { it.uppercase() }
         val check = tasks.register<LiteIconsCheck>("verify${name}Icons") {
             description = "Checks that every icon the compiled ${variant.name} uses is in its APK."
@@ -323,7 +342,8 @@ androidComponents {
         tasks.matching { it.name == "assemble$name" }.configureEach { dependsOn(check) }
         // The code (about 40 MB of dex without R8) is compressed in the Lite APK: about half the download.
         // Android unpacks it once at install, so the installed app takes a little more storage than the APK.
-        variant.packaging.dex.useLegacyPackaging.set(true)
+        // (TV keeps Android's default for its minimum version.)
+        if (variant.productFlavors.any { it.second == "lite" }) variant.packaging.dex.useLegacyPackaging.set(true)
     }
 }
 // ========================================================================== end Ketvoice Lite
@@ -391,7 +411,8 @@ abstract class BeatModelAsset : DefaultTask() {
 
 androidComponents {
     onVariants { variant ->
-        if (beatModelSkipped || variant.productFlavors.any { it.second == "lite" }) return@onVariants
+        // Lite and TV offer it as a download instead (TV processors are often modest: the listener chooses).
+        if (beatModelSkipped || variant.productFlavors.any { it.second == "lite" || it.second == "tv" }) return@onVariants
         val name = variant.name.replaceFirstChar { it.uppercase() }
         val task = tasks.register<BeatModelAsset>("ketmixBeatModel$name") {
             description = "Fetches and checks the Ketmix rhythm model for ${variant.name}."
@@ -407,9 +428,9 @@ androidComponents {
 // ============================================================ end Ketmix rhythm model
 
 dependencies {
-    if (discordSdkAvailable) {
-        implementation(files(discordSdk))
-        implementation("androidx.browser:browser:1.8.0")
+    if (discordSdkAvailable) for (edition in listOf("mobile", "quest", "lite")) {
+        "${edition}Implementation"(files(discordSdk))
+        "${edition}Implementation"("androidx.browser:browser:1.8.0")
     }
     val composeBom = platform("androidx.compose:compose-bom:2025.11.00")
     implementation(composeBom)
@@ -444,6 +465,10 @@ dependencies {
     "liteCompileOnly"("androidx.compose.material:material-icons-extended")
     "liteImplementation"("androidx.compose.material:material-icons-core")
     "liteRuntimeOnly"(files(liteIcons.flatMap { it.output }).builtBy(liteIcons))
+    // Ketvoice TV packages the same reduced icon set as Lite (TV boxes have little storage).
+    "tvCompileOnly"("androidx.compose.material:material-icons-extended")
+    "tvImplementation"("androidx.compose.material:material-icons-core")
+    "tvRuntimeOnly"(files(liteIcons.flatMap { it.output }).builtBy(liteIcons))
 
     implementation("androidx.media3:media3-exoplayer:1.6.1")
     implementation("androidx.media3:media3-session:1.6.1")

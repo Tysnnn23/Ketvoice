@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ketvoice TV (1.0.0): Android TV and Google TV. A TV-only APK: the leanback launcher, a banner, the remote. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature android:name="android.software.leanback" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.faketouch" android:required="false" />
+    <!-- Voice search goes through the TV's own recognizer (an intent): no microphone is asked for. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Many TVs are on Ethernet only. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
+    <!-- Phone-only permissions of the shared manifest: battery screens, phone-to-phone transfer, local files on the
+         phone, Android 16 live updates. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+
+    <application
+        android:banner="@drawable/tv_banner"
+        android:icon="@mipmap/ic_launcher_vicecity"
+        android:roundIcon="@mipmap/ic_launcher_vicecity_round"
+        android:label="@string/tv_app_name"
+        tools:replace="android:label,android:icon,android:roundIcon">
+
+        <activity
+            android:name=".tv.TvActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:label="@string/tv_app_name"
+            android:theme="@style/Theme.Ketvoice.Tv">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <!-- « Joue X sur Ketvoice » from the TV's assistant. -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+            </intent-filter>
+        </activity>
+
+        <!-- The shared code opens MainActivity (media session, notifications, links): on TV it hands over to TvActivity
+             at once, without drawing anything. -->
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoDisplay"
+            tools:replace="android:theme" />
+
+        <!-- No phone launcher icons on TV: the leanback launcher shows the banner of TvActivity. -->
+        <activity-alias android:name=".LauncherDefault" tools:node="remove" />
+        <activity-alias android:name=".LauncherGlass" tools:node="remove" />
+        <activity-alias android:name=".LauncherDark" tools:node="remove" />
+        <activity-alias android:name=".LauncherClassic" tools:node="remove" />
+        <activity-alias android:name=".LauncherViceCity" tools:node="remove" />
+
+        <!-- No home-screen widgets, Quick Settings tiles, phone-to-phone transfer, Discord or YouTube web sign-in on TV. -->
+        <receiver android:name=".widget.NowPlayingWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.NowPlayingControlsWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.WidgetActionReceiver" tools:node="remove" />
+        <service android:name=".widget.PlayPauseTileService" tools:node="remove" />
+        <service android:name=".widget.KetmixTileService" tools:node="remove" />
+        <service android:name=".airket.AirKetService" tools:node="remove" />
+        <activity android:name=".discord.DiscordAuthActivity" tools:node="remove" />
+        <activity android:name=".discord.DiscordCallbackActivity" tools:node="remove" />
+        <activity android:name=".YouTubeLoginActivity" tools:node="remove" />
+    </application>
+</manifest>
