@@ -68,8 +68,8 @@ internal data class SegmentAnalysis(
      */
     val sectionStartsMs: List<Double>? = null,
     /**
-     * 8.6: the sections of this stretch as the phone reads them ([SongSections]); null when they were not looked for
-     * (Light, Ketvoice Lite, a reading kept from before 8.6), empty when the stretch did not tell.
+     * 9.0: the sections of this stretch as the phone reads them ([SongSections]); null when they were not looked for
+     * (Light, Ketvoice Lite, a reading kept from before 9.0), empty when the stretch did not tell.
      */
     val sections: List<SongStructure.Section>? = null
 ) {
@@ -92,7 +92,7 @@ internal data class SegmentAnalysis(
     fun phraseStarts(fromMs: Double, untilMs: Double): List<Double> {
         if (untilMs < fromMs) return emptyList()
         sectionStartsMs?.filter { it >= fromMs - 1e-6 && it <= untilMs + 1e-6 }?.takeIf { it.isNotEmpty() }?.let { return it.sorted() }
-        // 8.6: where a section of this stretch starts (never a chorus's own start), else the phrases that do not open a chorus.
+        // 9.0: where a section of this stretch starts (never a chorus's own start), else the phrases that do not open a chorus.
         SongSections.exits(this, fromMs, untilMs)?.takeIf { it.isNotEmpty() }?.let { return it }
         if (!hasPhrases) return emptyList()
         val period = phraseMs

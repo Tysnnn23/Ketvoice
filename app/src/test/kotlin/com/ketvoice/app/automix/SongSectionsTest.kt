@@ -161,7 +161,7 @@ class SongSectionsTest {
         val empty = a.copy(sections = emptyList())
         assertEquals(emptyList<Section>(), AnalysisStore.decode(AnalysisStore.encode(empty))!!.sections)
         val old = AnalysisStore.encode(a).apply { remove("sv") }
-        assertNull("a reading kept before 8.6 has no sections", AnalysisStore.decode(old)!!.sections)
+        assertNull("a reading kept before 9.0 has no sections", AnalysisStore.decode(old)!!.sections)
         val other = AnalysisStore.encode(a).apply { put("sv", 99) }
         assertNull(AnalysisStore.decode(other)!!.sections)
         val broken = AnalysisStore.encode(a).apply { put("sc", org.json.JSONArray().put(1).put(2)) }

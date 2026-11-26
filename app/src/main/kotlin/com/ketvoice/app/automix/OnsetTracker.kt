@@ -38,7 +38,7 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey:
     private var hopEnergy = 0.0
     /** The notes heard, when the key is wanted too. */
     private val chroma: ChromaTracker? = if (withKey) ChromaTracker(rate) else null
-    /** The colour of the sound for the song's sections (8.6, see [SongSections]), when wanted. */
+    /** The colour of the sound for the song's sections (9.0, see [SongSections]), when wanted. */
     private val timbre: TimbreBands? = if (withTimbre) TimbreBands(rate / WINDOW) else null
 
     private var flux = FloatArray(4096)

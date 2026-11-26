@@ -154,7 +154,7 @@ internal object BeatModel {
         else pack.file(pack.parts.single())?.takeIf { it.isFile }?.let { LiteRtBeatNet(it) }
     }
 
-    /** The log-mel frames the model read ([BeatSpectrogram]) and where in the title the first one is, in ms (8.6, for [SongSections]). */
+    /** The log-mel frames the model read ([BeatSpectrogram]) and where in the title the first one is, in ms (9.0, for [SongSections]). */
     class Mels(val frames: FloatArray, val originMs: Double)
 
     /**

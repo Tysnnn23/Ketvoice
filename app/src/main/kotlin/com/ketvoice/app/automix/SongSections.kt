@@ -5,7 +5,7 @@ import com.ketvoice.app.automix.SongStructure.Label
 import com.ketvoice.app.automix.SongStructure.Section
 
 /**
- * The song's sections on the phone (8.6): [SongStructure] run on a stretch Ketmix already reads (a title's start or
+ * The song's sections on the phone (9.0): [SongStructure] run on a stretch Ketmix already reads (a title's start or
  * end), from the cheap band energies [OnsetTracker] keeps while it reads ([TimbreBands]), on the bars of the stretch's
  * beat grid (the beat model's when it ran). A stretch is not the whole title: its labels are those of the stretch,
  * so an ending has no intro and a start no outro.

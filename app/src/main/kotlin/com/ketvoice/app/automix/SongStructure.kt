@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * the loudest group that comes back is the chorus, a quieter first section the intro, a quieter last one the outro,
  * a section heard once after the middle the bridge, the rest verses. Pure: no audio, no model.
  *
- * Shared with the phone (8.6): there it reads the stretches Ketmix already decodes (a title's start and end) from
+ * Shared with the phone (9.0): there it reads the stretches Ketmix already decodes (a title's start and end) from
  * cheap band energies instead of log-mel frames, see [SongSections].
  */
 object SongStructure {

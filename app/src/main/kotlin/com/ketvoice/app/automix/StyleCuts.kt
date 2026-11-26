@@ -30,7 +30,7 @@ internal object StyleCuts {
 
     /**
      * Where the next title's groove comes in on a downbeat, or null when it has no drop worth jumping to: where its
-     * intro ends (8.6, its sections, [SongSections.entry]), else where its level reaches that of its body.
+     * intro ends (9.0, its sections, [SongSections.entry]), else where its level reaches that of its body.
      */
     fun dropAt(b: SegmentAnalysis, incoming: MixFacts): Long? {
         if (!b.hasBeat || b.barOffset < 0) return null
