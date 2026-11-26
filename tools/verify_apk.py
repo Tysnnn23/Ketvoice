@@ -63,7 +63,9 @@ def verify(path, build_tools, version, version_code, quest=False, certificate=CE
         raise ValueError('Unexpected native ABIs for ' + edition + ': ' + ', '.join(sorted(abis)))
     suffix = '.bat' if os.name == 'nt' else ''
     signature = run_tool(build_tools / ('apksigner' + suffix), 'verify', '--verbose', '--print-certs', path)
-    certs = re.findall(r'Signer #\d+ certificate SHA-256 digest: ([a-f0-9]+)', signature)
+    # build-tools 36 prints lowercase hex, newer ones may print upper case or colon-separated bytes.
+    certs = [c.replace(':', '').lower() for c in
+             re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9A-Fa-f:]+)', signature)]
     if certs != [certificate]:
         raise ValueError('Unexpected signing certificate (cannot update existing Ketvoice)')
     run_tool(build_tools / ('zipalign.exe' if os.name == 'nt' else 'zipalign'), '-c', '-P', '16', '4', path)

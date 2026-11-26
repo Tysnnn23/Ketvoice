@@ -45,6 +45,11 @@ class ApkGateTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.check()
 
+    def test_upper_case_or_colon_digest_is_the_same_certificate(self):
+        spaced = ':'.join(CERTIFICATE[i:i + 2] for i in range(0, 64, 2)).upper()
+        with self.tools(certificate=spaced):
+            self.assertEqual(CERTIFICATE, self.check()['certificate_sha256'])
+
     def test_wrong_certificate_rejected(self):
         with self.tools(certificate='0' * 64), self.assertRaises(ValueError):
             self.check()
