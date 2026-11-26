@@ -224,7 +224,7 @@ fun FullPlayer(onClose: () -> Unit) {
             Column((if (lyrics) Modifier.weight(1f) else Modifier.width(480.dp)).fillMaxHeight().padding(start = 28.dp, end = 64.dp, top = 64.dp, bottom = 48.dp),
                 verticalArrangement = if (lyrics) Arrangement.Top else Arrangement.Center) {
                 PlayerControlsBlock(track, compact = lyrics, backdrop = backdrop)
-                // What other features show here (the live mix view while Ketmix crosses two titles).
+                // What other features show here (FullPlayerSlots).
                 FullPlayerSlots.all.forEach { androidx.compose.runtime.key(it.id) { it.content(backdrop, lyrics) } }
                 if (lyrics) {
                     Spacer(Modifier.height(10.dp))

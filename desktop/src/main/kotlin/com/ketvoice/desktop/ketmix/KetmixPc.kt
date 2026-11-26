@@ -7,7 +7,6 @@ import com.ketvoice.app.stems.StemEngine
 import com.ketvoice.app.stems.StemLibrary
 import com.ketvoice.app.stems.StemMask
 import com.ketvoice.app.stems.StemStore
-import com.ketvoice.desktop.audio.FfmpegAudioEngine
 import com.ketvoice.desktop.platform.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,13 +21,13 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Ketmix's PC side of Windows 2.0, started once from `Main`: « Puissance de Ketmix », the large models and the GPU,
- * the library prepared while the PC is idle, the live mix view and « Ketmix apprend ».
+ * the library prepared while the PC is idle and « Ketmix apprend ».
  */
 internal object KetmixPc {
     private const val START_DELAY_MS = 45_000L
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
-    fun start(context: android.content.Context, engine: FfmpegAudioEngine, scope: CoroutineScope) {
+    fun start(context: android.content.Context, scope: CoroutineScope) {
         KetmixPcSettings.load(context)
         KetmixPower.machine() // starts reading the graphics cards in the background
         PcModels.init(context.filesDir)
@@ -38,7 +37,6 @@ internal object KetmixPc {
         // The large models only while the tier has them: « Équilibré » keeps today's.
         StemEngine.studioFile = { if (maximum()) PcModels.file(PcModel.VoiceStudio) else null }
         com.ketvoice.app.automix.BeatModel.fullFile = { if (maximum()) PcModels.file(PcModel.BeatFull) else null }
-        LiveMix.start(engine, scope)
         scope.launch {
             snapshotFlow { Triple(KetmixPcSettings.power.value, KetmixPcSettings.gpu.value, KetmixPcSettings.learns.value) }
                 .drop(1).debounce(300).collect { KetmixPcSettings.save(); StemEngine.close(); scope.launch(Dispatchers.IO) { prepareModels() } }

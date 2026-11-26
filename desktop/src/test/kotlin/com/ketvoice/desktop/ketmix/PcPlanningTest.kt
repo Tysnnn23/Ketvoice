@@ -208,23 +208,3 @@ class SongStructureTest {
         } finally { TrackFactsStore.folder = null; TrackFactsStore.clearCache(); dir.deleteRecursively() }
     }
 }
-
-class LiveMixTest {
-    @Test fun deckWindowCarriesBeatsBarsAndPhase() {
-        val a = SegmentAnalysis(startMs = 0, lengthMs = 60_000, bpm = 120f, beatAtMs = 0.0, confidence = .9f, barOffset = 0)
-        val d = LiveMix.deck("Titre", 10_250L, a, null, .7f, 1f)
-        assertEquals(LiveMix.POINTS, d.peaks.size)
-        // 12 s at 120 BPM: 24 beats, 6 of them first beats of bars.
-        assertEquals(24, d.beats.size + d.bars.size)
-        assertEquals(6, d.bars.size)
-        assertEquals(.5f, d.phase, 1e-3f)
-        assertTrue(d.bars.all { it in 0f..1f })
-    }
-
-    @Test fun crossingProgressFollowsTheOutgoingTitle() {
-        val plan = com.ketvoice.app.automix.MixPlan(MixKind.Beatmatch, outMs = 100_000, inMs = 0, overlapMs = 8_000)
-        assertEquals(0f, LiveMix.mixProgress(plan, 99_000))
-        assertEquals(.5f, LiveMix.mixProgress(plan, 104_000))
-        assertEquals(1f, LiveMix.mixProgress(plan, 120_000))
-    }
-}
