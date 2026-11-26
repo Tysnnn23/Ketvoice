@@ -114,14 +114,12 @@ internal class DeckAutomation(
         const val BASS_HZ = 300f
         private const val OPEN_HZ = 28f
         private const val TOP_HZ = 18_000f
-        /** Both decks at this level where the bass changes hands: full enough, without summing past full scale. */
-        private const val MEETING = .72f
         /**
-         * 7.7: the outgoing title, alone with its bass until the swap, is only led this far down there: the incoming
-         * one, high-passed and with its mids held back, fills too little to make up for more (led to [MEETING], a long
-         * blend lost 3 LU just before the swap). The sum's peaks are [MixBus]'s to keep under full scale.
+         * Both decks at this level where the bass changes hands. 7.7: it was 0.72, chosen when nothing guarded the sum;
+         * the incoming title, high-passed with its mids held back, filled too little for the outgoing one led that far
+         * down, and a long blend lost 3.4 LU just before the swap. [MixBus] keeps the sum's peaks under full scale.
          */
-        private const val OUT_MEETING = .86f
+        private const val MEETING = .86f
         /** Between a straight and an equal-power crossfade: no hole in the middle, no clipping either. */
         private const val POWER = 1.47f
         private const val SETTLE_US = 8_000_000L
@@ -283,7 +281,7 @@ internal class DeckAutomation(
             val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
             val curve = plan.shape.volume
             // Led down a little further when the incoming title is the quieter one, so that the two meet level.
-            val meeting = OUT_MEETING * plan.outGain
+            val meeting = MEETING * plan.outGain
             val gain = Curve.join(
                 Curve.shaped(start, swap, 24) { 1f - (1f - meeting) * beforeSwap(it, curve) },
                 Curve.shaped(swap, end, 24) { meeting * fadeOut(it, curve) })

@@ -144,7 +144,7 @@ class KetmixFitTest {
         assertEquals("-16 dB + outgoing gain = -10 dB + incoming gain", -16f + db(outLoud), -10f + db(inLoud), .3f)
         val (outQuiet, inQuiet) = meeting(quieter)
         assertEquals(-11f + db(outQuiet), -14f + db(inQuiet), .3f)
-        assertTrue("the outgoing title is only led down, never up", outQuiet < outLoud && outLoud <= .73f)
+        assertTrue("the outgoing title is only led down, never up", outQuiet < outLoud && outLoud <= .87f)
         // Once the blend is over the incoming title is back at its own level, reached without a step.
         val incoming = DeckAutomation.incoming(louder).gain
         val endUs = louder.inEndMs * 1000L

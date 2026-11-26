@@ -83,7 +83,7 @@ class DeckDspTest {
         assertEquals(.86f, out.gain.at(188_000_000), 2e-3f)
         assertEquals(0f, out.gain.at(196_000_000), 1e-3f)
         assertEquals(0f, into.gain.at(inAt(180_000)), 1e-3f)
-        assertEquals(.72f * .8f, into.gain.at(inAt(188_000)), 3e-3f)
+        assertEquals(.86f * .8f, into.gain.at(inAt(188_000)), 3e-3f)
         assertEquals(.8f, into.gain.at(inAt(196_000)), 2e-3f)
         assertEquals(1f, into.gain.at(inAt(196_000) + 8_000_000), 1e-3f)
         // Before the swap the outgoing title keeps its bass and the incoming one has none; after, the reverse.

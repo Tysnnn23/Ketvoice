@@ -66,9 +66,9 @@ class KetmixRenderQualityTest {
             assertTrue("${row.name}: the bass changes hands, never two at once for long (${row.clashMs} ms)", row.clashMs <= 250)
             // A cut is a step from one title to the other by nature; a crossing into a fade starts from its faded level.
             if (!row.plan.cut && row.plan.kind != MixKind.Crossfade)
-                assertTrue("${row.name}: no hole nor bulge past 3.2 LU (${row.loudness})", row.loudness <= 3.2)
+                assertTrue("${row.name}: no hole nor bulge past 2.8 LU (${row.loudness})", row.loudness <= 2.8)
         }
-        // 7.7: the outgoing title of a long blend no longer steps down to meet a thin incoming one before the swap
+        // 7.7: both titles of a long blend meet at 0.86 where the bass changes hands, not 0.72
         // (3.44 LU before), and the outgoing side of a crossing of spectra keeps its power (2.70 LU before).
         for (name in listOf("hard end 120>120", "beatless>groove", "far 128>96"))
             rows.first { it.name == name }.let { assertTrue("$name: no hole past 2.6 LU (${it.loudness})", it.loudness <= 2.6) }
