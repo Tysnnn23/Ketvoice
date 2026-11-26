@@ -78,6 +78,17 @@ object Ket27Glyphs {
         curveTo(19.1f, 3.8f, 21.4f, 6.1f, 21.4f, 9.1f); curveTo(21.4f, 13.4f, 17.8f, 16.6f, 12.85f, 20.3f)
         curveTo(12.6f, 20.5f, 12.3f, 20.6f, 12f, 20.6f); close()
     }
+    /** 👍 and 👎 for « Ketmix apprend »: a thumb over its cuff, the second one turned upside down. */
+    val ThumbUp: ImageVector by lazy { stroked("ThumbUp", 1.9f) { thumb { it } } }
+    val ThumbDown: ImageVector by lazy { stroked("ThumbDown", 1.9f) { thumb { 24f - it } } }
+
+    private fun PathBuilder.thumb(y: (Float) -> Float) {
+        moveTo(3.5f, y(10.5f)); lineTo(6.5f, y(10.5f)); lineTo(6.5f, y(19.5f)); lineTo(3.5f, y(19.5f)); close()
+        moveTo(6.5f, y(10.5f)); lineTo(10f, y(4.6f)); curveTo(11.4f, y(4.2f), 12.7f, y(5.3f), 12.3f, y(6.8f)); lineTo(11.7f, y(9.5f))
+        lineTo(17.4f, y(9.5f)); curveTo(18.9f, y(9.5f), 20f, y(10.9f), 19.6f, y(12.3f)); lineTo(18.3f, y(17.9f))
+        curveTo(18.1f, y(18.9f), 17.2f, y(19.5f), 16.2f, y(19.5f)); lineTo(6.5f, y(19.5f))
+    }
+
     val HeartFilled: ImageVector by lazy { filled("HeartFilled") { heartShape() } }
     val Heart: ImageVector by lazy { stroked("Heart", 2f) { heartShape() } }
 }

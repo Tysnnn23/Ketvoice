@@ -384,7 +384,9 @@ internal object Automix {
             skipSilence = AppSettings.skipSilence.value,
             albumsMixed = AppSettings.automixAlbums.value,
             speed = main.playbackParameters.speed,
-            userOverlapMs = MixPointStore.pair(current.id, next.track.id)?.overlapMs ?: -1L)
+            userOverlapMs = MixPointStore.pair(current.id, next.track.id)?.overlapMs ?: -1L,
+            // « Ketmix apprend »: the kinds the listener turned down, left out of the automatic style only (empty while off).
+            avoid = KetmixLearning.avoid())
         // The style the listener chose for this pair in the DJ editor (6.1) comes before the one of the settings.
         val shape = MixPointStore.pair(current.id, next.track.id)?.shape ?: MixShape.DEFAULT
         val settings = MixSettings(AppSettings.automixIntensity.value,
@@ -539,6 +541,7 @@ internal object Automix {
         deck.play()
         val playedAt = SystemClock.elapsedRealtime()
         s.started = true
+        KetmixLearning.played(plan, "${current.title} — ${current.artist}", "${next.track.title} — ${next.track.artist}")
         _ui.value = Ui(Phase.Mixing, current, next.track, plan.kind, SystemClock.elapsedRealtime() + finalPreRoll, plan.overlapMs,
             bpm = outro?.bpm ?: 0f, swapAt = MixWords.swapShare(plan), measures = MixWords.measures(plan))
         mix(s, plan, epoch, playedAt)

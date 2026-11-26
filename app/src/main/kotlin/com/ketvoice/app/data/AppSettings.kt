@@ -138,6 +138,10 @@ object AppSettings {
     val ketmixStyle = mutableStateOf(0)
     /** A light vibration when the bass passes from one title to the next (app in front only). */
     val ketmixHaptics = mutableStateOf(false)
+    /** « Ketmix apprend de vos avis » (9.x, optional): 👍/👎 after a transition steer Ketmix's automatic style ([com.ketvoice.app.automix.KetmixLearning]). */
+    val ketmixLearns = mutableStateOf(false)
+    /** What « Ketmix apprend » learnt, [com.ketvoice.app.automix.KetmixTaste.encode]d; kept on this phone only (never synced). */
+    val ketmixTaste = mutableStateOf("")
     val lyricsSource = mutableStateOf("auto")
     /** « Ordre des sources de paroles » (8.4): the automatic lookup's order, ids joined by commas; empty is the default ([LyricsOrder]). */
     val lyricsOrder = mutableStateOf("")
