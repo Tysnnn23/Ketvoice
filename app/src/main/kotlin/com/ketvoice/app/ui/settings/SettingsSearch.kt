@@ -94,6 +94,7 @@ internal object SettingsSearch {
         p("Mixer aussi les albums", "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres."),
         p("Vibrer à l'échange des basses", "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran."),
         p("Ketmix apprend de vos avis", KETMIX_LEARNS_SUB),
+        p("Oublier ce que Ketmix a appris", "Ketmix apprend de vos avis"),
         p("Séparer les voix", "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée."),
         p("Calage précis du rythme", "Un petit modèle d'IA intégré trouve les temps et les mesures pour des mélanges mieux calés."),
         p("File intelligente", "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais."),
