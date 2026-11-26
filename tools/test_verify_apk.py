@@ -50,6 +50,17 @@ class ApkGateTest(unittest.TestCase):
         with self.tools(certificate=spaced):
             self.assertEqual(CERTIFICATE, self.check()['certificate_sha256'])
 
+    def test_build_tools_37_lines_per_scheme(self):
+        lines = 'V2 Signer: certificate SHA-256 digest: {0}\nV3 Signer: certificate SHA-256 digest: {0}'.format(CERTIFICATE)
+        with patch('verify_apk.run_tool', side_effect=lambda path, *a: lines if 'apksigner' in path.name else
+                   self.tools_output(path)):
+            self.assertEqual(CERTIFICATE, self.check()['certificate_sha256'])
+
+    def tools_output(self, path):
+        if 'zipalign' in path.name:
+            return 'Verification successful'
+        return "package: name='com.ketvoice.app' versionCode='25' versionName='3.0.0-Beta3'\nsdkVersion:'31'\ntargetSdkVersion:'36'\n"
+
     def test_wrong_certificate_rejected(self):
         with self.tools(certificate='0' * 64), self.assertRaises(ValueError):
             self.check()
