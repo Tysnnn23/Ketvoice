@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "version": "2.0.2",
+  "platform": "windows",
+  "tag": "windows-v2.0.2",
+  "source_commit": "0b11689ed956be7db0498092f448a1eff5a019f9",
+  "created_at": "2026-11-27T15:19:05.563123+00:00",
+  "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from the dispatched main head; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since source_commit",
+  "tests": {
+    "desktop_suite_local_linux": {
+      "failed": 0,
+      "commit": "0b11689",
+      "note": "desktop com.ketvoice.app.remote* (10) and com.ketvoice.desktop.remote* (3), 0 failures, on the accounts agent's branch; SendToTvTest added to desktop/shared/tests.txt"
+    },
+    "windows_ci": {
+      "workflow": "windows.yml",
+      "run_id": 46014928718,
+      "conclusion": "success",
+      "commit": "0b11689ed956be7db0498092f448a1eff5a019f9",
+      "steps": "desktop tests with SMTC and WASAPI required, MSI packaging, silent install, Ketvoice.exe --smoke, cold-start probe, uninstall"
+    },
+    "android_ci_shared_code": {
+      "workflow": "android.yml",
+      "run_id": 46015129701,
+      "conclusion": "success",
+      "commit": "0b11689ed956be7db0498092f448a1eff5a019f9",
+      "note": "shared code changed with Ketvoice TV 1.1.0: RemoteSession (commands older than 30 s dropped), RemoteWire/PhoneRemote (device kind tv), PlaylistMix, Automix.mixList, BeatModel, AutoLibrary; full mobile and Quest suites"
+    },
+    "new_tests": "SendToTvTest, PlaylistMixTest",
+    "supabase": "no server change"
+  },
+  "ui_text_audit": "tools/audit_ui_texts.py --check: 0 unaccounted; Lire sur la TV has 10 translations",
+  "license_check": "checkNoGpl: no -gpl artifact in the runtime; FFmpeg is the JavaCPP LGPL v3 build; notices installed under app/resources/licenses; the four added fonts (Manrope, Atkinson Hyperlegible Next, Nunito, Lora) are SIL OFL 1.1, their licences shown in About; ketmix-pc-v1 models and ketvoice-align-v1 (Whisper small, MIT) reviewed in docs/licenses/ketmix-pc-models.md and docs/licenses/ketvoice-align.md, permissive code and weights; ketmix-pc-v1 models and ketvoice-align-v1 (Whisper small, MIT) reviewed in docs/licenses/ketmix-pc-models.md and docs/licenses/ketvoice-align.md, permissive code and weights",
+  "credential_scan": {
+    "findings": 0,
+    "scope": "desktop distributable built from the source tree with -PappVersion=2.0.2 (createDistributable, 211 files/archive entries, incl. the bundled Java runtime and its class-data archives); the Last.fm API key and shared secret were confirmed absent from the build and from git (they live only as Supabase edge-function secrets)",
+    "kind": "credential_patterns (tools/scan_release.py)",
+    "reviewed_false_positives": [
+      {
+        "file": "Ketvoice/lib/runtime/lib/modules",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes_nocoops.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      }
+    ],
+    "findings_raw": 3
+  },
+  "models": {
+    "ketmix-stems-onnx-v1": "published 2026-11-21 as a prerelease, not latest; assets match tools/stems/expected-onnx.sha256",
+    "beat_model": "downloaded on request from ketmix-beat-v1's pinned source with SHA-256 c462b064\u2026aea",
+    "ketmix-pc-v1": "published 2026-11-25 as a prerelease, not latest; assets (ketmix-beat-final0, ketmix-voice-melroformer, ketmix-key-skey, ketmix-sound-clap-int8) match tools/models/expected-pc.sha256; downloaded on request, checked before use",
+    "ketvoice-align-v1": "published 2026-11-25 as a prerelease, not latest; encoder 4e0c362d\u202645a6, decoder 5882e594\u2026ce5a, vocab b34b360d\u2026a126 match tools/models/expected-align.sha256"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the Android in-app updater and the website read the latest release (v9.1.2)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une r\u00e8gle.",
+    "user_statement_date": "2026-11-14",
+    "owner_request": "Windows 2.0.2 (2026-11-27): owner pick for Ketvoice TV 1.1.0, Envoyer vers la TV (send to the TV from the phone and the PC)",
+    "recorded_in": "AGENTS.md",
+    "reason": "The owner made publishing validated versions without device testing a standing rule.",
+    "scope": "installation and use on the owner's own Windows computer"
+  },
+  "not_validated": [
+    "No person has installed or used 2.0.2 on a real Windows PC; only the GitHub windows-latest runner installed it silently, ran --smoke and the start-up probe, and uninstalled it.",
+    "Play on TV between a real PC and a real TV on one account.",
+    "The desktop ui test package was not rerun locally after the one-label change (memory pressure); Windows CI ran the full suite.",
+    "The MSI is not code-signed; Windows SmartScreen will warn about an unknown publisher.",
+    "Independent code review."
+  ],
+  "known_limitations": [
+    "No light/dark/system theme choice on Windows: the window follows Windows.",
+    "The phone is only reachable for phone control while its app is open or playing."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966",
+  "features_2_0_2": {
+    "play_on_tv": "the Devices panel shows Lire sur la TV (Play on TV) for a device of kind tv; the send pauses the computer and the TV starts playing; commands older than 30 s are ignored by the receiver"
+  }
+}

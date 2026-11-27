@@ -1,0 +1,187 @@
+{
+  "schema": 8,
+  "version": "9.1.2",
+  "versionCode": 156,
+  "source_commit": "70d52b3d235940df7f89ef9d47ae61c289d142a5",
+  "created_at": "2026-11-27T15:18:51.849969+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 46015129701,
+    "artifact": {
+      "id": 15208059089,
+      "sha256": "1eb71e95e9fd5fe2dd0b37acebf368cffa7d5cd94c6e0677ea80aabe538ffd4e"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "tested in a cloud container on the merged tree with Ketvoice TV 1.1.0: the remote control, handoff, Ketmix and car suites on the mobile debug flavor, the desktop remote packages, release lint of the mobile and TV flavors; CI ran the full mobile and Quest suites (debug and release) and the Lite-specific tests",
+    "commands": [
+      "testMobileDebugUnitTest SendToTvTest, PlaylistMixTest, RemoteControlTest, AudioChainPlaybackTest, *automix*, RemoteDevices*, AutoLibraryTest, AutoTreeTest, CarControlsTest (275, 0 failures, on the agents' branches)",
+      "desktop com.ketvoice.app.remote* and com.ketvoice.desktop.remote* (13, 0 failures)",
+      "lintMobileRelease (0 errors, on the branches)",
+      "tools/audit_ui_texts.py --check (0 unaccounted, merged tree)"
+    ],
+    "ci_validation": "run 46015129701: release builds of the three flavors, mobile and Quest debug and release unit tests, the Lite-specific tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "features_9_1_2": "Play on TV: Ketvoice TV announces device kind tv on the phone-control room; the devices list shows a TV icon and a Play on TV action (older apps see it as a phone and can transfer to it); cmd/take/give older than 30 s are dropped (COMMAND_MAX_AGE_MS). Shared code for Ketvoice TV 1.1.0: PlaylistMix, Automix.mixList, BeatModel.usable on TV, AutoLibrary artistRadio (off on phone and car), LyricsBlur off on TV"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": "full suite passed in CI (debug and release), 0 failures; the Gradle log does not print totals",
+        "failures": 0,
+        "errors": 0,
+        "skipped": "see tests"
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": "full suite passed in CI (debug and release), 0 failures",
+        "failures": 0,
+        "errors": 0,
+        "skipped": "see tests"
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": "LiteTuningTest, LiteResourcesTest and ui.update.* passed in CI, 0 failures",
+        "failures": 0,
+        "errors": 0,
+        "skipped": "see tests"
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "warnings": "0 errors (lintMobileRelease, lintQuestRelease, lintLiteRelease, lintTvRelease)",
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-9.1.2.apk",
+      "sha256": "3d1b06ee9bfc58b88b8fe1ce051f1c3502f36920e70e700a6130d4aea5f3ccf3",
+      "bytes": 108726134,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "9.1.2",
+      "versionCode": 156,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-9.1.2-Quest.apk",
+      "sha256": "cf3cdbb415bd65fdf603bfa9a8bde0ebcefc9888d3e35a4e0ee60c60bc0d1e1e",
+      "bytes": 121077254,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "9.1.2",
+      "versionCode": 156,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-9.1.2-Lite.apk",
+      "sha256": "d09fadf4f1af4ec9c749974917052d4849fb2ee30d1533c68b39ad957f2669b9",
+      "bytes": 35566590,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "9.1.2",
+      "versionCode": 156,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4025,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-27T15:18:51.849969+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "« J'autorise TOUT devient maintenant une règle. »",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 9.1.2 (mobile, Lite and Quest)"
+  },
+  "owner_request_2026_11_27_9_1_2": {
+    "statement": "owner pick for Ketvoice TV 1.1.0: Envoyer vers la TV (send to the TV from the phone and the PC)",
+    "done": "Play on TV in the phone's devices list (Windows 2.0.2 ships the same); nothing was tried with a real phone and TV"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 9.1.2",
+    "Play on TV between a real phone and a real TV on one account",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "Streaming voice separation does not cover HLS streams.",
+    "A listener who picked the Liquid Glass icon before 7.6 is moved to the GTA VI icon like everyone else.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}

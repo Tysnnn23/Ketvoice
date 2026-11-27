@@ -1,0 +1,111 @@
+{
+  "schema": 8,
+  "edition": "tv",
+  "version": "1.1.0",
+  "versionCode": 2,
+  "source_commit": "70d52b3d235940df7f89ef9d47ae61c289d142a5",
+  "created_at": "2026-11-27T15:18:55.767402+00:00",
+  "build_origin": {
+    "kind": "github_actions",
+    "workflow": "android.yml",
+    "run_id": 46015129701,
+    "artifact": {
+      "id": 15208059089,
+      "sha256": "1eb71e95e9fd5fe2dd0b37acebf368cffa7d5cd94c6e0677ea80aabe538ffd4e"
+    },
+    "gradle": "assembleTvRelease",
+    "note": "signed by CI with the pinned keystore secret (same certificate as the phone APKs); no Discord bridge and no bundled rhythm model in the TV flavour"
+  },
+  "local_validation": {
+    "result": "tested in a cloud container on the merged tree of three parallel agents (visuals, system integrations, accounts and Ketmix)",
+    "commands": [
+      "testTvDebugUnitTest --tests 'com.ketvoice.app.tv.*' (98 tests, 0 failures, merged tree)",
+      "per agent: lintTvRelease and lintMobileRelease (0 errors), assembleTvRelease + check_dex_registers (system agent), testMobileDebugUnitTest AudioChainPlaybackTest, AutoLibraryTest, AutoTreeTest, CarControlsTest, *automix*, RemoteControlTest, SendToTvTest, PlaylistMixTest (275, 0 failures), desktop com.ketvoice.app.remote* and com.ketvoice.desktop.remote* (13, 0 failures)",
+      "tools/audit_ui_texts.py --check (0 unaccounted)"
+    ],
+    "ci_validation": "run 46015129701: phone, Quest, Lite and TV builds and suites, the curated testTvDebugUnitTest set (LiteTuningTest, ui.update.* and com.ketvoice.app.tv.* passed, 0 failures), lintTvRelease, the TV APK checks and the dex register check",
+    "host_previews": "Robolectric renders at 1920x1080 driven by D-pad keys (app/build/host-ui-preview/tv): new Now Playing with lyrics, gliding, hidden, without lyrics, Canvas in the frame, Ketmix blend before/after the swap, remote rating prompt and thanks; Home poster; card-to-page and artist zoom frames; immersive artist page; art frame (Balanced, Light); screensaver; Replay slides; profile picker; mix button and progress; handoff toast; rhythm model offer; settings sections. Looked at by the agents and by the lead",
+    "merge_fix": "TvSystemHostTest walked Home with three Down presses from the 1.0 hero; the 1.1 poster header moved the first focus, so the test now walks Down until the extras row",
+    "performance_host": "8 Left/Right presses on Now Playing controls: 0 recompositions of page, layout or colour field; walking a Home row: Home 0, rows 0, cards 5; 20 position ticks: 1 Now Playing recomposition",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "features_tv_1_1": "Apple-Music-like Now Playing without a background Canvas; Ketmix blend visuals on the bass swap; Up/Down transition rating; still-picture Home poster; card-to-page zoom; immersive artist page; KetvoiceDreamService screensaver and art frame (still images only); Android TV home-screen channels and Watch Next (tvprovider, signed in only); voice artist radio; Replay/Wrapped slides; per-account profiles with restart-based data mounting; Lire sur la TV over the phone-control room; Full tier Maximale analysis and one-time rhythm model offer; Mix this playlist/album"
+  },
+  "server": {
+    "changed_in_this_version": false,
+    "note": "profiles and handoff use the existing device-link function, the tv device kind migration of 1.0.0 and the existing Realtime room"
+  },
+  "tests": {
+    "tv": {
+      "jvm_curated_ci": "LiteTuningTest, ui.update.* and com.ketvoice.app.tv.* passed, 0 failures",
+      "host_local": "98 tests, 0 failures"
+    },
+    "dex_register_check": "tools/check_dex_registers.py in CI on the TV APK"
+  },
+  "lint": {
+    "tv": "lintTvRelease passed with 0 errors in CI",
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-TV-1.1.0.apk",
+      "sha256": "d32de2ba07aa6285a1b888935d7d512c217b1f6d9573e5a86ee70808c2ee1642",
+      "bytes": 59148308,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.tv",
+      "version": "1.1.0",
+      "versionCode": 2,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "tv"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_tv_build": false
+  },
+  "credential_scan": {
+    "entries": 591,
+    "findings": 0,
+    "scope": "the TV release APK",
+    "kind": "credential_patterns (tools/scan_release.py)"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the phone's in-app updater and the website read the latest release (v9.1.1)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-27T15:18:55.767402+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une r\u00e8gle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical Android TV / Google TV installation and all on-device behaviour of Ketvoice TV 1.1.0"
+  },
+  "owner_request_2026_11_27_tv_1_1_0": {
+    "statement": "owner picks over three question rounds: immersive artist page, card zoom, living Home with still images only, screensaver, home-screen channels, visual mix fade, stronger Ketmix on powerful TVs, profiles, send to TV, Google Assistant, Replay/Wrapped TV, art frame, a rebuilt player like Apple Music with no Canvas in the background, remote thumbs, Ketmix on a whole playlist",
+    "done": "all picks built on the TV; the phone and PC show the TV in their devices list with a Play on TV label in their next versions (transfer already works with current versions)"
+  },
+  "not_validated": [
+    "installation and use on a real Android TV, Google TV or emulator",
+    "screensaver binding, home-screen channels, Watch Next and the Google TV launcher",
+    "Google Assistant voice requests on a real TV",
+    "profile switch by process restart, Keystore session slots and QR profile add on a device",
+    "a real phone or PC to TV handoff",
+    "Canvas video inside the player frame (host tests use a stand-in)",
+    "the colour field drift (host tests stop infinite animations)",
+    "rhythm model download on a TV",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Leanback global search.",
+    "Mix this playlist is TV only.",
+    "No Discord Rich Presence on TV."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
