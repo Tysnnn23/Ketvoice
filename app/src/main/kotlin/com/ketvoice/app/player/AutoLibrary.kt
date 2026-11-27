@@ -184,7 +184,12 @@ internal class AutoLibrary(
     private val searchTimeoutMs: Long = SEARCH_TIMEOUT_MS,
     private val mixTimeoutMs: Long = MIX_TIMEOUT_MS,
     /** The app's package, for the icons of tabs and categories; none in the host tests. */
-    private val iconPackage: String? = null
+    private val iconPackage: String? = null,
+    /**
+     * Ketvoice TV (1.1.0): « joue Adele » starts the artist's radio rather than a list of the artist's titles. Off
+     * on the phone and in the car, whose voice requests are unchanged.
+     */
+    private val artistRadio: Boolean = false
 ) {
     companion object {
         /** Longest list a car is given: driving screens are short, and Auto cuts long lists anyway. */
@@ -569,6 +574,7 @@ internal class AutoLibrary(
         val found = search(text).tracks
         if (found.isEmpty()) return nothingFor(text)
         val ranked = VoiceMatch.rank(found, text, ask.title, ask.artist)
+        if (artistRadio && VoiceMatch.asksArtist(ask, ranked)) return voiceRadio(ask)
         val queue = when {
             ask.focus == VoiceAsk.ARTIST && ask.artist != null -> ranked.filter { VoiceMatch.sameArtist(it, ask.artist) }.ifEmpty { ranked }
             ask.focus == VoiceAsk.ALBUM && ask.album != null ->

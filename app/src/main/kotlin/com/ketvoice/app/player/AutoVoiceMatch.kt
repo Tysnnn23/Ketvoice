@@ -141,6 +141,21 @@ internal object VoiceMatch {
             .thenByDescending { SearchRank.score(query, it.value) }.thenBy { it.index })
             .map { it.value }
 
+    /**
+     * The request names an artist and nothing narrower (Ketvoice TV 1.1.0, « joue Adele » → the artist's radio): the
+     * assistant said so (artist focus), or, without a focus, the words are an artist's name and not a title's.
+     */
+    fun asksArtist(ask: VoiceAsk, ranked: List<Track>): Boolean {
+        if (ask.title != null || ask.album != null || ask.playlist != null) return false
+        val name = ask.artist ?: ask.text
+        if (name.isBlank() || ranked.none { sameArtist(it, name) }) return false
+        return when (ask.focus) {
+            VoiceAsk.ARTIST -> true
+            null -> !namesTitle(name, ranked) && SearchRank.namesArtist(name, ranked)
+            else -> false
+        }
+    }
+
     /** The words are exactly the name of one of [tracks]: « Radio Ga Ga » is a title, not a radio. */
     fun namesTitle(spoken: String, tracks: List<Track>): Boolean {
         val q = SearchRank.fold(spoken)
