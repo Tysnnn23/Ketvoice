@@ -473,6 +473,8 @@ dependencies {
     "tvCompileOnly"("androidx.compose.material:material-icons-extended")
     "tvImplementation"("androidx.compose.material:material-icons-core")
     "tvRuntimeOnly"(files(liteIcons.flatMap { it.output }).builtBy(liteIcons))
+    // Ketvoice TV 1.1.0: « Continuer l'écoute » and a channel on the TV's home screen (Apache-2.0).
+    "tvImplementation"("androidx.tvprovider:tvprovider:1.1.0")
 
     implementation("androidx.media3:media3-exoplayer:1.6.1")
     implementation("androidx.media3:media3-session:1.6.1")

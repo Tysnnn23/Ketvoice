@@ -2,4 +2,6 @@
 <resources>
     <!-- The product's name, the same in every language. -->
     <string name="tv_app_name" translatable="false">Ketvoice TV</string>
+    <!-- The screensaver's name in the TV's settings (1.1.0). -->
+    <string name="tv_dream_name" translatable="false">Ketvoice</string>
 </resources>

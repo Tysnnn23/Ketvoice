@@ -29,7 +29,16 @@ sealed interface TvRoute {
     data object NowPlaying : TvRoute { override val key = "now-playing" }
     data object SignIn : TvRoute { override val key = "sign-in" }
 
+    /** « Mode cadre d'art » (1.1.0): the covers of the listener's albums, one after the other, over the whole screen. */
+    data object ArtFrame : TvRoute { override val key = "art-frame" }
+
+    /** « Replay » of [month] ("2026-11"), or the year's « Wrapped » when [month] is null (1.1.0), as full-screen slides. */
+    data class Replay(val month: String?) : TvRoute { override val key = "replay:${month ?: "year"}" }
+
     val isRoot: Boolean get() = this in ROOTS
+
+    /** Drawn over the whole screen, without the side menu. */
+    val immersive: Boolean get() = this == NowPlaying || this == ArtFrame || this is Replay
 
     companion object {
         /**

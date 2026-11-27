@@ -210,5 +210,12 @@
  "SHA256SUMS.txt": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
  "SHA256SUMS.txt and the asset digest disagree": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
  "SHA256SUMS.txt too large": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
- "{0} is not listed in SHA256SUMS.txt": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy"
+ "{0} is not listed in SHA256SUMS.txt": "TV updater checksum diagnostic (exception text for the update journal), not user-facing copy",
+ "AM": "12-hour clock marker of the TV screensaver (shown only when the TV uses a 12-hour clock), not translated",
+ "PM": "12-hour clock marker of the TV screensaver (shown only when the TV uses a 12-hour clock), not translated",
+ "RestrictedApi": "lint suppression name",
+ "artFrameArtists": "TV preferences key",
+ "homeChannels": "TV preferences key",
+ "replay:{0}": "TV row card key",
+ "wrapped:{0}": "TV row card key"
 }

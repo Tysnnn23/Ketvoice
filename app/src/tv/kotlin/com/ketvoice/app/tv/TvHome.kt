@@ -80,6 +80,9 @@ fun TvHomePage() {
         if (current != null) { if (!playing) Player.toggle(); actions.nav.open(TvRoute.NowPlaying) }
         else if (lead != null) actions.play(library.recent.ifEmpty { listOf(lead) }, 0)
     }
+    // 1.1.0: Replay, Wrapped and the art frame, third on the page.
+    val extras = rememberTvExtras()
+    val rows = remember(shelves, extras) { TvExtras.placeIn(shelves, extras) }
     val state = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         TvHomeBackdrop(spotlight, Modifier.fillMaxSize().underRail())
@@ -90,11 +93,11 @@ fun TvHomePage() {
                 TvPivot(pivot = HOME_PIVOT) {
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize().testTag("tv-home"),
                         contentPadding = PaddingValues(bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(TvDesign.Size.rowSpacing)) {
-                        items(shelves, key = { it.key }, contentType = { "shelf" }) { shelf ->
-                            TvShelfRow(shelf, actions::open, onMenu = actions::options, first = lead == null && shelf == shelves.firstOrNull(),
+                        items(rows, key = { it.key }, contentType = { "shelf" }) { shelf ->
+                            TvShelfRow(shelf, actions::open, onMenu = actions::options, first = lead == null && shelf == rows.firstOrNull(),
                                 onFocusItem = spotlight::show)
                         }
-                        if (shelves.isEmpty() && lead == null) item(key = "empty") {
+                        if (rows.isEmpty() && lead == null) item(key = "empty") {
                             TvEmpty("Bienvenue sur Ketvoice TV", "Connectez votre compte dans Réglages pour retrouver votre bibliothèque, ou cherchez un titre.")
                         }
                     }

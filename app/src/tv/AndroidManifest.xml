@@ -19,6 +19,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
 
+    <!-- 1.1.0: « Continuer l'écoute » and Ketvoice's channel on the TV's home screen (its own entries only). -->
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
+
     <!-- Voice search: the TV's own speech recognizer, found through its intent (Android 11+ package visibility). -->
     <queries>
         <intent>
@@ -52,7 +55,26 @@
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>
+            <!-- 1.1.0: the programmes of the TV's home screen (Watch Next, Ketvoice's channel) open ketvoice://tv/… -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ketvoice" android:host="tv" />
+            </intent-filter>
         </activity>
+
+        <!-- 1.1.0 « Écran de veille Ketvoice »: offered in the TV's screensaver settings under the name « Ketvoice ». -->
+        <service
+            android:name=".tv.KetvoiceDreamService"
+            android:exported="true"
+            android:label="@string/tv_dream_name"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
 
         <!-- The shared code opens MainActivity (media session, notifications, links): on TV it hands over to TvActivity
              at once, without drawing anything. -->
@@ -79,5 +101,7 @@
         <activity android:name=".discord.DiscordAuthActivity" tools:node="remove" />
         <activity android:name=".discord.DiscordCallbackActivity" tools:node="remove" />
         <activity android:name=".YouTubeLoginActivity" tools:node="remove" />
+        <!-- 1.1.0: the phone's charging screen saver gives way to the TV's own (« Ketvoice », KetvoiceDreamService): one entry. -->
+        <service android:name=".ui.standby.StandbyDream" tools:node="remove" />
     </application>
 </manifest>

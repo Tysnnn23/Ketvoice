@@ -208,7 +208,8 @@ internal object AutoVoice {
         // Handled once: a recreated activity must not play it again.
         intent.action = null
         val app = context.applicationContext
-        val voice = library ?: AutoLibrary(AppAutoSource(app), PlayerAutoPlayback(app)).also { library = it }
+        val voice = library ?: AutoLibrary(AppAutoSource(app), PlayerAutoPlayback(app), artistRadio = com.ketvoice.app.BuildConfig.IS_TV)
+            .also { library = it }
         scope.launch(Dispatchers.Main) {
             voice.prepare()
             val request = withContext(Dispatchers.Default) { voice.voice(query, extras) }
@@ -238,7 +239,7 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
     internal val library: AutoLibrary by lazy {
         val app = context.applicationContext
         AutoLibrary(testSource ?: AppAutoSource(app), testPlayback ?: PlayerAutoPlayback(app), { AutoArtwork.uri(app, it) },
-            iconPackage = app.packageName)
+            iconPackage = app.packageName, artistRadio = com.ketvoice.app.BuildConfig.IS_TV)
     }
 
     private fun <T> future(block: suspend () -> T): ListenableFuture<T> {

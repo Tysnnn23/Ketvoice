@@ -67,7 +67,7 @@ fun TvApp(actions: TvActions, tier: TvTier, onExit: () -> Unit) {
             val nav = actions.nav
             BackHandler { if (!nav.back()) onExit() }
             Box(Modifier.fillMaxSize().background(TvDesign.Ink.page)) {
-                if (nav.current == TvRoute.NowPlaying) TvPageHost(nav, Modifier.fillMaxSize())
+                if (nav.current.immersive) TvPageHost(nav, Modifier.fillMaxSize())
                 else {
                     // Home draws its own poster from edge to edge (1.1.0): no second picture under it.
                     if (nav.current != TvRoute.Home) TvAmbientBackground()
@@ -112,6 +112,8 @@ private fun TvPage(route: TvRoute) {
         TvRoute.SignIn -> TvSignInPage()
         is TvRoute.Collection -> TvCollectionPage(route)
         is TvRoute.Artist -> TvArtistPage(route)
+        TvRoute.ArtFrame -> TvArtFramePage()
+        is TvRoute.Replay -> TvReplayPage(route)
     }
 }
 

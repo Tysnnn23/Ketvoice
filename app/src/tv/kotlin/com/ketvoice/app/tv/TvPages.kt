@@ -62,6 +62,7 @@ fun TvLibraryPage() {
                 PersonalMixes.topArtists(library.known, library.counts, library.favoriteIds), emptyMap(), library::cover)
         }
     }
+    val extras = rememberTvExtras()
     TvPivot(pivot = .14f, slack = .15f) {
         LazyColumn(Modifier.fillMaxSize().testTag("tv-library"), contentPadding = PaddingValues(top = TvDesign.Safe.vertical, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(TvDesign.Size.rowSpacing)) {
@@ -69,6 +70,8 @@ fun TvLibraryPage() {
             items(shelves, key = { it.key }) { shelf ->
                 TvShelfRow(shelf, actions::open, onMenu = actions::options, first = shelf == shelves.first())
             }
+            // 1.1.0: Replay, Wrapped and the art frame, under the library.
+            extras?.let { e -> item(key = e.key) { TvShelfRow(e, actions::open) } }
             if (shelves.isEmpty()) item(key = "empty") {
                 TvEmpty("Votre bibliothèque est vide", "Connectez votre compte dans Réglages : vos favoris, playlists et écoutes du téléphone arrivent ici.")
             }
