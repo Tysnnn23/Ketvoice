@@ -35,7 +35,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +65,7 @@ fun TvProfilePicker() {
     val book by TvProfiles.book.collectAsState()
     val stamp by TvProfiles.avatars.collectAsState()
     val actions = LocalTvActions.current
-    val activity = LocalContext.current as? Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     BackHandler { TvProfiles.picking.value = false }
     TvProfilePickerView(book, avatar = { id -> stamp.let { TvProfiles.avatarOf(id) } },
         onPick = { id -> if (activity != null) TvProfiles.switchTo(activity, id) else TvProfiles.picking.value = false },
@@ -162,7 +161,7 @@ fun TvProfilesSection() {
     val book by TvProfiles.book.collectAsState()
     val stamp by TvProfiles.avatars.collectAsState()
     val actions = LocalTvActions.current
-    val activity = LocalContext.current as? Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     val account by com.ketvoice.app.account.AccountSession.state.collectAsState()
     if (book.profiles.isEmpty() && !account.signedIn) return
     Column(Modifier.padding(horizontal = TvDesign.Safe.horizontal).padding(top = 12.dp).widthIn(max = 720.dp).testTag("tv-profiles"),
@@ -204,7 +203,7 @@ private fun ProfileLine(p: TvProfile, avatar: File?, current: Boolean, onSwitch:
 fun TvRemoveProfileConfirm() {
     val target by TvProfiles.confirming.collectAsState()
     val p = target ?: return
-    val activity = LocalContext.current as? Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     val scope = rememberCoroutineScope()
     val first = remember { FocusRequester() }
     var busy by remember { mutableStateOf(false) }

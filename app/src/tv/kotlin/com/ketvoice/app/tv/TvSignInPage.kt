@@ -56,7 +56,7 @@ fun TvSignInPage(deviceName: String = com.ketvoice.app.sync.DeviceIdentity.name(
     DisposableEffect(Unit) {
         onDispose { TvSignIn.state.value.let { if (it != TvSignIn.State.Done && it != TvSignIn.State.SigningIn) TvSignIn.cancel() } }
     }
-    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     // A new profile (1.1): the TV restarts into it; the profile in use signed in again: back where the listener was.
     LaunchedEffect(state) {
         if (state != TvSignIn.State.Done) return@LaunchedEffect
