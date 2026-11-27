@@ -7,6 +7,17 @@
 
 ---
 
+# Ketvoice 9.1.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 156** — Play on the TV: Ketvoice TV (device kind `tv`) shows in the phone's devices list with a TV icon and a "Play on TV" action; Ketvoice for Windows 2.0.2 shows the same action in its Devices panel. Ketvoice TV 1.1.0 ships alongside.
+
+- Handoff (`remote/RemoteWire.kt`, `remote/PhoneRemote.kt`, `remote/RemoteSession.kt`, `ui/player/RemoteDevices.kt`, `desktop/ui/Devices.kt`): the TV announces kind `tv` (older apps read it as a phone); `cmd`/`take`/`give` older than 30 s are dropped (`COMMAND_MAX_AGE_MS`). `SendToTvTest`.
+- Shared for the TV: `automix/PlaylistMix.kt` (gentle tempo/key reordering, four titles ahead, pinned titles), `Automix.mixList`, `BeatModel.usable()` treats a TV as charging, `AutoLibrary(artistRadio)` (off on phone and car), `LyricsBlur.deviceSupported` off on TV.
+
+---
+
 # Ketvoice 9.1.1
 
 ![Ketvoice](ketvoice-banner.png)
