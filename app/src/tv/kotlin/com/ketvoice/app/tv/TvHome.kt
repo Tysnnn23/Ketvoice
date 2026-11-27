@@ -94,6 +94,9 @@ fun TvHomePage() {
     val current by remember { Player.state.pick { it.current } }.collectPick()
     val playing by remember { Player.state.pick { it.playWhenReady } }.collectPick()
     val lead = current ?: library.recent.firstOrNull()
+    // 1.1.0: Replay, Wrapped and the art frame, third on the page.
+    val extras = rememberTvExtras()
+    val rows = remember(shelves, extras) { TvExtras.placeIn(shelves, extras) }
     val state = rememberLazyListState()
     TvPivot(pivot = .16f, slack = .25f) {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().testTag("tv-home"),
@@ -106,10 +109,10 @@ fun TvHomePage() {
                     else lead?.let { actions.play(library.recent.ifEmpty { listOf(it) }, 0) }
                 }
             }
-            items(shelves, key = { it.key }, contentType = { "shelf" }) { shelf ->
-                TvShelfRow(shelf, actions::open, onMenu = actions::options, first = lead == null && shelf == shelves.firstOrNull())
+            items(rows, key = { it.key }, contentType = { "shelf" }) { shelf ->
+                TvShelfRow(shelf, actions::open, onMenu = actions::options, first = lead == null && shelf == rows.firstOrNull())
             }
-            if (shelves.isEmpty() && lead == null) item(key = "empty") {
+            if (rows.isEmpty() && lead == null) item(key = "empty") {
                 TvEmpty("Bienvenue sur Ketvoice TV", "Connectez votre compte dans Réglages pour retrouver votre bibliothèque, ou cherchez un titre.")
             }
         }

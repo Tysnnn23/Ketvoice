@@ -58,6 +58,7 @@ fun TvSettingsPage() {
             section("Lecture") { PlaybackSection() }
             section("Paroles") { LyricsSection() }
             section("Affichage") { DisplaySection() }
+            section("Écran de veille et accueil") { TvSystemSection() }
             section("À propos") { AboutSection() }
         }
     }

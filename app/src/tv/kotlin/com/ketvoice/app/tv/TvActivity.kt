@@ -55,6 +55,9 @@ class TvActivity : ComponentActivity() {
             .apply { priority = Thread.NORM_PRIORITY - 1 }.start()
         runCatching { com.ketvoice.app.data.FavoritesOffline.start(app) }
         runCatching { Player.connect(app) }
+        // 1.1.0: the art frame's and home screen's settings, then « Continuer l'écoute » and the channel on the TV's home screen.
+        runCatching { TvPrefs.init(app) }
+        runCatching { TvHomeChannels.start(app) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -67,6 +70,8 @@ class TvActivity : ComponentActivity() {
     private fun handle(intent: Intent?) {
         intent ?: return
         if (com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)) return
+        // 1.1.0: a programme of the TV's home screen (ketvoice://tv/…).
+        if (TvDeepLinks.handle(intent, actions, lifecycleScope)) return
         if (intent.action == Intent.ACTION_SEARCH) {
             intent.getStringExtra(android.app.SearchManager.QUERY)?.takeIf { it.isNotBlank() }?.let(actions::search)
             intent.action = null

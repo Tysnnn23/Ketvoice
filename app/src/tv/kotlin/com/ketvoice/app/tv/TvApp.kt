@@ -66,7 +66,7 @@ fun TvApp(actions: TvActions, tier: TvTier, onExit: () -> Unit) {
             val nav = actions.nav
             BackHandler { if (!nav.back()) onExit() }
             Box(Modifier.fillMaxSize().background(TvDesign.Ink.page)) {
-                if (nav.current == TvRoute.NowPlaying) TvPageHost(nav, Modifier.fillMaxSize())
+                if (nav.current.immersive) TvPageHost(nav, Modifier.fillMaxSize())
                 else {
                     TvAmbientBackground()
                     TvPageHost(nav, Modifier.fillMaxSize().padding(start = TvDesign.Size.railClosed))
@@ -109,6 +109,8 @@ private fun TvPage(route: TvRoute) {
         TvRoute.SignIn -> TvSignInPage()
         is TvRoute.Collection -> TvCollectionPage(route)
         is TvRoute.Artist -> TvArtistPage(route)
+        TvRoute.ArtFrame -> TvArtFramePage()
+        is TvRoute.Replay -> TvReplayPage(route)
     }
 }
 
