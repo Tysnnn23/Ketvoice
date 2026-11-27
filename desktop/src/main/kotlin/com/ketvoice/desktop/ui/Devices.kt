@@ -188,7 +188,8 @@ private fun DeviceControls(device: RemoteDevice, clock: () -> Long, onOp: (Remot
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)) {
             if (track != null) KetTextLink("Reprendre ici", "device-take", onTake)
-            KetTextLink("Transférer la lecture", "device-send", onSend)
+            // Ketvoice TV 1.1: the TV of the same account starts playing what this PC plays, and the PC pauses.
+            KetTextLink(if (device.kind == "tv") "Lire sur la TV" else "Transférer la lecture", "device-send", onSend)
         }
         Spacer(Modifier.height(4.dp))
     }

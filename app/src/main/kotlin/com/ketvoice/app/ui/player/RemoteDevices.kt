@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,8 +56,12 @@ import kotlinx.coroutines.delay
 internal fun remoteIcon(kind: String): ImageVector = when (kind) {
     "pc" -> Icons.Filled.Computer
     "tablet" -> Icons.Filled.Tablet
+    "tv" -> Icons.Filled.Tv
     else -> Icons.Filled.Smartphone
 }
+
+/** The button that sends what plays here to [kind]: « Lire sur la TV » for Ketvoice TV (1.1), else the usual transfer. */
+internal fun sendLabel(kind: String): String = if (kind == "tv") "Lire sur la TV" else "Transférer la lecture"
 
 /** « Vos appareils » in « Sortie audio »: the account's other devices (the PC…), shown only while signed in. */
 @Composable
@@ -159,7 +164,7 @@ private fun RemoteDeviceCard(device: RemoteDevice, expanded: Boolean, clock: () 
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
             if (track != null) KetTextButton("Reprendre ici", onTake, Modifier.testTag("remote-take"))
-            KetTextButton("Transférer la lecture", onSend, Modifier.testTag("remote-send"), primary = true)
+            KetTextButton(sendLabel(device.kind), onSend, Modifier.testTag("remote-send"), primary = true)
         }
     }
 }

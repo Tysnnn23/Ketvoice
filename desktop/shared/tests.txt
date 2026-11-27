@@ -43,6 +43,8 @@ data/StreamResolverTest.kt
 player/QueueEntryIdsTest.kt
 player/QueueOrderTest.kt
 remote/RemoteControlTest.kt
+# Ketvoice TV 1.1: « Lire sur la TV » from the PC (same account, stale commands ignored, the sender pauses).
+remote/SendToTvTest.kt
 # Phase 3 (winpolish)
 data/SearchRankTest.kt
 data/SearchGroupsTest.kt

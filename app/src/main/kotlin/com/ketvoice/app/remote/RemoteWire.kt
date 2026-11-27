@@ -124,7 +124,8 @@ data class LocalPlayback(val queue: List<Track>, val index: Int, val playing: Bo
 object RemoteWire {
     const val MAX_UPCOMING = 25
     const val MAX_HANDOFF = 150
-    private val kinds = setOf("phone", "tablet", "quest", "pc")
+    /** `tv` since Ketvoice TV 1.1 (older apps read it as `phone`, so they still list and drive the TV). */
+    private val kinds = setOf("phone", "tablet", "quest", "pc", "tv")
 
     fun state(name: String, kind: String, p: LocalPlayback, at: Long): JSONObject = JSONObject()
         .put("name", name.take(40)).put("kind", kind)

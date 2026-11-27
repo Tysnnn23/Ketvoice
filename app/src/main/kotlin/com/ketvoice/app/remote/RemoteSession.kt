@@ -9,6 +9,8 @@ interface RemotePort {
     fun run(op: RemoteOp)
     fun play(handoff: RemoteHandoff)
     fun pause()
+    /** A handoff from [from] (the sender's name) was just played here: Ketvoice TV says so in a toast. */
+    fun received(from: String) {}
 }
 
 /**
@@ -47,6 +49,8 @@ class RemoteSession(
     fun receive(payload: JSONObject) {
         val body = seal.open(payload) ?: return
         val from = body.getString("f")
+        // A command or a handoff that took more than 30 s to arrive is dropped: it no longer says what the listener wants.
+        if (body.optString("t") in COMMANDS && clock() - body.optLong("ts") > COMMAND_MAX_AGE_MS) return
         when (body.optString("t")) {
             "hi" -> announce(force = true)
             "st" -> RemoteWire.device(from, body, present[from])?.let { devices[from] = it; emit() }
@@ -55,7 +59,11 @@ class RemoteSession(
                 val handoff = RemoteWire.handoff(port.playback()) ?: return
                 if (send(seal.seal("give", RemoteWire.handoff(handoff), to = from))) { port.pause(); announce(force = true) }
             }
-            "give" -> RemoteWire.handoff(body)?.let { port.play(it); announce(force = true) }
+            "give" -> RemoteWire.handoff(body)?.let {
+                port.play(it)
+                port.received(devices[from]?.name ?: present[from] ?: "?")
+                announce(force = true)
+            }
         }
     }
 
@@ -99,5 +107,8 @@ class RemoteSession(
     companion object {
         const val REFRESH_MS = 15_000L
         const val SEEK_SLACK_MS = 2_500L
+        /** Ketvoice TV 1.1: commands and handoffs older than this are ignored (stricter than the seal's own window). */
+        const val COMMAND_MAX_AGE_MS = 30_000L
+        private val COMMANDS = setOf("cmd", "take", "give")
     }
 }

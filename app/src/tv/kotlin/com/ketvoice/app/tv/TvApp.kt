@@ -73,6 +73,8 @@ fun TvApp(actions: TvActions, tier: TvTier, onExit: () -> Unit) {
                     TvRail(nav)
                 }
                 TvTrackMenu(actions)
+                // 1.1 accounts and Ketmix: « Qui écoute ? », « Lecture reçue de … », a mix being prepared, the rhythm model.
+                TvAccountsLayer()
                 // Updates come from the tv-v releases (Edition.Tv); the offer is the shared dialog, reached with the remote.
                 com.ketvoice.app.ui.update.UpdateHost()
             }
