@@ -50,7 +50,11 @@ object TvDesign {
 
     object Type {
         private val font get() = Ket27.font
+        /** An artist's name over their photo, a focused card's title over Home's poster (1.1.0). */
+        val hero get() = TextStyle(fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 60.sp, lineHeight = 64.sp, letterSpacing = (-1.2).sp)
         val display get() = TextStyle(fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 40.sp, lineHeight = 46.sp, letterSpacing = (-.6).sp)
+        /** The artist under Now Playing's title. */
+        val lead get() = TextStyle(fontFamily = font, fontWeight = FontWeight.Medium, fontSize = 22.sp, lineHeight = 28.sp)
         val title get() = TextStyle(fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-.4).sp)
         val row get() = TextStyle(fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, lineHeight = 24.sp)
         val card get() = TextStyle(fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp)

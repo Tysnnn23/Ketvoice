@@ -35,8 +35,9 @@ internal object LyricsBlur {
     /** Pixels rounded to a quarter, so that a settled radius always gives the same effect. */
     fun quantizedPx(px: Float): Float = if (!px.isFinite() || px <= 0f) 0f else kotlin.math.round(px * 4f) / 4f
 
-    /** This device: Android 12 or later, not Quest, not a modest phone running Ketvoice Lite. */
-    fun deviceSupported(): Boolean = supported(android.os.Build.VERSION.SDK_INT, com.ketvoice.app.BuildConfig.IS_QUEST,
+    /** This device: Android 12 or later, not Quest, not Ketvoice TV (no live blur there), not a modest phone running Ketvoice Lite. */
+    fun deviceSupported(): Boolean = supported(android.os.Build.VERSION.SDK_INT,
+        com.ketvoice.app.BuildConfig.IS_QUEST || com.ketvoice.app.BuildConfig.IS_TV,
         com.ketvoice.app.LiteTuning.lite && com.ketvoice.app.LiteTuning.modest)
 }
 

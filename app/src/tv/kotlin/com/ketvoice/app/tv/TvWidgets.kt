@@ -131,14 +131,19 @@ fun TvButton(label: String, icon: ImageVector?, onClick: () -> Unit, modifier: M
 @Composable
 fun TvIconButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp,
                  active: Boolean = false, accent: Color = Color.White, tag: String? = null) {
+    TvRoundButton(label, onClick, modifier, size, active, tag) { ink ->
+        Icon(icon, null, Modifier.size(size * .44f), tint = if (ink == TvDesign.Ink.primary && active) accent else ink)
+    }
+}
+
+/** A round button with any [content], drawn in the ink it is given (dark on the white focus disc, white otherwise). */
+@Composable
+fun TvRoundButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp, active: Boolean = false,
+                  tag: String? = null, content: @Composable (ink: Color) -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val fill by animateColorAsState(if (focused) TvDesign.Ink.focusFill else Color.White.copy(alpha = if (active) .2f else .08f), label = "tv-icon")
-    val ink = when {
-        focused -> TvDesign.Ink.onFocusFill
-        active -> accent
-        else -> TvDesign.Ink.primary
-    }
+    val ink = if (focused) TvDesign.Ink.onFocusFill else TvDesign.Ink.primary
     val description = AppText.t(label)
     Box(modifier
         .then(if (tag != null) Modifier.testTag(tag) else Modifier)
@@ -147,7 +152,7 @@ fun TvIconButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier
         .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClickLabel = description, onClick = onClick)
         .semantics { contentDescription = description },
         contentAlignment = Alignment.Center) {
-        Icon(icon, null, Modifier.size(size * .44f), tint = ink)
+        content(ink)
     }
 }
 

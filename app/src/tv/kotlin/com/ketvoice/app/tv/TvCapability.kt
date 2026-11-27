@@ -23,8 +23,8 @@ enum class TvTier {
     /** Focused cards grow with a spring everywhere; light boxes skip the soft shadow under them. */
     val focusShadow: Boolean get() = this != Light
 
-    /** The animated background behind Now Playing breathes only where the processor has room for it. */
-    val livingBackground: Boolean get() = this == Full
+    /** The colour field behind Now Playing drifts slowly except on light boxes (1.1.0: still there). */
+    val livingBackground: Boolean get() = this != Light
 
     /** How many cards a row composes ahead of the visible ones (lazy rows prefetch this many). */
     val rowPrefetch: Int get() = if (this == Light) 2 else 4

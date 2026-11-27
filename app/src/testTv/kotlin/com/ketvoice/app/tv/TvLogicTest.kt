@@ -34,7 +34,8 @@ class TvLogicTest {
         assertFalse(TvTier.Balanced.performanceMode)
         assertFalse(TvTier.Light.focusShadow)
         assertTrue(TvTier.Full.livingBackground)
-        assertFalse(TvTier.Balanced.livingBackground)
+        assertTrue(TvTier.Balanced.livingBackground)
+        assertFalse(TvTier.Light.livingBackground)
     }
 
     @Test fun backGoesUpTheStackThenHomeThenLeaves() {

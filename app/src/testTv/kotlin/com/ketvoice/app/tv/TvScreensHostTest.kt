@@ -243,23 +243,28 @@ class TvScreensHostTest {
         image("06-now-playing")
         press(Key.DirectionRight)
         assertEquals("np-next", focusedTag())
-        // Along the bar to « File d'attente »: the queue takes the right half.
-        press(Key.DirectionRight, 5)
-        assertEquals("np-panel", focusedTag())
+        // Down to the second row, along it to « File d'attente »: the queue slides in from the right.
+        press(Key.DirectionDown)
+        repeat(4) { if (focusedTag() != "np-queue-open") press(Key.DirectionRight) }
+        assertEquals("np-queue-open", focusedTag())
         press(Key.DirectionCenter)
         settle(600)
         compose.onNodeWithTag("np-queue").assertExists()
+        assertTrue("the queue takes the focus", focusedTag().orEmpty().startsWith("track-"))
         image("07-now-playing-queue")
-        // Back to the lyrics, then asleep after a while without a key: the first key only wakes the controls.
-        press(Key.DirectionCenter)
+        // Back closes it and gives the focus back to play; then asleep after a while without a key: the first key only wakes.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle(600)
+        compose.onNodeWithTag("np-queue").assertDoesNotExist()
+        assertEquals("np-play", focusedTag())
         compose.onNodeWithTag("np-lyrics").assertExists()
         compose.mainClock.advanceTimeBy(IDLE_MS + 1_500)
         compose.waitForIdle()
         image("07b-now-playing-asleep")
         press(Key.DirectionLeft)
-        assertEquals("the waking key did not move the focus", "np-panel", focusedTag())
+        assertEquals("the waking key did not move the focus", "np-play", focusedTag())
         press(Key.DirectionLeft)
-        assertTrue(focusedTag() != "np-panel")
+        assertEquals("np-previous", focusedTag())
     }
 
     @Test fun collectionPageListsTheFavouritesAndPlaysFromATitle() {

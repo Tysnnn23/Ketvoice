@@ -142,6 +142,24 @@ class TvPerfHostTest {
         assertTrue("cards recompose only around the focus ($cards)", cards <= 6 * 4)
     }
 
+    @Test fun walkingNowPlayingsControlsRecomposesNeitherThePageNorItsStage() {
+        val tracks = recent.value
+        player.value = PlayerUiState(queue = tracks, index = 0, isPlaying = true, playWhenReady = true, durationMs = 200_000)
+        actions.nav.open(TvRoute.NowPlaying)
+        show(TvTier.Balanced)
+        Runs.counts.clear()
+        repeat(4) { press(Key.DirectionRight) }
+        repeat(4) { press(Key.DirectionLeft) }
+        val page = Runs.counts["TvNowPlayingPage"] ?: 0
+        val stage = Runs.counts["TvPlayerStage"] ?: 0
+        val field = Runs.counts["TvColorField"] ?: 0
+        report.appendLine("8 × Left/Right along Now Playing's controls: TvNowPlayingPage %d, TvPlayerStage %d, TvColorField %d recompositions"
+            .format(page, stage, field))
+        assertEquals("Now Playing never recomposes while the focus moves", 0, page)
+        assertEquals(0, stage)
+        assertEquals(0, field)
+    }
+
     @Test fun positionTicksRecomposeOnlyTheTimes() {
         val tracks = recent.value
         player.value = PlayerUiState(queue = tracks, index = 0, isPlaying = true, playWhenReady = true, durationMs = 200_000)
