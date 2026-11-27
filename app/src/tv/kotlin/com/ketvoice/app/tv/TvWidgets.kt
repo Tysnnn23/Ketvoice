@@ -49,7 +49,7 @@ import com.ketvoice.app.ui.common.Text
 /** A row of cards under its title: lazy, keyed, the focus kept in place as it scrolls, back to its last card on re-entry. */
 @Composable
 fun TvShelfRow(shelf: TvShelf, onItem: (TvItem) -> Unit, modifier: Modifier = Modifier, onMenu: ((TvItem) -> Unit)? = null,
-               first: Boolean = false) {
+               first: Boolean = false, onFocusItem: ((TvItem) -> Unit)? = null) {
     Column(modifier.fillMaxWidth()) {
         Text(shelf.title, style = TvDesign.Type.row, color = TvDesign.Ink.primary,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -64,21 +64,30 @@ fun TvShelfRow(shelf: TvShelf, onItem: (TvItem) -> Unit, modifier: Modifier = Mo
                 itemsIndexed(shelf.items, key = { _, item -> item.key }, contentType = { _, item -> item.kind }) { index, item ->
                     TvItemCard(item, { onItem(item) }, focus = Modifier.pageItem(shelf.key, item.key, first = first && index == 0)
                         .then(if (index == 0) Modifier.focusRequester(head) else Modifier),
-                        onMenu = onMenu?.let { menu -> { menu(item) } })
+                        onMenu = onMenu?.let { menu -> { menu(item) } }, onFocused = onFocusItem?.let { focus -> { focus(item) } })
                 }
             }
         }
     }
 }
 
-/** A card of a row: a square cover (a circle for an artist), its title and subtitle under it. */
+/**
+ * A card of a row: a square cover (a circle for an artist), its title and subtitle under it. Opening a page from it
+ * flies its picture into the page's header ([TvZoom]); [onFocused] tells the page which card has the focus (Home's
+ * poster).
+ */
 @Composable
-fun TvItemCard(item: TvItem, onClick: () -> Unit, modifier: Modifier = Modifier, focus: Modifier = Modifier, onMenu: (() -> Unit)? = null) {
+fun TvItemCard(item: TvItem, onClick: () -> Unit, modifier: Modifier = Modifier, focus: Modifier = Modifier, onMenu: (() -> Unit)? = null,
+               onFocused: (() -> Unit)? = null) {
     val artist = item.kind == TvItemKind.Artist
     val size = if (artist) TvDesign.Size.artist else TvDesign.Size.card
     val shape = if (artist) CircleShape else RoundedCornerShape(TvDesign.Radius.card)
+    val zoom = LocalTvZoom.current
+    val place = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
+    val open = remember(item, onClick, zoom) { { zoom?.takeOff(item, place[0], TvDesign.FOCUS_SCALE); onClick() } }
     Column(modifier.width(size), horizontalAlignment = if (artist) Alignment.CenterHorizontally else Alignment.Start) {
-        TvCover(item.image, size, shape, focus.tvFocusable(onClick, shape, onLongClick = onMenu, tag = "card-${item.key}")
+        TvCover(item.image, size, shape, focus.tvZoomSource(item.key, place)
+            .tvFocusable(open, shape, onLongClick = onMenu, onFocused = onFocused, tag = "card-${item.key}")
             .semantics { contentDescription = if (item.appText) AppText.t(item.title) else item.title },
             placeholder = placeholderFor(item.kind))
         Spacer(Modifier.height(10.dp))

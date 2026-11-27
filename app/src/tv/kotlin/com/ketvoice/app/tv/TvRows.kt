@@ -24,6 +24,9 @@ data class TvItem(
     val index: Int = 0,
     /** The title is the app's own French text (translated at display), not a song or an artist's name. */
     val appText: Boolean = false,
+    /** For a release: its kind as French source text (« Album », « Single », « EP ») and its year, when known. */
+    val release: String = "",
+    val year: String = "",
 )
 
 /** A titled row of cards. [title] is French source text, translated at display. */
@@ -87,10 +90,21 @@ object TvRows {
         TvItem("t:${t.id}:$index", TvItemKind.Track, t.title, t.artist, cover(t), queue = queue, index = index)
 
     fun album(a: CatalogAlbum) = TvItem("al:${a.id}", TvItemKind.Album, a.title, a.artist, a.cover,
-        TvRoute.Collection("album", a.id, a.title, a.cover))
+        TvRoute.Collection("album", a.id, a.title, a.cover), release = "Album", year = yearOf(a.releaseDate))
 
     fun album(a: Album) = TvItem("al:${a.id}", TvItemKind.Album, a.title, a.artist, a.coverUrl,
-        TvRoute.Collection("album", a.id, a.title, a.coverUrl))
+        TvRoute.Collection("album", a.id, a.title, a.coverUrl), release = releaseOf(a),
+        year = com.ketvoice.app.ui.sub.ArtistDiscography.year(a)?.toString().orEmpty())
+
+    /** « Album », « Single » or « EP », as the catalogue's type line says. */
+    fun releaseOf(a: Album): String = when (com.ketvoice.app.ui.sub.ArtistDiscography.kind(a)) {
+        com.ketvoice.app.ui.sub.ArtistDiscography.Kind.SINGLE -> "Single"
+        com.ketvoice.app.ui.sub.ArtistDiscography.Kind.EP -> "EP"
+        com.ketvoice.app.ui.sub.ArtistDiscography.Kind.ALBUM -> "Album"
+    }
+
+    /** The year of a « 2024-05-17 » release date, or empty. */
+    fun yearOf(date: String?): String = date?.take(4)?.takeIf { it.length == 4 && it.all(Char::isDigit) }.orEmpty()
 
     fun mix(card: MixCard): TvItem {
         val title = com.ketvoice.app.ui.home.mixTitle(card)

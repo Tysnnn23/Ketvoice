@@ -19,13 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,8 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ketvoice.app.data.ArtistPage
-import com.ketvoice.app.data.ArtistPages
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.CatalogPage
 import com.ketvoice.app.data.CatalogRepo
@@ -109,7 +105,8 @@ fun TvCollectionPage(route: TvRoute.Collection) {
         TvBackdrop(cover, Modifier.fillMaxSize().underRail(), veil = .72f)
         Row(Modifier.fillMaxSize().padding(top = TvDesign.Safe.vertical)) {
             Column(Modifier.width(372.dp).fillMaxHeight().padding(start = TvDesign.Safe.horizontal, end = 24.dp)) {
-                TvCover(cover, 232.dp, RoundedCornerShape(TvDesign.Radius.panel), placeholder = KetIcons.Album)
+                TvCover(cover, 232.dp, RoundedCornerShape(TvDesign.Radius.panel), Modifier.tvZoomTarget(route).testTag("collection-cover"),
+                    placeholder = KetIcons.Album)
                 Spacer(Modifier.height(18.dp))
                 Text(route.title, localize = appNamed, style = TvDesign.Type.title, color = TvDesign.Ink.primary, maxLines = 2,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("collection-title"))
@@ -179,74 +176,6 @@ fun TvTrackRow(index: Int, track: Track, cover: String?, playing: Boolean, focus
         if (track.durationMs > 0) Text(TvTime.format(track.durationMs), localize = false, style = TvDesign.Type.caption,
             color = TvDesign.Ink.tertiary)
     }
-}
-
-/** An artist: the photo behind, the name, play and radio, then popular titles, albums and similar artists. */
-@Composable
-fun TvArtistPage(route: TvRoute.Artist) {
-    val actions = LocalTvActions.current
-    val library = rememberTvLibrary()
-    var attempt by remember { mutableIntStateOf(0) }
-    val page by produceState<ArtistPage?>(null, route, attempt) {
-        value = runCatching { ArtistPages.cachedOrFetch(route.id.takeIf { it.startsWith("UC") }.orEmpty(), route.name) }.getOrNull()
-    }
-    var loaded by remember(route, attempt) { mutableStateOf(false) }
-    LaunchedEffect(page) { if (page != null) loaded = true }
-    val photo = page?.artist?.photo ?: route.picture
-    val own = remember(library, route.name) {
-        library.known.filter { PersonalMixes.primaryArtist(it).equals(route.name, ignoreCase = true) }
-    }
-    val top = page?.tracks?.ifEmpty { null } ?: own
-    val shelves = remember(page, own) { artistShelves(page, own, library) }
-    Box(Modifier.fillMaxSize()) {
-        TvBackdrop(photo, Modifier.fillMaxSize().underRail(), veil = .6f)
-        TvPivot(pivot = .16f, slack = .15f) {
-            LazyColumn(Modifier.fillMaxSize().testTag("tv-artist"), contentPadding = PaddingValues(top = TvDesign.Safe.vertical, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(TvDesign.Size.rowSpacing)) {
-                item(key = "header") {
-                    Row(Modifier.padding(horizontal = TvDesign.Safe.horizontal), verticalAlignment = Alignment.CenterVertically) {
-                        TvCover(photo, 168.dp, CircleShape, placeholder = KetIcons.Account)
-                        Spacer(Modifier.width(28.dp))
-                        Column {
-                            Text(page?.artist?.name ?: route.name, localize = false, style = TvDesign.Type.display, color = TvDesign.Ink.primary,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("artist-name"))
-                            page?.listeners?.takeIf { it.isNotBlank() }?.let {
-                                Text(it, localize = false, style = TvDesign.Type.body, color = TvDesign.Ink.secondary, maxLines = 1)
-                            }
-                            Spacer(Modifier.height(16.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                TvButton("Lecture", KetIcons.Play, { actions.play(top) }, Modifier.pageItem("buttons", "play", first = true),
-                                    primary = true, tag = "artist-play")
-                                TvButton("Lancer la radio", KetIcons.Shuffle, {
-                                    Player.startArtistRadio(route.name, route.id.takeIf { id -> id.all(Char::isDigit) && id.isNotEmpty() }, top)
-                                    actions.nav.open(TvRoute.NowPlaying)
-                                }, Modifier.pageItem("buttons", "radio"), tag = "artist-radio")
-                            }
-                        }
-                    }
-                }
-                items(shelves, key = { it.key }) { shelf -> TvShelfRow(shelf, actions::open, onMenu = actions::options) }
-                if (shelves.isEmpty() && loaded) item(key = "retry") {
-                    TvButton("Réessayer", KetIcons.Refresh, { attempt++ }, Modifier.padding(start = TvDesign.Safe.horizontal))
-                }
-            }
-        }
-    }
-}
-
-private fun artistShelves(page: ArtistPage?, own: List<Track>, library: TvLibrary): List<TvShelf> {
-    val top = page?.tracks.orEmpty().take(TvRows.ROW_MAX)
-    return listOfNotNull(
-        top.takeIf { it.isNotEmpty() }?.let { list -> TvShelf("top", "Titres populaires", list.mapIndexed { i, t -> TvRows.track(t, list, i, library::cover) }) },
-        own.take(TvRows.ROW_MAX).takeIf { it.isNotEmpty() }?.let { list ->
-            TvShelf("own", "Dans votre bibliothèque", list.mapIndexed { i, t -> TvRows.track(t, list, i, library::cover) }) },
-        page?.albums?.takeIf { it.isNotEmpty() }?.let { albums -> TvShelf("albums", "Albums et singles", albums.map(TvRows::album)) },
-        page?.related?.takeIf { it.isNotEmpty() }?.let { related ->
-            TvShelf("related", "Artistes similaires", related.map { a ->
-                TvItem("ar:${a.id}", TvItemKind.Artist, a.name, "", a.photo, TvRoute.Artist(a.id, a.name, a.photo))
-            })
-        },
-    )
 }
 
 /** « 3:25 », « 1:02:10 ». */

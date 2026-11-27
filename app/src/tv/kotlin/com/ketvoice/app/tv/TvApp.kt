@@ -62,16 +62,19 @@ import kotlinx.coroutines.delay
 @Composable
 fun TvApp(actions: TvActions, tier: TvTier, onExit: () -> Unit) {
     KetvoiceTheme(useDark = true) {
-        CompositionLocalProvider(LocalTvTier provides tier, LocalTvActions provides actions) {
+        val zoom = remember(actions.nav) { TvZoom(actions.nav) }
+        CompositionLocalProvider(LocalTvTier provides tier, LocalTvActions provides actions, LocalTvZoom provides zoom) {
             val nav = actions.nav
             BackHandler { if (!nav.back()) onExit() }
             Box(Modifier.fillMaxSize().background(TvDesign.Ink.page)) {
                 if (nav.current == TvRoute.NowPlaying) TvPageHost(nav, Modifier.fillMaxSize())
                 else {
-                    TvAmbientBackground()
+                    // Home draws its own poster from edge to edge (1.1.0): no second picture under it.
+                    if (nav.current != TvRoute.Home) TvAmbientBackground()
                     TvPageHost(nav, Modifier.fillMaxSize().padding(start = TvDesign.Size.railClosed))
                     TvRail(nav)
                 }
+                TvZoomOverlay(zoom, nav)
                 TvTrackMenu(actions)
                 // Updates come from the tv-v releases (Edition.Tv); the offer is the shared dialog, reached with the remote.
                 com.ketvoice.app.ui.update.UpdateHost()
