@@ -72,6 +72,14 @@ private class PosterLayers {
     val fade = Animatable(1f)
 
     suspend fun show(bitmap: ImageBitmap?) {
+        if (bitmap == null) {
+            // Nothing to show any more: the poster fades out over what lies under it.
+            back = null
+            fade.animateTo(0f, tween(Motion.duration(POSTER_FADE_MS)))
+            front = null
+            fade.snapTo(1f)
+            return
+        }
         back = front
         front = bitmap
         fade.snapTo(0f)

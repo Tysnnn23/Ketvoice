@@ -83,7 +83,7 @@ fun TvNowPlayingPage() {
     val ask = rememberKetmixAsk()
     val split = rememberLyricsSplit(current)
     val fade = Modifier.graphicsLayer { alpha = chrome.value }
-    Box(Modifier.fillMaxSize().testTag("tv-now-playing").onPreviewKeyEvent { awake.onKey(it, ask.value) }) {
+    Box(Modifier.fillMaxSize().testTag("tv-now-playing").onPreviewKeyEvent { awake.onKey(it, ask.value.takeIf { panel == TvPanel.None }) }) {
         TvColorField(rememberFieldPalette(shown, mix), Modifier.fillMaxSize())
         TvPlayerStage(
             split = split.value,
