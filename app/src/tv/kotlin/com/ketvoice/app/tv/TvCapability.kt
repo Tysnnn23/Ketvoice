@@ -14,8 +14,11 @@ enum class TvTier {
     /** 4 GB or more on a 64-bit system with four cores or more. */
     Full;
 
-    /** `ketmixAnalysis` on a fresh install: 0 « Légère » on light boxes, 1 « Équilibrée » elsewhere. */
-    val ketmixAnalysis: Int get() = if (this == Light) 0 else 1
+    /**
+     * `ketmixAnalysis` on a fresh install (and for each new profile): 0 « Légère » on light boxes, 1 « Équilibrée » on
+     * balanced ones, 2 « Maximale » (longer reads, the key, sections) on powerful ones since 1.1.
+     */
+    val ketmixAnalysis: Int get() = when (this) { Light -> 0; Balanced -> 1; Full -> 2 }
 
     /** `highPerformanceMode` on a fresh install: on for light boxes (visible effects stay, the invisible ones go). */
     val performanceMode: Boolean get() = this == Light
@@ -58,7 +61,7 @@ object TvCapability {
     fun about(tier: TvTier): String = when (tier) {
         TvTier.Light -> "Téléviseur modeste : Ketmix en analyse légère, effets allégés"
         TvTier.Balanced -> "Téléviseur équilibré : tous les effets, Ketmix en analyse équilibrée"
-        TvTier.Full -> "Téléviseur puissant : tous les effets"
+        TvTier.Full -> "Téléviseur puissant : tous les effets, Ketmix en analyse maximale"
     }
 
     /** Reads this device (Android only; the tier itself is computed by [tier]). */

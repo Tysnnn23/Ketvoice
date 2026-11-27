@@ -86,6 +86,12 @@ internal object Automix {
     private const val BACKGROUND_ANALYSIS_SPEED = 3f
     /** Set by the activity: whether Ketvoice is the app on screen. */
     @Volatile var appInFront = true
+    /**
+     * « Mixer cette playlist » (Ketvoice TV 1.1): the titles of the list the listener asked to mix. Two of them that
+     * follow each other are mixed even when they are an album played in order.
+     */
+    @Volatile var mixList: Set<String> = emptySet()
+    private fun listMixed(a: Track, b: Track) = a.id in mixList && b.id in mixList
     internal fun analysisSpeed(inFront: Boolean) = if (inFront) ANALYSIS_SPEED else BACKGROUND_ANALYSIS_SPEED
     /** A title must have played this long before the ones after it are prepared: a listener skipping through titles prepares nothing. */
     private const val PREP_FROM_MS = 4_000L
@@ -361,7 +367,8 @@ internal object Automix {
         h.exact || AppSettings.bitPerfect.value -> "sortie bit-perfect"
         state.repeatOne && !AppSettings.ketmixLoops.value -> "titre répété"
         SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180 -> "minuterie active"
-        !state.repeatOne && !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) -> "album joué dans l'ordre"
+        !state.repeatOne && !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) &&
+            !listMixed(current, next.track) -> "album joué dans l'ordre"
         next.track.durationMs in 1 until 30_000L -> "titre suivant trop court"
         else -> null
     }
@@ -382,7 +389,7 @@ internal object Automix {
             stopAfterCurrent = SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180,
             exactAudio = h.exact || AppSettings.bitPerfect.value,
             skipSilence = AppSettings.skipSilence.value,
-            albumsMixed = AppSettings.automixAlbums.value,
+            albumsMixed = AppSettings.automixAlbums.value || listMixed(current, next.track),
             speed = main.playbackParameters.speed,
             userOverlapMs = MixPointStore.pair(current.id, next.track.id)?.overlapMs ?: -1L,
             // « Ketmix apprend »: the kinds the listener turned down, left out of the automatic style only (empty while off).

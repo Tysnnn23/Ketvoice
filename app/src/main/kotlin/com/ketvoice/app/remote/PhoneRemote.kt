@@ -41,11 +41,21 @@ object PhoneRemote {
         }
 
         override fun play(handoff: RemoteHandoff) {
-            Player.playTrack(handoff.queue[handoff.index], handoff.queue, handoff.index, handoff.positionMs, handoff.play, keepOrder = true)
+            // « Lire sur la TV » (Ketvoice TV 1.1): the TV always starts playing what it was sent, wherever it is.
+            val play = handoff.play || com.ketvoice.app.BuildConfig.IS_TV
+            Player.playTrack(handoff.queue[handoff.index], handoff.queue, handoff.index, handoff.positionMs, play, keepOrder = true)
         }
 
         override fun pause() = Player.pause()
+
+        override fun received(from: String) { _received.value = Received(from, System.currentTimeMillis()) }
     }
+
+    /** A handoff just played here, from the device named [from]: the TV shows « Lecture reçue de … ». */
+    data class Received(val from: String, val at: Long)
+
+    private val _received = MutableStateFlow<Received?>(null)
+    val received: kotlinx.coroutines.flow.StateFlow<Received?> = _received
 
     fun inFront(on: Boolean) { front.value = on }
 
@@ -56,6 +66,7 @@ object PhoneRemote {
         val app = context.applicationContext
         val kind = when {
             com.ketvoice.app.BuildConfig.IS_QUEST -> "quest"
+            com.ketvoice.app.BuildConfig.IS_TV -> "tv"
             app.resources.configuration.smallestScreenWidthDp >= 600 -> "tablet"
             else -> "phone"
         }

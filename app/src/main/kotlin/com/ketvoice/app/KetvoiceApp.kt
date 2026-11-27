@@ -18,6 +18,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Ketvoice TV's restart process (switching profiles, 1.1) only ends the app and opens it again: it reads nothing.
+        if (WorkProcess.isRestart(getProcessName(), packageName)) return
         // Every process keeps its crash reports from the very start (6.1.1).
         runCatching { com.ketvoice.app.util.Crash.install(this) }
         // Ketvoice Lite: budgets follow the phone's memory (LiteTuning). Since 6.6 the mobile edition finds a modest
@@ -151,6 +153,9 @@ internal object WorkProcess {
     /** The name of the work process, as declared for StemWorkService in the manifest. */
     const val SUFFIX = ":stems"
     fun isWork(processName: String?, packageName: String): Boolean = processName == packageName + SUFFIX
+
+    /** Ketvoice TV's restart process (`TvRestartActivity`, declared in the TV manifest only). */
+    fun isRestart(processName: String?, packageName: String): Boolean = processName == "$packageName:restart"
 }
 
 internal object MemoryRelief {

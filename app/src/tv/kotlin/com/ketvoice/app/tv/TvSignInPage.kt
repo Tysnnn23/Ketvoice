@@ -56,13 +56,21 @@ fun TvSignInPage(deviceName: String = com.ketvoice.app.sync.DeviceIdentity.name(
     DisposableEffect(Unit) {
         onDispose { TvSignIn.state.value.let { if (it != TvSignIn.State.Done && it != TvSignIn.State.SigningIn) TvSignIn.cancel() } }
     }
-    LaunchedEffect(state) { if (state == TvSignIn.State.Done) { delay(1_600); actions.nav.back() } }
+    val activity = androidx.activity.compose.LocalActivity.current
+    // A new profile (1.1): the TV restarts into it; the profile in use signed in again: back where the listener was.
+    LaunchedEffect(state) {
+        if (state != TvSignIn.State.Done) return@LaunchedEffect
+        delay(1_600)
+        if (activity == null || !TvProfiles.finishAdd(activity)) actions.nav.back()
+    }
     Box(Modifier.fillMaxSize().testTag("tv-sign-in"), contentAlignment = Alignment.Center) {
         Row(Modifier.clip(RoundedCornerShape(28.dp)).background(TvDesign.Ink.glass).padding(36.dp), verticalAlignment = Alignment.CenterVertically) {
             QrPanel(state, 236.dp)
             Spacer(Modifier.width(40.dp))
             Column(Modifier.width(420.dp)) {
-                Text("Se connecter avec le téléphone", style = TvDesign.Type.title, color = TvDesign.Ink.primary)
+                // Signed in already: this code adds another listener's profile to the TV (1.1).
+                val adding = com.ketvoice.app.account.AccountSession.state.collectAsState().value.signedIn
+                Text(if (adding) "Ajouter un profil" else "Se connecter avec le téléphone", style = TvDesign.Type.title, color = TvDesign.Ink.primary)
                 Spacer(Modifier.height(14.dp))
                 Instructions(state)
                 Spacer(Modifier.height(22.dp))

@@ -84,6 +84,21 @@
             android:theme="@android:style/Theme.NoDisplay"
             tools:replace="android:theme" />
 
+        <!-- « Qui écoute ? » (1.1): a profile's data is put in place before anything reads it (the highest initOrder runs
+             first, in the main process only), and a switch restarts the app through a small process of its own. -->
+        <provider
+            android:name=".tv.TvProfileMount"
+            android:authorities="${applicationId}.tvprofiles"
+            android:exported="false"
+            android:initOrder="1000" />
+        <activity
+            android:name=".tv.TvRestartActivity"
+            android:process=":restart"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <!-- No phone launcher icons on TV: the leanback launcher shows the banner of TvActivity. -->
         <activity-alias android:name=".LauncherDefault" tools:node="remove" />
         <activity-alias android:name=".LauncherGlass" tools:node="remove" />

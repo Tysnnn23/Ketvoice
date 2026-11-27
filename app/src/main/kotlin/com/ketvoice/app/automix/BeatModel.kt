@@ -120,7 +120,8 @@ internal object BeatModel {
 
     /** The model may run now: carried by the APK and switched on, or downloaded; on Lite and on modest phones only while charging. */
     fun usable(): Boolean = present(bundled, AppSettings.ketmixBeatModel.value, pack.ready) &&
-        allowed(LiteTuning.lite, LiteTuning.modest, StemModel.charging())
+        // A TV is always on mains power (Ketvoice TV 1.1 offers the download on powerful TVs only).
+        allowed(LiteTuning.lite, LiteTuning.modest, StemModel.charging() || com.ketvoice.app.BuildConfig.IS_TV)
 
     internal fun present(bundled: Boolean, switchedOn: Boolean, downloaded: Boolean) = if (bundled) switchedOn else downloaded
 

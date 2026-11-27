@@ -124,6 +124,9 @@ fun TvCollectionPage(route: TvRoute.Collection) {
                         .focusProperties { if (tracks.isNotEmpty()) right = listHead },
                         tag = "collection-shuffle")
                 }
+                // 1.1: the list as one continuous Ketmix mix (prepared ahead, gently reordered).
+                Spacer(Modifier.height(12.dp))
+                TvMixButton(route.kind, tracks, Modifier.pageItem("buttons", "mix").focusProperties { if (tracks.isNotEmpty()) right = listHead })
             }
             TvTrackList(tracks, library, loading, onRetry = { attempt++ }, modifier = Modifier.weight(1f).fillMaxHeight(), head = listHead)
         }

@@ -36,6 +36,9 @@ class TvActivity : ComponentActivity() {
         TvCapability.init(this)
         TvDefaults.apply(getSharedPreferences(TvDefaults.PREFS, MODE_PRIVATE), TvCapability.current)
         startShared()
+        // 1.1 profiles: the book follows the account in use; « Qui écoute ? » at launch when the TV is shared.
+        runCatching { TvProfiles.watch(this) }
+        if (savedInstanceState == null) runCatching { TvProfiles.launch() }
         setContent { TvApp(actions, TvCapability.current, onExit = ::finish) }
         handle(intent)
     }

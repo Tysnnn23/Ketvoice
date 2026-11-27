@@ -217,5 +217,16 @@
  "artFrameArtists": "TV preferences key",
  "homeChannels": "TV preferences key",
  "replay:{0}": "TV row card key",
- "wrapped:{0}": "TV row card key"
+ "wrapped:{0}": "TV row card key",
+ "GET": "HTTP method of a request, not user text",
+ "WebView": "prefix of the system WebView's preference files, kept for every TV profile",
+ "ketvoice.mainPid": "intent extra name of the TV restart, never shown",
+ "profile-{0}": "test tag of a TV profile tile",
+ "profile-remove-{0}": "test tag of a TV profile's remove button",
+ "profile-switch-{0}": "test tag of a TV profile's switch button",
+ "remove:{0}": "focus memory key of a TV settings button",
+ "switch:{0}": "focus memory key of a TV settings button",
+ "rhythmModelSuggested": "preference key of the TV's one-time rhythm model offer",
+ "skipPicker": "key of the TV profiles' book file",
+ "tv-profile:{0}": "name of a TV profile's slot in the encrypted session store"
 }

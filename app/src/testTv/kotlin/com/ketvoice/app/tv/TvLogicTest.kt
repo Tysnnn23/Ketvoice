@@ -29,7 +29,8 @@ class TvLogicTest {
     @Test fun tierChoosesKetmixAnalysisAndPerformanceDefaults() {
         assertEquals(0, TvTier.Light.ketmixAnalysis)
         assertEquals(1, TvTier.Balanced.ketmixAnalysis)
-        assertEquals(1, TvTier.Full.ketmixAnalysis)
+        // 1.1: a powerful TV starts on the deeper analysis (« Maximale »).
+        assertEquals(2, TvTier.Full.ketmixAnalysis)
         assertTrue(TvTier.Light.performanceMode)
         assertFalse(TvTier.Balanced.performanceMode)
         assertFalse(TvTier.Light.focusShadow)

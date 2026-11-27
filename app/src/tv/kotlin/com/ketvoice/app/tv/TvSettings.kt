@@ -54,6 +54,7 @@ fun TvSettingsPage() {
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "title") { TvPageTitle("Réglages", Modifier.padding(bottom = 10.dp)) }
             item(key = "account") { AccountSection() }
+            item(key = "profiles") { TvProfilesSection() }
             section("Ketmix") { KetmixSection() }
             section("Lecture") { PlaybackSection() }
             section("Paroles") { LyricsSection() }
@@ -121,6 +122,7 @@ private fun KetmixSection() {
         AppSettings.ketmixAnalysis.value, listOf(TvOption(0, "Légère"), TvOption(1, "Équilibrée"), TvOption(2, "Maximale")), "ketmix-analysis") {
         AppSettings.ketmixAnalysis.value = it; SettingsStore.save()
     }
+    TvRhythmModelLine()
     TvToggle("Ketmix apprend de vos avis", "Après chaque transition, 👍 ou 👎 sur l'écran En cours. Tout reste sur ce téléviseur.",
         AppSettings.ketmixLearns.value, "ketmix-learns") { AppSettings.ketmixLearns.value = it; SettingsStore.save() }
     TvToggle("Mixer aussi les albums", "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",
@@ -204,17 +206,20 @@ fun TvChoice(title: String, subtitle: String, value: Int, options: List<TvOption
 }
 
 @Composable
-private fun TvSettingLine(title: String, subtitle: String, value: String, key: String, onClick: () -> Unit, on: Boolean? = null) {
+internal fun TvSettingLine(title: String, subtitle: String, value: String, key: String, onClick: () -> Unit, on: Boolean? = null,
+                           localizeSubtitle: Boolean = true, localizeValue: Boolean = true) {
     val shape = RoundedCornerShape(16.dp)
     Row(Modifier.pageItem("settings", key).tvFocusable(onClick, shape, scale = 1.02f, edge = 2.dp, tag = "setting-$key")
         .fillMaxWidth().clip(shape).background(Color.White.copy(alpha = .06f)).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = TvDesign.Type.label, color = TvDesign.Ink.primary)
-            Text(subtitle, style = TvDesign.Type.caption, color = TvDesign.Ink.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, localize = localizeSubtitle, style = TvDesign.Type.caption, color = TvDesign.Ink.secondary, maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(16.dp))
-        Text(value, style = TvDesign.Type.label, color = if (on == true) com.ketvoice.app.theme.LocalTheme.current.accent else TvDesign.Ink.secondary)
+        Text(value, localize = localizeValue, style = TvDesign.Type.label,
+            color = if (on == true) com.ketvoice.app.theme.LocalTheme.current.accent else TvDesign.Ink.secondary)
     }
 }
 

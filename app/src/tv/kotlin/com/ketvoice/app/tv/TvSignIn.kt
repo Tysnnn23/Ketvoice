@@ -97,8 +97,9 @@ object TvSignIn {
         try {
             link.signIn(tokenHash)
             _state.value = State.Done
-        } catch (e: CancellationException) { throw e } catch (_: Exception) {
-            _state.value = State.Failed(UNAVAILABLE)
+        } catch (e: CancellationException) { throw e } catch (e: Exception) {
+            // The publishing account is refused on the TV too ([TvProfiles.signInWithLink]).
+            _state.value = State.Failed(if (e.message == DENIED) DENIED else UNAVAILABLE)
         }
     }
 
@@ -129,6 +130,9 @@ object TvSignIn {
             LinkPoll.parse(r.status, runCatching { JSONObject(r.text) }.getOrNull())
         }.getOrDefault(LinkAnswer.Failed)
 
-        override suspend fun signIn(tokenHash: String) = com.ketvoice.app.account.AccountSession.signInWithLink(tokenHash)
+        /** Signed in here, or kept as another profile of this TV ([TvProfiles], 1.1). */
+        override suspend fun signIn(tokenHash: String) {
+            TvProfiles.signInWithLink(com.ketvoice.app.KetvoiceApp.instance, tokenHash)
+        }
     }
 }
