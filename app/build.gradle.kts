@@ -93,8 +93,8 @@ android {
         create("tv") {
             dimension = "device"
             applicationId = "com.ketvoice.tv"
-            versionCode = 1
-            versionName = "1.0.0"
+            versionCode = 2
+            versionName = "1.1.0"
             // Android 9 (API 28), Android TV's oldest version still common on boxes and TVs. The shared code really
             // needs 28: the equalizer (DynamicsProcessing), avatar decoding (ImageDecoder), the updater's signature check
             // (SigningInfo) and the process name of the work process have no older equivalent. Its API 29-30 calls are

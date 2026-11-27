@@ -287,7 +287,8 @@ class TvSystemHostTest {
 
     @Test fun homeLeadsToReplayWrappedAndTheArtFrame() {
         show()
-        press(Key.DirectionDown, 3)
+        // Down from the poster's button (or the first row) to the third row, where the extras sit.
+        repeat(5) { if (!focusedTag().orEmpty().startsWith("card-replay:")) { press(Key.DirectionDown); settle(500) } }
         settle(2_000)
         compose.onNodeWithTag("row-${TvExtras.SHELF}").assertExists()
         assertTrue(focusedTag().orEmpty(), focusedTag().orEmpty().startsWith("card-replay:"))
